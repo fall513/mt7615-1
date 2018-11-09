@@ -8,11 +8,10 @@ PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/mt7615e
-  CATEGORY:=MTK Properties
+  CATEGORY:=Kernel modules
   TITLE:=MTK MT7615e wifi AP driver
   FILES:=$(PKG_BUILD_DIR)/mt_wifi_ap/mt7615e.ko
-  SUBMENU:=Drivers
-  MENU:=1
+  SUBMENU:=Wireless Drivers
 endef
 
 define KernelPackage/mt7615e/config
