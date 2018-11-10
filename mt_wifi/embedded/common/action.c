@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,17 +25,13 @@
     --------    ----------    ----------------------------------------------
 	Jan Lee		2006	  	created for rt2860
  */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "action.h"
 
 #define MCAST_WCID_TO_REMOVE 0 //Pat: TODO
 
 extern UCHAR  ZeroSsid[32];
-
-#ifdef WH_EZ_SETUP
-extern UCHAR  mtk_oui[];
-#endif
 
 static VOID ReservedAction(
 	IN PRTMP_ADAPTER pAd,
@@ -947,44 +944,18 @@ VOID PeerPublicAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 	                            {
 	                                wlan_operate_set_ht_bw(wdev,HT_BW_20);
 									wlan_operate_set_ext_cha(wdev,EXTCHA_NONE);
-
-#if (defined(WH_EZ_SETUP) && defined(EZ_NETWORK_MERGE_SUPPORT))
-									if (IS_EZ_SETUP_ENABLED(wdev)){
-										EZ_DEBUG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("\nPeerPublicAction: Fallback thru ACTION_BSS_2040_COEXIST ****\n"));
-										ez_set_ap_fallback_context(wdev,TRUE,wdev->channel);
-									}
-#endif /* WH_EZ_SETUP */
-
 	                            }
 	                            else
 	                            {
 	                            	/*recover to origin bw & extcha*/
 	                                wlan_operate_set_ht_bw(wdev,cfg_ht_bw);
 									wlan_operate_set_ext_cha(wdev,cfg_ext_cha);
-#if (defined(WH_EZ_SETUP) && defined(EZ_NETWORK_MERGE_SUPPORT))
-									if (IS_EZ_SETUP_ENABLED(wdev)){
-										EZ_DEBUG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("\nPeerPublicAction: recover cfg setting thru ACTION_BSS_2040_COEXIST ****\n"));
-										ez_set_ap_fallback_context(wdev,FALSE,0);
-									}
-#endif /* WH_EZ_SETUP */
-
 	                            }
 	                            MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
 	                                    ("\tNow RecomWidth=%d, ExtChanOffset=%d\n",
 	                                    wlan_operate_get_ht_bw(wdev),
 	                                    wlan_operate_get_ext_cha(wdev)));
 	                            pAd->CommonCfg.Bss2040CoexistFlag |= BSS_2040_COEXIST_INFO_NOTIFY;
-															
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-								/* Update BSS2040COEX for pEntry */
-								if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
-								{
-									CMD_STAREC_AUTO_RATE_UPDATE_T rRaParam;
-									NdisZeroMemory(&rRaParam, sizeof(CMD_STAREC_AUTO_RATE_UPDATE_T));
-									rRaParam.u4Field = RA_PARAM_HT_2040_COEX;
-									RAParamUpdate(pAd, &pAd->MacTab.Content[Elem->Wcid], &rRaParam);
-								}
-#endif /* RACTRL_FW_OFFLOAD_SUPPORT */
 	                        }
 
 	     
@@ -1020,39 +991,10 @@ VOID PeerPublicAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 #endif /* CONFIG_AP_SUPPORT */
 
 		case ACTION_WIFI_DIRECT:
-#ifdef WH_EZ_SETUP
-		{
-			//struct wifi_dev *wdev = NULL; 
-			if (IS_ADPTR_EZ_SETUP_ENABLED(pAd)) {
-				if (!VALID_UCAST_ENTRY_WCID(pAd, Elem->Wcid))
-				{
-					MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-							("%s, Wrong Wcid:%d !!! need to check the root cause!!!!",
-								__FUNCTION__, Elem->Wcid));
-					return;
-				}
-				//wdev = pAd->MacTab.Content[Elem->Wcid].wdev;
-				//if (IS_EZ_SETUP_ENABLED(wdev))
-				if (NdisEqualMemory(&(Elem->Msg[LENGTH_802_11+2]), mtk_oui, MTK_OUI_LEN))
-				{
-					ez_process_action_frame(pAd, Elem);
-					break;		
-				}
-			}
-		}
-#endif /* WH_EZ_SETUP */
-
 
 			break;
 
 
-
-#ifdef WH_EZ_SETUP
-		case ACTION_VENDOR_USAGE:
-			if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-				EZ_DEBUG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("ERROR !!! ACTION - 221 is Reserved\n"));		
-			break;
-#endif
 
 		default:
 			break;

@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,6 +14,7 @@
 	Module Name:
 	hdev.c
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "hdev/hdev.h"
 

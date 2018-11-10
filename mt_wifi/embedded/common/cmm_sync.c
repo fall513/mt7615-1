@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,6 +25,7 @@
 	--------	----------		----------------------------------------------
 	John Chang	2004-09-01      modified for rt2561/2661
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 /*BaSizeArray follows the 802.11n definition as MaxRxFactor.  2^(13+factor) bytes. When factor =0, it's about Ba buffer size =8.*/
@@ -136,10 +138,6 @@ static UCHAR BuildChannelListFor2G(RTMP_ADAPTER *pAd, UCHAR index)
 
 
 	}
-#ifdef RT_CFG80211_SUPPORT
-		if (CFG80211OS_UpdateRegRuleByRegionIdx(pAd->pCfg80211_CB, pChDesc, NULL) != 0)
-				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("Update RegRule failed!\n"));
-#endif /* RT_CFG80211_SUPPORT */
 
 done:
 	return index;
@@ -210,40 +208,21 @@ static UCHAR BuildChannelListFor5G(RTMP_ADAPTER *pAd, UCHAR index)
 		{
 			if((pAd->CommonCfg.bIEEE80211H == 0)|| ((pAd->CommonCfg.bIEEE80211H == 1) && (pAd->CommonCfg.RDDurRegion != FCC)))
 			{
-				if (MTChGrpValid(pAd))				
-				{
-					if (MTChGrpChannelChk(pAd,GetChannel_5GHZ(pChDesc, i)))
-					{
 				pChannelList[q] = GetChannel_5GHZ(pChDesc, i);
 				pChannelListFlag[q] = GetChannelFlag(pChDesc, i);
 				q++;
-			}
-					
-				} else {
-				pChannelList[q] = GetChannel_5GHZ(pChDesc, i);
-				pChannelListFlag[q] = GetChannelFlag(pChDesc, i);
-				q++;
-			}
 			}
 			/*Based on the requiremnt of FCC, some channles could not be used anymore when test DFS function.*/
 			else if ((pAd->CommonCfg.bIEEE80211H == 1) &&
 					(pAd->CommonCfg.RDDurRegion == FCC) &&
 					(pAd->Dot11_H.bDFSIndoor == 1))
 			{
-					if (MTChGrpValid(pAd))				
-					{
-						if (MTChGrpChannelChk(pAd,GetChannel_5GHZ(pChDesc, i)))
-						{
-							pChannelList[q] = GetChannel_5GHZ(pChDesc, i);
-							pChannelListFlag[q] = GetChannelFlag(pChDesc, i);
-							q++;
-						}
-						
-					} else {
+				if((GetChannel_5GHZ(pChDesc, i) < 120) || (GetChannel_5GHZ(pChDesc, i) > 128))
+				{
 					pChannelList[q] = GetChannel_5GHZ(pChDesc, i);
 					pChannelListFlag[q] = GetChannelFlag(pChDesc, i);
 					q++;
-					}
+				}
 			}
 			else if ((pAd->CommonCfg.bIEEE80211H == 1) &&
 					(pAd->CommonCfg.RDDurRegion == FCC) &&
@@ -251,29 +230,11 @@ static UCHAR BuildChannelListFor5G(RTMP_ADAPTER *pAd, UCHAR index)
 			{
 				if((GetChannel_5GHZ(pChDesc, i) < 100) || (GetChannel_5GHZ(pChDesc, i) > 140) )
 				{
-					if (MTChGrpValid(pAd))				
-					{
-						if (MTChGrpChannelChk(pAd,GetChannel_5GHZ(pChDesc, i)))
-						{
-					pChannelList[q] = GetChannel_5GHZ(pChDesc, i);
-					pChannelListFlag[q] = GetChannelFlag(pChDesc, i);
-					q++;
-				}
-						
-					} else {				
 					pChannelList[q] = GetChannel_5GHZ(pChDesc, i);
 					pChannelListFlag[q] = GetChannelFlag(pChDesc, i);
 					q++;
 				}
 			}
-			}
-			else if (MTChGrpValid(pAd) && MTChGrpChannelChk(pAd,GetChannel_5GHZ(pChDesc, i)))
-				{
-						pChannelList[q] = GetChannel_5GHZ(pChDesc, i);
-						pChannelListFlag[q] = GetChannelFlag(pChDesc, i);
-						q++;				
-				}
-			
 
 		}
 		num = q;
@@ -323,10 +284,6 @@ static UCHAR BuildChannelListFor5G(RTMP_ADAPTER *pAd, UCHAR index)
 		os_free_mem( pChannelList);
 		os_free_mem( pChannelListFlag);
 	}
-#ifdef RT_CFG80211_SUPPORT
-		if (CFG80211OS_UpdateRegRuleByRegionIdx(pAd->pCfg80211_CB, NULL, pChDesc) != 0)
-				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("Update RegRule failed!\n"));
-#endif /*RT_CFG80211_SUPPORT*/
 
 done:
 	return index;
@@ -344,6 +301,10 @@ VOID BuildChannelList(RTMP_ADAPTER *pAd)
   pAd->AutoChSelCtrl.ChannelListNum2G = 0;             
   pAd->AutoChSelCtrl.ChannelListNum5G = 0;
 #endif/*CONFIG_AP_SUPPORT*/
+
+#ifdef MT_DFS_SUPPORT
+					DfsSaveNonOccupancy(pAd);//Jelly20150323
+#endif
 
 	os_zero_mem(pAd->ChannelList, MAX_NUM_OF_CHANNELS * sizeof(CHANNEL_TX_POWER));
 
@@ -370,7 +331,7 @@ VOID BuildChannelList(RTMP_ADAPTER *pAd)
 		PhyMode2G,PhyMode5G, pAd->ChannelListNum));
 	
 #ifdef MT_DFS_SUPPORT	
-	DfsBuildChannelList(pAd);
+    DfsRecoverNonOccupancy(pAd); //Jelly20150323
 #endif
 
 #ifdef DBG
@@ -557,8 +518,6 @@ VOID ChangeToCellPowerLimit(RTMP_ADAPTER *pAd, UCHAR AironetCellPowerLimit)
 #endif /* DBDC_MODE */   
 }
 
-
-
 CHAR ConvertToRssi(RTMP_ADAPTER *pAd, struct raw_rssi_info *rssi_info, UCHAR rssi_idx)
 {
 	UCHAR RssiOffset, LNAGain;
@@ -571,8 +530,8 @@ CHAR ConvertToRssi(RTMP_ADAPTER *pAd, struct raw_rssi_info *rssi_info, UCHAR rss
 
 	rssi = rssi_info->raw_rssi[rssi_idx];
 
-	//if (rssi == 0)
-	//	return -99;
+	if (rssi == 0)
+		return -99;
 
 	LNAGain = pAd->hw_cfg.lan_gain;
 
@@ -596,6 +555,9 @@ CHAR ConvertToRssi(RTMP_ADAPTER *pAd, struct raw_rssi_info *rssi_info, UCHAR rss
 
 CHAR ConvertToSnr(RTMP_ADAPTER *pAd, UCHAR Snr)
 {
+#ifdef CUSTOMER_DCC_FEATURE
+	return Snr;
+#endif
 	if (pAd->chipCap.SnrFormula == SNR_FORMULA2)
 		return (Snr * 3 + 8) >> 4;
 	else if (pAd->chipCap.SnrFormula == SNR_FORMULA3)
@@ -639,14 +601,6 @@ VOID Handle_BSS_Width_Trigger_Events(RTMP_ADAPTER *pAd, UCHAR Channel)
 
 			wlan_operate_set_ht_bw(wdev,HT_BW_20);
 			wlan_operate_set_ext_cha(wdev,EXTCHA_NONE);
-
-#if (defined(WH_EZ_SETUP) && defined(EZ_NETWORK_MERGE_SUPPORT))
-			if (IS_EZ_SETUP_ENABLED(wdev) && (wdev->wdev_type == WDEV_TYPE_AP)){
-				EZ_DEBUG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("\nHandle_BSS_Width_Trigger_Events: do fallback ****\n"));
-				ez_set_ap_fallback_context(wdev,TRUE,wdev->channel);
-			}
-#endif /* WH_EZ_SETUP */
-
 		}
         DetectOverlappingPeriodicRound = 31;
 	}
@@ -661,99 +615,17 @@ VOID BuildEffectedChannelList(
 	IN struct wifi_dev *wdev
 	)
 {
-	UCHAR		EChannel[11];
-	UCHAR		i, j, k;
-	UCHAR		UpperChannel = 0, LowerChannel = 0;
+	UCHAR		k;
 
-	RTMPZeroMemory(EChannel, 11);
+
 
 	/* 802.11n D4 11.14.3.3: If no secondary channel has been selected, all channels in the frequency band shall be scanned. */
+	for (k = 0;k < pAd->ChannelListNum;k++)
 	{
-		for (k = 0;k < pAd->ChannelListNum;k++)
-		{
-			if (pAd->ChannelList[k].Channel <=14 )
-			pAd->ChannelList[k].bEffectedChannel = TRUE;
-		}
-		return;
+		if (pAd->ChannelList[k].Channel <=14 )
+		pAd->ChannelList[k].bEffectedChannel = TRUE;
 	}
-
-	i = 0;
-	/* Find upper and lower channel according to 40MHz current operation. */
-	if (pAd->CommonCfg.CentralChannel < wdev->channel)
-	{
-		UpperChannel = wdev->channel;
-		LowerChannel = pAd->CommonCfg.CentralChannel-2;
-	}
-	else if (pAd->CommonCfg.CentralChannel > wdev->channel)
-	{
-		UpperChannel = pAd->CommonCfg.CentralChannel+2;
-		LowerChannel = wdev->channel;
-	}
-	else
-	{
-		MTWF_LOG(DBG_CAT_CLIENT, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("LinkUP 20MHz . No Effected Channel \n"));
-		/* Now operating in 20MHz, doesn't find 40MHz effected channels */
-		return;
-	}
-
-	DeleteEffectedChannelList(pAd);
-
-	MTWF_LOG(DBG_CAT_CLIENT, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("BuildEffectedChannelList!LowerChannel ~ UpperChannel; %d ~ %d \n", LowerChannel, UpperChannel));
-
-	/* Find all channels that are below lower channel.. */
-	if (LowerChannel > 1)
-	{
-		EChannel[0] = LowerChannel - 1;
-		i = 1;
-		if (LowerChannel > 2)
-		{
-			EChannel[1] = LowerChannel - 2;
-			i = 2;
-			if (LowerChannel > 3)
-			{
-				EChannel[2] = LowerChannel - 3;
-				i = 3;
-			}
-		}
-	}
-	/* Find all channels that are between  lower channel and upper channel. */
-	for (k = LowerChannel;k <= UpperChannel;k++)
-	{
-		EChannel[i] = k;
-		i++;
-	}
-	/* Find all channels that are above upper channel.. */
-	if (UpperChannel < 14)
-	{
-		EChannel[i] = UpperChannel + 1;
-		i++;
-		if (UpperChannel < 13)
-		{
-			EChannel[i] = UpperChannel + 2;
-			i++;
-			if (UpperChannel < 12)
-			{
-				EChannel[i] = UpperChannel + 3;
-				i++;
-			}
-		}
-	}
-	/*
-	    Total i channels are effected channels.
-	    Now find corresponding channel in ChannelList array.  Then set its bEffectedChannel= TRUE
-	*/
-	for (j = 0;j < i;j++)
-	{
-		for (k = 0;k < pAd->ChannelListNum;k++)
-		{
-			if (pAd->ChannelList[k].Channel == EChannel[j])
-			{
-				pAd->ChannelList[k].bEffectedChannel = TRUE;
-				MTWF_LOG(DBG_CAT_CLIENT, DBG_SUBCAT_ALL, DBG_LVL_TRACE,(" EffectedChannel[%d]( =%d)\n", k, EChannel[j]));
-				break;
-			}
-		}
-	}
+	return;
 }
 
 

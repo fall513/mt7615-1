@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,16 +25,14 @@
     --------    ----------    ----------------------------------------------
     John Chang  08-04-2003    created for 11g soft-AP
  */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #ifdef DOT11R_FT_SUPPORT
 #include "ft.h"
 #endif /* DOT11R_FT_SUPPORT */
 
-#ifdef WH_EZ_SETUP
-#ifdef DUAL_CHIP
-extern NDIS_SPIN_LOCK ez_conn_perm_lock;
-#endif
+#ifdef VENDOR_FEATURE6_SUPPORT
+#include "arris_wps_gpio_handler.h"
 #endif
 
 /*
@@ -68,10 +67,7 @@ static BOOLEAN PeerDeauthReqSanity(
         Upper Layer request to kick out a STA
     ==========================================================================
  */
-#ifndef WH_EZ_SETUP
-static
-#endif
-VOID APMlmeDeauthReqAction(
+static VOID APMlmeDeauthReqAction(
     IN PRTMP_ADAPTER pAd,
     IN MLME_QUEUE_ELEM *Elem)
 {
@@ -82,29 +78,16 @@ VOID APMlmeDeauthReqAction(
     ULONG					FrameLen = 0;
     MAC_TABLE_ENTRY			*pEntry;
 	UCHAR					apidx;
-#if (defined(WH_EZ_SETUP)  || defined (WH_EVENT_NOTIFIER))
-    struct wifi_dev         *wdev;
-#endif
 
 	RETURN_IF_PAD_NULL(pAd);
 
     pInfo = (MLME_DEAUTH_REQ_STRUCT *)Elem->Msg;
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-		EZ_DEBUG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_ERROR,(" ---> %s, wcid = %d\n", __FUNCTION__,Elem->Wcid));
-#endif
+
     if (VALID_UCAST_ENTRY_WCID(pAd, Elem->Wcid))
     {
-#ifdef WH_EZ_SETUP
-		if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-    		EZ_DEBUG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("Valid unicast entry\n"));
-#endif
 		pEntry = &pAd->MacTab.Content[Elem->Wcid];
 		if (!pEntry)
 			return;
-#if (defined(WH_EZ_SETUP)  || defined (WH_EVENT_NOTIFIER))
-        wdev = pEntry->wdev;
-#endif
 
 #ifdef WAPI_SUPPORT
 		WAPI_InternalCmdAction(pAd,
@@ -119,7 +102,18 @@ VOID APMlmeDeauthReqAction(
 		ApLogEvent(pAd, pInfo->Addr, EVENT_DISASSOCIATED);
 
 		apidx = pEntry->func_tb_idx;
+#ifdef VENDOR_FEATURE6_SUPPORT		
+		{
+			UCHAR disassoc_event_msg[32] = {0};
 
+			if (WMODE_CAP_5G(pAd->ApCfg.MBSSID[apidx].wdev.PhyMode))
+				snprintf(disassoc_event_msg, sizeof(disassoc_event_msg), "%02x:%02x:%02x:%02x:%02x:%02x BSS(%d)", PRINT_MAC(pInfo->Addr), (pEntry->func_tb_idx) + WIFI_50_RADIO);
+			else
+				snprintf(disassoc_event_msg, sizeof(disassoc_event_msg), "%02x:%02x:%02x:%02x:%02x:%02x BSS(%d)", PRINT_MAC(pInfo->Addr), (pEntry->func_tb_idx) + WIFI_24_RADIO);
+
+			ARRISMOD_CALL(arris_event_send_hook, ATOM_HOST, WLAN_EVENT, STA_DISSOC, disassoc_event_msg, strlen(disassoc_event_msg));
+		}
+#endif
         /* 1. remove this STA from MAC table */
         MacTableDeleteEntry(pAd, Elem->Wcid, pInfo->Addr);
 
@@ -142,28 +136,7 @@ VOID APMlmeDeauthReqAction(
         MiniportMMRequest(pAd, 0, pOutBuffer, FrameLen);
 
         MlmeFreeMemory( pOutBuffer);
-
-#ifdef WH_EVENT_NOTIFIER
-        {
-            EventHdlr pEventHdlrHook = NULL;
-            pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_STA_LEAVE);
-            if(pEventHdlrHook && wdev)
-                pEventHdlrHook(pAd, wdev, pInfo->Addr, Elem->Channel);
-        }
-#endif /* WH_EVENT_NOTIFIER */
     }
-#ifdef WH_EZ_SETUP	
-#ifdef EZ_NETWORK_MERGE_SUPPORT		
-	else {
-		MLME_BROADCAST_DEAUTH_REQ_STRUCT	*pInfo;
-		pInfo = (PMLME_BROADCAST_DEAUTH_REQ_STRUCT)Elem->Msg;
-		wdev = pInfo->wdev;
-		
-		if(IS_EZ_SETUP_ENABLED(wdev) || ez_is_triband()) // This required for both  ez and non ez in triband.	
-			ez_APMlmeBroadcastDeauthReqAction(pAd, Elem);
-	}
-#endif
-#endif		
 }
 
 
@@ -174,14 +147,7 @@ static VOID APPeerDeauthReqAction(
 	UCHAR Addr2[MAC_ADDR_LEN];
 	UINT16 Reason, SeqNum;
 	MAC_TABLE_ENTRY *pEntry;
-#if (defined(WH_EZ_SETUP) || defined(WH_EVENT_NOTIFIER))
-    struct wifi_dev *wdev;
-#endif
 
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-		EZ_DEBUG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF,("AUTH_RSP - APPeerDeauthReqAction\n"));
-#endif
 
 
 	if (! PeerDeauthReqSanity(pAd, Elem->Msg, Elem->MsgLen, Addr2, &SeqNum, &Reason))
@@ -193,9 +159,7 @@ static VOID APPeerDeauthReqAction(
 	if (VALID_UCAST_ENTRY_WCID(pAd, Elem->Wcid))
 	{
 		pEntry = &pAd->MacTab.Content[Elem->Wcid];
-#if (defined(WH_EZ_SETUP) || defined(WH_EVENT_NOTIFIER))
-		wdev = pEntry->wdev;
-#endif
+
 		{
 			/*
 				Add Hotspot2.0 Rlease 1 Prestested Code
@@ -232,6 +196,18 @@ static VOID APPeerDeauthReqAction(
 
 		/* send wireless event - for deauthentication */
 		RTMPSendWirelessEvent(pAd, IW_DEAUTH_EVENT_FLAG, Addr2, 0, 0);
+#ifdef VENDOR_FEATURE6_SUPPORT
+		{
+			UCHAR disassoc_event_msg[32] = {0};
+
+			if(WMODE_CAP_5G(pAd->ApCfg.MBSSID[pEntry->func_tb_idx].wdev.PhyMode))
+				snprintf(disassoc_event_msg, sizeof(disassoc_event_msg), "%02x:%02x:%02x:%02x:%02x:%02x BSS(%d)", PRINT_MAC(Addr2), (pEntry->func_tb_idx) + WIFI_50_RADIO);
+			else
+				snprintf(disassoc_event_msg, sizeof(disassoc_event_msg), "%02x:%02x:%02x:%02x:%02x:%02x BSS(%d)", PRINT_MAC(Addr2), (pEntry->func_tb_idx) + WIFI_24_RADIO);
+
+			ARRISMOD_CALL(arris_event_send_hook, ATOM_HOST, WLAN_EVENT, STA_DISSOC, disassoc_event_msg, strlen(disassoc_event_msg));
+		}
+#endif
 		ApLogEvent(pAd, Addr2, EVENT_DISASSOCIATED);
 
 		if (pEntry->CMTimerRunning == TRUE)
@@ -276,15 +252,6 @@ static VOID APPeerDeauthReqAction(
 			}
 		}
 #endif /* MAC_REPEATER_SUPPORT */
-
-#ifdef WH_EVENT_NOTIFIER
-        {
-            EventHdlr pEventHdlrHook = NULL;
-            pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_STA_LEAVE);
-            if(pEventHdlrHook && wdev)
-                pEventHdlrHook(pAd, wdev, Addr2, Elem->Channel);
-        }
-#endif /* WH_EVENT_NOTIFIER */
 	}
 }
 
@@ -312,11 +279,6 @@ static BOOLEAN APPeerAuthSanity(
 	NdisMoveMemory(&auth_info->auth_seq,    &Fr->Octet[2], 2);
 	NdisMoveMemory(&auth_info->auth_status, &Fr->Octet[4], 2);
 
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-	    auth_info->auth_alg = le2cpu16(auth_info->auth_alg);
-#endif
-	
 	if (auth_info->auth_alg == AUTH_MODE_OPEN)
 	{
 		if (auth_info->auth_seq == 1 || auth_info->auth_seq == 2)
@@ -412,14 +374,6 @@ static BOOLEAN APPeerAuthSanity(
 		}
 	}
 #endif /* DOT11R_FT_SUPPORT */
-#ifdef WH_EZ_SETUP
-	else if(IS_ADPTR_EZ_SETUP_ENABLED(pAd) && (auth_info->auth_alg == AUTH_MODE_EZ)){
-		EZ_DEBUG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-			("%s(): receive easy setup auth request (alg=0x%02x)\n",
-			__FUNCTION__, auth_info->auth_alg));
-		return TRUE;
-	}
-#endif /* WH_EZ_SETUP */
     else
     {
         MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s(): fail - wrong algorithm (=%d)\n",
@@ -502,11 +456,6 @@ static VOID APPeerAuthReqAtIdleAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 	BOOLEAN bBndStrgCheck = TRUE;
 #endif /* BAND_STEERING */
 
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-		EZ_DEBUG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("AUTH - APPeerAuthReqAtIdleAction\n"));
-#endif
-
 
 	if (pAd->ApCfg.BANClass3Data == TRUE)
 	{
@@ -548,18 +497,6 @@ static VOID APPeerAuthReqAtIdleAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("AUTH - Bssid IF didn't up yet.\n"));
 	   	return;
 	}
-
-#ifdef WH_EZ_SETUP
-	if (IS_EZ_SETUP_ENABLED(wdev) && (ez_is_connection_allowed(wdev) == FALSE))
-		return;
-	if ((auth_info.auth_alg == AUTH_MODE_EZ)
-		&& (IS_EZ_SETUP_ENABLED(wdev) == FALSE)) {
-             //    ez_update_connection_permission(pAd,NULL,EZ_ALLOW_ALL);
-		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
-			("AUTH - Easy setup function is disabled. Reject easy setup auth request.\n"));
-		return;
-	}
-#endif /* WH_EZ_SETUP */
 
 	pEntry = MacTableLookup(pAd, auth_info.addr2);
 	if (pEntry && IS_ENTRY_CLIENT(pEntry))
@@ -606,24 +543,12 @@ SendAuth:
 
 	pRcvHdr = (PHEADER_802_11)(Elem->Msg);
 	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-			("AUTH - MBSS(%d), Rcv AUTH seq#%d, Alg=%02x, Status=%d from "
+			("AUTH - MBSS(%d), Rcv AUTH seq#%d, Alg=%d, Status=%d from "
 			"[wcid=%d]%02x:%02x:%02x:%02x:%02x:%02x\n",
 			apidx, auth_info.auth_seq, auth_info.auth_alg,
 			auth_info.auth_status, Elem->Wcid,
 			PRINT_MAC(auth_info.addr2)));
 
-#ifdef WH_EZ_SETUP
-	if ((auth_info.auth_alg == AUTH_MODE_EZ)
-		&& IS_EZ_SETUP_ENABLED(wdev)) {
-		/* 
-			Do not check ACL when easy setup is enabled 
-			and ACL policy is positive. 
-		*/
-		EZ_DEBUG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-			("%s: This is an easy setup device.\n", __FUNCTION__));
-	}
-	else
-#endif /* WH_EZ_SETUP */
 #ifdef WSC_V2_SUPPORT
 	/* Do not check ACL when WPS V2 is enabled and ACL policy is positive. */
 	if ((pMbss->WscControl.WscConfMode != WSC_DISABLE) &&
@@ -649,27 +574,11 @@ SendAuth:
 		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
 				("Failed in ACL checking => send an AUTH seq#2 with "
 				"Status code = %d\n", MLME_UNSPECIFY_FAIL));
-
-#ifdef WH_EVENT_NOTIFIER
-        {
-            EventHdlr pEventHdlrHook = NULL;
-            pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_STA_AUTH_REJECT);
-            if(pEventHdlrHook && wdev)
-                pEventHdlrHook(pAd, wdev, auth_info.addr2, Elem);
-        }
-#endif /* WH_EVENT_NOTIFIER */
-
 		return;
     }
 
 #ifdef BAND_STEERING
-	if (pAd->ApCfg.BandSteering == TRUE
-#ifdef WH_EZ_SETUP
-		&& !((wdev != NULL) && (IS_EZ_SETUP_ENABLED(wdev)) && (auth_info.auth_alg == AUTH_MODE_EZ))
-#endif
-
-	) {
-
+	if (pAd->ApCfg.BandSteering == TRUE) {
 		BND_STRG_CHECK_CONNECTION_REQ(	pAd,
 											wdev, 
 											auth_info.addr2,
@@ -680,73 +589,12 @@ SendAuth:
 											0,
 											&bBndStrgCheck);
 		if (bBndStrgCheck == FALSE) {
-			APPeerAuthSimpleRspGenAndSend(pAd, pRcvHdr, auth_info.auth_alg, auth_info.auth_seq + 1, MLME_UNSPECIFY_FAIL);
-			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("AUTH - check failed.\n"));
+			//APPeerAuthSimpleRspGenAndSend(pAd, pRcvHdr, auth_info.auth_alg, auth_info.auth_seq + 1, MLME_UNSPECIFY_FAIL);
+			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("AUTH - BndStrg check failed.\n"));
 			return;
 		}
 	}
 #endif /* BAND_STEERING */
-
-#ifdef RADIUS_MAC_ACL_SUPPORT
-    if (IS_IEEE8021X_Entry(wdev) &&
-       (wdev->SecConfig.RadiusMacAuthCache.Policy == RADIUS_MAC_AUTH_ENABLE)) 	 		
-    {	
-#define	RADIUS_ACL_REJECT          0
-#define	RADIUS_ACL_ACCEPT          1
-#define	RADIUS_ACL_PENDING         2
-#define	RADIUS_ACL_ACCEPT_TIMEOUT  3
-
-	    PRT_802_11_RADIUS_ACL_ENTRY pAclEntry = NULL;
-        pAclEntry = RadiusFindAclEntry(&wdev->SecConfig.RadiusMacAuthCache.cacheList, auth_info.addr2);
-
-	    if (!pEntry)
-            pEntry = MacTableInsertEntry(pAd, auth_info.addr2, wdev, ENTRY_CLIENT, OPMODE_AP, TRUE);
-
-	    if (pAclEntry)
-        {
-    		if (pAclEntry->result == RADIUS_ACL_REJECT)
-    		{
-    			APPeerAuthSimpleRspGenAndSend(pAd, pRcvHdr, auth_info.auth_alg, 
-                    auth_info.auth_seq + 1, MLME_UNSPECIFY_FAIL);
-                
-    			if (pEntry)
-    				MacTableDeleteEntry(pAd, pEntry->wcid, pEntry->Addr);
-
-    			RTMPSendWirelessEvent(pAd, IW_MAC_FILTER_LIST_EVENT_FLAG, Addr2, apidx, 0);
-    			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-    				("%02x:%02x:%02x:%02x:%02x:%02x RADIUS ACL checking => Reject.\n", PRINT_MAC(auth_info.addr2)));
-    		}
-    		else if (pAclEntry->result == RADIUS_ACL_ACCEPT)
-    		{
-    			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-                    ("%02x:%02x:%02x:%02x:%02x:%02x RADIUS ACL checking => OK.\n", 
-    				PRINT_MAC(auth_info.addr2)));
-    		}
-    		else if (pAclEntry->result == RADIUS_ACL_ACCEPT_TIMEOUT)
-            {
-    			/* with SESSION-TIMEOUT attr. in EAP message from Radius Server */
-                MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-                    ("%02x:%02x:%02x:%02x:%02x:%02x RADIUS ACL checking => OK. (TIMEOUT)\n", 
-                        PRINT_MAC(auth_info.addr2)));
-    			DOT1X_InternalCmdAction(pAd, pEntry, DOT1X_ACL_ENTRY);
-            }
-            else
-    		{
-    			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-                    ("%02x:%02x:%02x:%02x:%02x:%02x RADIUS ACL checking => Unkown.\n", 
-    				PRINT_MAC(auth_info.addr2)));
-    		}
-	    }
-        else
-    	{
-    		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-                ("%02x:%02x:%02x:%02x:%02x:%02x Not Found in RADIUS ACL & go to Check.\n", 
-    			PRINT_MAC(auth_info.addr2)));
-            DOT1X_InternalCmdAction(pAd, pEntry, DOT1X_ACL_ENTRY);
-    		return;
-    	}
-    }	
-#endif /* RADIUS_MAC_ACL_SUPPORT */
 
 #ifdef DOT11R_FT_SUPPORT
 	pFtCfg = &wdev->FtCfg;
@@ -852,26 +700,6 @@ SendAuth:
 		else
 			; /* MAC table full, what should we respond ???? */
 	}
-#ifdef WH_EZ_SETUP  /* Move to ez_cmm.c */
-	else if ((auth_info.auth_alg == AUTH_MODE_EZ)
-		&& IS_EZ_SETUP_ENABLED(wdev)) {
-		if (!pEntry)
-			pEntry = MacTableInsertEntry(pAd, auth_info.addr2, wdev, ENTRY_CLIENT, OPMODE_AP, TRUE);
-
-		if (pEntry) {
-			if (ez_process_auth_request(pAd, wdev, &auth_info, Elem->Msg, Elem->MsgLen)) {
-				pEntry->AuthState = AS_AUTH_OPEN;
-				pEntry->Sst = SST_AUTH;
-			}
-			else 
-			{
-				ez_update_connection(pAd, wdev);
-			MacTableDeleteEntry(pAd, pEntry->wcid, pEntry->Addr);
-			}
-			
-		}
-	}
-#endif /* WH_EZ_SETUP */
 	else
 	{
 		/* wrong algorithm */
@@ -968,7 +796,7 @@ static VOID APPeerAuthConfirmAction(
     pRcvHdr = (PHEADER_802_11)(Elem->Msg);
 
 	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-			("AUTH - MBSS(%d), Rcv AUTH seq#%d, Alg=%02x, Status=%d from "
+			("AUTH - MBSS(%d), Rcv AUTH seq#%d, Alg=%d, Status=%d from "
 			"[wcid=%d]%02x:%02x:%02x:%02x:%02x:%02x\n",
 			apidx, auth_info.auth_seq, auth_info.auth_alg,
 			auth_info.auth_status, Elem->Wcid,
@@ -1091,12 +919,13 @@ VOID APCls2errAction(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 	}
 
 #ifdef MT_DFS_SUPPORT
-		if(DfsIsClass2DeauthDisable(pAd))
-		{
-			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-				("Do not send Class 2 Deauth under DFS Radar Detected scenario.\n"));
+			if(DfsIsClass2DeauthDisable(pAd))
+			{
+				MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+						("Do not send Class 2 Deauth under DFS Radar Detected scenario.\n"));
+		
 				return;
-		}
+			}
 #endif
 
 	/* send out DEAUTH frame */

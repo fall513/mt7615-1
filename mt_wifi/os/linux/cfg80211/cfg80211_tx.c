@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -11,7 +12,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 /****************************************************************************
  
 	Abstract:
@@ -152,7 +153,7 @@ VOID ProbeResponseHandler(
 					if ( ((((ProbeReqParam->SsidLen == 0) && (!mbss->bHideSsid)) ||
 			   ((ProbeReqParam->SsidLen == mbss->SsidLen) && NdisEqualMemory(ProbeReqParam->Ssid, mbss->Ssid, (ULONG) ProbeReqParam->SsidLen)))
 #ifdef CONFIG_HOTSPOT
-			   && ProbeReqforHSAP(pAd, apidx, &ProbeReqParam)
+			   && ProbeReqforHSAP(pAd, apidx, ProbeReqParam)
 #endif
 			 )
 		)
@@ -399,7 +400,9 @@ VOID ProbeResponseHandler(
 
 		/* Extended Capabilities IE */
 		{
-			ULONG TmpLen;
+			ULONG TmpLen, infoPos;
+			PUCHAR pInfo;
+			BOOLEAN bNeedAppendExtIE = FALSE;
 			EXT_CAP_INFO_ELEMENT extCapInfo;
 			UCHAR extInfoLen = sizeof(EXT_CAP_INFO_ELEMENT);
 
@@ -435,25 +438,50 @@ VOID ProbeResponseHandler(
 				extCapInfo.interworking = 1;
 #endif
 
+			pInfo = (PUCHAR)(&extCapInfo);
+			for (infoPos = 0; infoPos < extInfoLen; infoPos++)
+			{
+				if (pInfo[infoPos] != 0)
+				{
+					bNeedAppendExtIE = TRUE;
+					break;
+				}
+			}
 
-			MakeOutgoingFrame(pOutBuffer+FrameLen, &TmpLen,
-								1,			&ExtCapIe,
-								1,			&extInfoLen,
-								extInfoLen, 	&extCapInfo,
-								END_OF_ARGS);
+			if (bNeedAppendExtIE == TRUE)
+			{
+				for (infoPos = (extInfoLen - 1); infoPos >= EXT_CAP_MIN_SAFE_LENGTH; infoPos--)
+				{
+					if (pInfo[infoPos] == 0)
+						extInfoLen --;
+					else
+						break;
+				}
 
-			FrameLen += TmpLen;
+				MakeOutgoingFrame(pOutBuffer+FrameLen, &TmpLen,
+									1,			&ExtCapIe,
+									1,			&extInfoLen,
+									extInfoLen, 	&extCapInfo,
+									END_OF_ARGS);
+				FrameLen += TmpLen;
+			}
 		}
 
-#ifdef AP_QLOAD_SUPPORT
+#ifdef AP_QLOAD_SUPPORT		
+		if(pAd->CommonCfg.dbdc_mode == 0)	
+			pQloadCtrl = HcGetQloadCtrl(pAd);
+		else
+			pQloadCtrl = (wdev->channel > 14)? HcGetQloadCtrlByRf(pAd,RFIC_5GHZ) : HcGetQloadCtrlByRf(pAd,RFIC_24GHZ);
+			
 		if (pQloadCtrl->FlgQloadEnable != 0)
 		{
 #ifdef CONFIG_HOTSPOT_R2
 			if (pAd->ApCfg.MBSSID[apidx].HotSpotCtrl.QLoadTestEnable == 1)
 				FrameLen += QBSS_LoadElementAppend_HSTEST(pAd, pOutBuffer+FrameLen, apidx);
 			else if (pAd->ApCfg.MBSSID[apidx].HotSpotCtrl.QLoadTestEnable == 0)
-#endif
-			FrameLen += QBSS_LoadElementAppend(pAd, pOutBuffer+FrameLen);
+#endif			
+				FrameLen += QBSS_LoadElementAppend(pAd, pOutBuffer+FrameLen,pQloadCtrl);
+			
 		}
 #endif /* AP_QLOAD_SUPPORT */
 

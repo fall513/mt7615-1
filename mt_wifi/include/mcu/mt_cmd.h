@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __MT_CMD_H__
 #define __MT_CMD_H__
 
@@ -96,6 +97,10 @@ enum cmd_msg_state {
 	rx_receive_fail,        // a
 	rx_done,                // b
 };
+
+#define TX_DELAY_MODE_ARG1_TX_BATCH_CNT 1
+#define TX_DELAY_MODE_ARG1_TX_DELAY_TIMEOUT_US 2
+#define TX_DELAY_MODE_ARG1_PKT_LENGTHS 3
 
 typedef enum _ENUM_EXT_CMD_CR4_SET_ID_T {
                 CR4_SET_ID_HELP = 0,
@@ -617,7 +622,7 @@ enum EXT_CMD_TYPE {
     EXT_CMD_ID_TXDPD_CAL_RESULT = 0x60,
     EXT_CMD_ID_RDCE_VERIFY = 0x61,
 #endif /* PRE_CAL_TRX_SET1_SUPPORT */
-#if defined (RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
+#if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
     EXT_CMD_ID_TXLPF_CAL_INFO = 0x62,
     EXT_CMD_ID_TXIQ_CAL_INFO = 0x63,
     EXT_CMD_ID_TXDC_CAL_INFO = 0x64,
@@ -648,13 +653,13 @@ enum EXT_CMD_TYPE {
 #ifdef PA_TRIM_SUPPORT
     EXT_CMD_ID_CAL_RESTORE_FROM_FILE = 0x77,
 #endif /* PA_TRIM_SUPPORT */
-#ifdef LINK_TEST_SUPPORT
+#ifdef NR_PD_DETECTION
     EXT_CMD_ID_CMW_FEATURE_CTRL = 0x78,
-#endif /* LINK_TEST_SUPPORT */
-	EXT_CMD_ID_THERMAL_RECAL_MODE = 0x79,
-#ifdef MWDS
-    EXT_CMD_ID_MWDS_SUPPORT   =	0x80,
-#endif
+#endif /* NR_PD_DETECTION */
+	EXT_CMD_ID_THERMAL_RECAL_MODE = 0x79,	
+#if defined(CUSTOMER_RSG_FEATURE) || defined (CUSTOMER_DCC_FEATURE)
+	EXT_CMD_ID_GET_WTBL_TX_COUNTER = 0x91,
+#endif	
 };
 
 /* CR4 test */
@@ -718,20 +723,19 @@ enum
 	CH_SWITCH_SCAN_BYPASS_DPD = 9
 };
 
-#ifdef LINK_TEST_SUPPORT
+#ifdef NR_PD_DETECTION
 typedef enum _CMW_ACTION_CATEGORY
 {
-    CMW_TX_CSD = 0,
+    CMW_TX = 0,
     CMW_RX,
     CMW_TXPWR,
-    CMW_TXPWR_UP_TABLE,
     CMW_ACR,
     CMW_RCPI,
     CMW_SEIDX,
     CMW_RCPI_MA,
     CMW_ACTION_NUM
 } CMW_ACTION_CATEGORY, *P_CMW_ACTION_CATEGORY;
-#endif /* LINK_TEST_SUPPORT */
+#endif /* NR_PD_DETECTION */
 
 #ifdef CONFIG_MULTI_CHANNEL
 typedef struct GNU_PACKED _EXT_CMD_MCC_START_T
@@ -884,6 +888,9 @@ enum EXT_EVENT_TYPE {
 	EXT_EVENT_CMD_ID_EFUSE_ACCESS  = 0x1,
 	EXT_EVENT_RF_REG_ACCESS = 0x2,
 	EXT_EVENT_ID_RF_TEST = 0x4,
+#ifdef RTMP_MAC_SDIO
+	EXT_EVENT_SLEEPY_NOTIFY = 0x06,
+#endif
 	EXT_EVENT_MULTI_CR_ACCESS = 0x0E,
 	EXT_EVENT_FW_LOG_2_HOST = 0x13,
     EXT_EVENT_BT_COEX = 0x19,
@@ -925,7 +932,7 @@ enum EXT_EVENT_TYPE {
     EXT_EVENT_TMR_CALCU_INFO = 0x51,
     EXT_EVENT_ID_BSS_ACQ_PKT_NUM = 0x52,
     EXT_EVENT_ID_TX_POWER_FEATURE_CTRL = 0x58,
-#if defined (RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
+#if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
     EXT_EVENT_ID_TXLPF_CAL_INFO = 0x62,
     EXT_EVENT_ID_TXIQ_CAL_INFO = 0x63,
     EXT_EVENT_ID_TXDC_CAL_INFO = 0x64,
@@ -939,6 +946,9 @@ enum EXT_EVENT_TYPE {
 	EXT_EVENT_ID_INFORM_HOST_REPROCESS_PKT = 0x71,
 	EXT_EVENT_ID_GET_CR4_HOTSPOT_CAPABILITY = 0x72,
 #endif /* CONFIG_HOTSPOT_R2 */
+#ifdef CUSTOMER_RSG_FEATURE
+	EXT_EVENT_ID_GET_WTBL_TX_COUNTER = 0x91,
+#endif
 };
 
 /*
@@ -1396,11 +1406,11 @@ typedef struct GNU_PACKED _EXT_CMD_ETXBf_MU_SND_PERIODIC_TRIGGER_CTRL_T
 typedef struct GNU_PACKED _EXT_CMD_BF_TX_PWR_BACK_OFF_T
 {
     UINT8  ucCmdCategoryID;
-    UINT8  ucBandIdx;
+    UINT8  ucBand;
     UINT8  aucReserved1[2];
-    INT8   acTxPwrFccBfOnCase[10];
+    UINT8  aucTxPwrFccBfOnCase[10];
     UINT8  aucReserved2[2];
-    INT8   acTxPwrFccBfOffCase[10];
+    UINT8  aucTxPwrFccBfOffCase[10];
     UINT8  aucReserved3[2];
 } EXT_CMD_BF_TX_PWR_BACK_OFF_T, *P_EXT_CMD_BF_TX_PWR_BACK_OFF_T;
 
@@ -1410,13 +1420,6 @@ typedef struct GNU_PACKED _EXT_CMD_BF_AWARE_CTRL_T
     BOOLEAN  fgBfAwareCtrl;
     UINT8    aucReserved[2];
 } EXT_CMD_BF_AWARE_CTRL_T, *P_EXT_CMD_BF_AWARE_CTRL_T;
-
-typedef struct GNU_PACKED _EXT_CMD_BFEE_HW_CTRL_T
-{
-    UINT8    ucCmdCategoryID;
-    BOOLEAN  fgBfeeHwCtrl;
-    UINT8    aucReserved[2];
-} EXT_CMD_BFEE_HW_CTRL_T, *P_EXT_CMD_BFEE_HW_CTRL_T;
 
 typedef struct GNU_PACKED _EXT_CMD_BF_HW_ENABLE_STATUS_UPDATE_T
 {
@@ -1605,7 +1608,7 @@ typedef struct GNU_PACKED _EXT_CMD_RDD_ON_OFF_CTRL_T//Jelly20150211
 	UINT8 ucRddCtrl;
 	UINT8 ucRddIdx;
 	UINT8 ucRddInSel;
-	UINT8 ucRddTpRatio;
+	UINT8 ucReserve[1];
 } EXT_CMD_RDD_ON_OFF_CTRL_T, *P_EXT_CMD_RDD_ON_OFF_CTRL_T;
 
 typedef struct _SET_ADC_T
@@ -1940,7 +1943,7 @@ enum
 {
 	STA_REC_BASIC_STA_RECORD = 0,
 	STA_REC_RA = 1,
-	STA_REC_RA_COMMON_INFO = 2,         /* only for mt7636 and mt7637 */
+	STA_REC_RA_COMMON_INFO = 2,
 	STA_REC_RA_UPDATE = 3,
 	STA_REC_BF = 4,
 	STA_REC_AMSDU = 5,
@@ -1957,7 +1960,7 @@ enum
 {
 	STA_REC_BASIC_STA_RECORD_FEATURE = (1 << STA_REC_BASIC_STA_RECORD),
 	STA_REC_RA_FEATURE = (1 << STA_REC_RA),
-	STA_REC_RA_COMMON_INFO_FEATURE = (1 << STA_REC_RA_COMMON_INFO),     /* only for mt7636 and mt7637 */
+	STA_REC_RA_COMMON_INFO_FEATURE = (1 << STA_REC_RA_COMMON_INFO),
 	STA_REC_RA_UPDATE_FEATURE = (1 << STA_REC_RA_UPDATE),
 	STA_REC_BF_FEATURE = (1 << STA_REC_BF),
 	STA_REC_AMSDU_FEATURE = (1 << STA_REC_AMSDU),
@@ -2101,8 +2104,7 @@ typedef struct GNU_PACKED _STAREC_PS_T
     sizeof(CMD_BSSINFO_PM_T) + \
     sizeof(CMD_BSSINFO_UAPSD_T) + \
     sizeof(CMD_BSSINFO_RSSI_RM_DET_T) + \
-    sizeof(CMD_BSSINFO_EXT_BSS_INFO_T) + \
-	sizeof(CMD_BSSINFO_AUTO_RATE_CFG_T))
+    sizeof(CMD_BSSINFO_EXT_BSS_INFO_T))
     /* Carter, not finish yet. + \
     sizeof(CMD_BSSINFO_SYNC_MODE_CTRL_T))*/
 
@@ -2118,7 +2120,6 @@ enum
     BSS_INFO_EXT_BSS = 7,
     BSS_INFO_BROADCAST_INFO = 8,
     BSS_INFO_SYNC_MODE = 9,
-    BSS_INFO_RA = 10,
     BSS_INFO_MAX_NUM
 };
 
@@ -2134,7 +2135,6 @@ enum
     BSS_INFO_EXT_BSS_FEATURE = (1 << BSS_INFO_EXT_BSS),
     BSS_INFO_BROADCAST_INFO_FEATURE = (1 << BSS_INFO_BROADCAST_INFO),
     BSS_INFO_SYNC_MODE_FEATURE = (1 << BSS_INFO_SYNC_MODE),
-    BSS_INFO_RA_FEATURE = (1 << BSS_INFO_RA),
     BSS_INFO_MAX_NUM_FEATURE = (1 << BSS_INFO_MAX_NUM)
 };
 
@@ -2675,10 +2675,10 @@ typedef struct GNU_PACKED _EXT_CMD_CHAN_SWITCH_T {
     UINT16	u2CacCase;
     UINT8	ucBand;
     UINT8	aucReserve0[1];
-    
-	UINT32  u4OutBandFreq;
 	
-	INT8    cTxPowerDrop;
+    UINT32  u4OutBandFreq;
+	
+	UINT8   ucTxPowerDrop;
     UINT8	aucReserve1[3];
     
     UINT8	aucTxPowerSKU[SKU_TOTAL_SIZE];
@@ -2705,7 +2705,6 @@ typedef struct GNU_PACKED _EXT_EVENT_ID_GET_TX_POWER_T {
 	UINT8 ucEfuseContent;
 	UINT8 ucBand;
 } EXT_EVENT_ID_GET_TX_POWER_T, *P_EXT_EVENT_ID_GET_TX_POWER_T;
-
 typedef struct GNU_PACKED _EXT_CMD_GET_TX_POWER_T{
 	UINT8 ucTxPwrType;
 	UINT8 ucCenterChannel;
@@ -2713,7 +2712,6 @@ typedef struct GNU_PACKED _EXT_CMD_GET_TX_POWER_T{
 	UINT8 ucBand;
 	UINT8 aucReserved[4];
 } EXT_CMD_GET_TX_POWER_T, *P_EXT_CMD_GET_TX_POWER_T;
-
 typedef struct GNU_PACKED _EXT_CMD_TX_POWER_CTRL_T {
 	UINT8 ucCenterChannel;
 	UINT8 ucDbdcIdx;
@@ -2721,19 +2719,6 @@ typedef struct GNU_PACKED _EXT_CMD_TX_POWER_CTRL_T {
 	UINT8 ucReserved[1];
 	UINT8 aucBinContent[EFUSE_CONTENT_SIZE];
 } EXT_CMD_TX_POWER_CTRL_T, *P_EXT_CMD_TX_POWER_CTRL_T;
-
-#ifdef ABSOLUTE_POWER_TEST
-typedef struct _CMD_POWER_RATE_TXPOWER_CTRL_T
-{
-    UINT8    ucPowerCtrlFormatId;
-    UINT8    ucPhyMode;
-	UINT8    ucTxRate;
-	UINT8    ucBW;
-    UINT8    ucBandIdx;
-	INT8     cTxPower;
-    UINT8    ucReserved[2];
-} CMD_POWER_RATE_TXPOWER_CTRL_T, *P_CMD_POWER_RATE_TXPOWER_CTRL_T;
-#endif /* ABSOLUTE_POWER_TEST */
 
 #ifdef BACKGROUND_SCAN_SUPPORT
 typedef struct GNU_PACKED _EXT_CMD_BGND_SCAN_NOTIFY_T {
@@ -2845,6 +2830,26 @@ typedef struct GNU_PACKED _EXT_CMD_FW_LOG_2_HOST_CTRL_T {
 	UINT8 ucReserve[3];
 } EXT_CMD_FW_LOG_2_HOST_CTRL_T;
 
+#if defined(CUSTOMER_RSG_FEATURE) || defined(CUSTOMER_DCC_FEATURE)
+// u4Field and ucWlanIdx is included for DCC to get per bss packet count
+typedef struct _EXT_EVENT_WTBL_TX_COUNTER_RESULT_T {
+	UINT32  u4Field;
+	UINT32	CurrentBWTxCount;
+	UINT32	OtherBWTxCount;
+	UINT32	DataFrameRetryCnt;
+	UINT32	MgmtRetryCnt;
+	UINT32	PerStaRetriedPktCnt[MAX_LEN_OF_MAC_TABLE];
+    UINT8	ucWlanIdx;
+    UINT8	aucReserved[3];
+} EXT_EVENT_WTBL_TX_COUNTER_RESULT_T;
+typedef struct _EXT_CMD_GET_WTBL_TX_COUNT_T {
+    UINT32	u4Field;
+    UINT8	ucWlanIdx;
+    UINT8	aucReserved[3];
+} EXT_CMD_GET_WTBL_TX_COUNT_T, *P_EXT_CMD_GET_WTBL_TX_COUNT_T;
+
+#endif
+
 
 typedef struct GNU_PACKED _CMD_AP_PS_RETRIEVE_T {
     UINT32 u4Option; /* 0: AP_PWS enable, 1: redirect disable */
@@ -2925,6 +2930,13 @@ typedef enum _EXT_ENUM_PM_FEATURE_T
 	PM_CMD_FEATURE_SEND_NULL_FRAME 		 = 0x00000008,
 } EXT_ENUM_PM_FEATURE_T;
 
+#ifdef RTMP_MAC_SDIO
+typedef struct GNU_PACKED _EXT_EVENT_SLEEPY_NOTIFY_T
+{
+	UINT8		ucSleepState;
+	UINT8		aucReserves[3];
+} EXT_EVENT_SLEEPY_NOTIFY_T, *P_EXT_EVENT_SLEEPY_NOTIFY_T;
+#endif
 
 enum _ENUM_BCN_LOSS_REASON_T
 {
@@ -3289,9 +3301,7 @@ typedef struct GNU_PACKED _EXT_CMD_VOW_FEATURE_CTRL_T
 	UINT16	   u2IfApplyEnbwrefillFlag:1;
 	UINT16	   u2IfApplyAirTimeFairnessFlag:1;
 	UINT16	   u2IfApplyEnTxopNoChangeBssFlag:1;
-	UINT16     u2Reserve_b26_to_b27Flag:2;
-	UINT16     u2IfApplyWeightedAirTimeFairnessFlag:1;
-	UINT16     u2Reserve_b22_to_b24Flag:3;
+	UINT16	   u2Reserve_b22_to_b27Flag:6;
 	UINT16	   u2IfApplyDbdc0SearchRuleFlag:1;
 	UINT16	   u2IfApplyDbdc1SearchRuleFlag:1;
 	UINT16	   u2Reserve_b19Flag:1;
@@ -3329,9 +3339,7 @@ typedef struct GNU_PACKED _EXT_CMD_VOW_FEATURE_CTRL_T
 		UINT16	   u2EnbwrefillValue:1;
 		UINT16	   u2AirTimeFairnessValue:1;
 		UINT16	   u2EnTxopNoChangeBssValue:1;
-		UINT16	   u2Reserve_b26_to_b27Value:2;
-		UINT16	   u2WeightedAirTimeFairnessValue:1;
-		UINT16	   u2Reserve_b22_to_b24Value:3;
+		UINT16	   u2Reserve_b22_to_b27Value:6;
 		UINT16	   u2Dbdc0SearchRuleValue:1;
 		UINT16	   u2Dbdc1SearchRuleValue:1;
 		UINT16	   u2Reserve_b19Value:1;
@@ -3681,7 +3689,7 @@ typedef struct GNU_PACKED _CMD_SLOT_TIME_SET_T
 
 typedef struct GNU_PACKED _CMD_POWER_PWERCENTAGE_LEVEL_SET_T
 {
-    INT8   cPowerDropLevel;
+    UINT8  ucPowerDropLevel;
     UINT8  ucBand;
     UINT8  aucReserved[10];
 }CMD_POWER_PWERCENTAGE_LEVEL_SET_T,*P_CMD_POWER_PWERCENTAGE_LEVEL_SET_T;
@@ -4759,19 +4767,19 @@ typedef struct GNU_PACKED _EXT_CMD_RDCE_VERIFY_T
 #if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
 typedef struct GNU_PACKED _EXT_CMD_GET_PRECAL_RESULT_T
 {
-	UINT16		u2PreCalBitMap;
-	UINT8		ucCalId;
-	UINT8		aucReserved;   	
+    UINT16          u2PreCalBitMap;
+    UINT8           ucCalId;
+    UINT8           aucReserved;   	
 } EXT_CMD_GET_PRECAL_RESULT_T, *P_EXT_CMD_GET_PRECAL_RESULT_T;
 
 typedef enum _PRE_CAL_TYPE{ 
-	PRECAL_TXLPF,
-	PRECAL_TXIQ,
-	PRECAL_TXDC, 
-	PRECAL_RXFI,
-	PRECAL_RXFD
+    PRECAL_TXLPF,
+    PRECAL_TXIQ,
+    PRECAL_TXDC, 
+    PRECAL_RXFI,
+    PRECAL_RXFD
 }PRE_CAL_TYPE;
-#endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */
+#endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */ 
 
 #ifdef PA_TRIM_SUPPORT
 typedef struct GNU_PACKED _EXT_CMD_CAL_CTRL_T
@@ -4934,7 +4942,6 @@ typedef struct _CMD_GET_CR4_HOTSPOT_CAPABILITY_T {
     UINT8         ucHotspotBssFlags[CR4_CFG_BSS_NUM];
 } CMD_GET_CR4_HOTSPOT_CAPABILITY_T, *P_CMD_GET_CR4_HOTSPOT_CAPABILITY_T;
 
-
 typedef struct _EXT_EVENT_THERMAL_NOTIFY_T {    
     INT8 cLoThresh; 
     INT8 cHiThresh;   
@@ -5010,14 +5017,6 @@ typedef struct _CMD_POWER_PERCENTAGE_CTRL_T
     UINT8  ucReserved;
 } CMD_POWER_PERCENTAGE_CTRL_T, *P_CMD_POWER_PERCENTAGE_CTRL_T;
 
-typedef struct _CMD_POWER_PERCENTAGE_DROP_CTRL_T
-{
-    UINT8  ucPowerCtrlFormatId;
-    INT8   cPowerDropLevel;
-    UINT8  ucBandIdx;
-    UINT8  ucReserved;
-} CMD_POWER_PERCENTAGE_DROP_CTRL_T, *P_CMD_POWER_PERCENTAGE_DROP_CTRL_T;
-
 typedef struct _CMD_POWER_BF_BACKOFF_CTRL_T
 {
     UINT8  ucPowerCtrlFormatId;
@@ -5025,14 +5024,6 @@ typedef struct _CMD_POWER_BF_BACKOFF_CTRL_T
     UCHAR  ucBandIdx;
     UINT8  ucReserved;
 } CMD_POWER_BF_BACKOFF_CTRL_T, *P_CMD_POWER_BF_BACKOFF_CTRL_T;
-
-typedef struct _CMD_POWER_THERMAL_COMP_CTRL_T
-{
-    UINT8    ucPowerCtrlFormatId;
-    BOOLEAN  fgThermalCompEn;
-    UINT8    ucBandIdx;
-    UINT8    ucReserved;
-} CMD_POWER_THERMAL_COMP_CTRL_T, *P_CMD_POWER_THERMAL_COMP_CTRL_T;
 
 typedef struct _CMD_POWER_UPPER_BOUND_CTRL_T
 {
@@ -5044,16 +5035,19 @@ typedef struct _CMD_POWER_UPPER_BOUND_CTRL_T
 typedef struct _CMD_POWER_RF_TXANT_CTRL_T
 {
     UINT8  ucPowerCtrlFormatId;
-    UINT8  ucTxAntIdx;          // bitwise representation. 0x5 means only TX0, TX2 enabled
+    UCHAR  ucTxAntCtrlEn;    // 1: Enable TxAnt Ctrl  0: Disable TxAnt Ctrl (set to default)
+    UCHAR  ucWIFI_EN_0;    // 1:0 => Enable/Disable RF WIFI0 Tx
+    UCHAR  ucWIFI_EN_1;    // 1:0 => Enable/Disable RF WIFI1 Tx
+    UCHAR  ucWIFI_EN_2;    // 1:0 => Enable/Disable RF WIFI2 Tx
+    UCHAR  ucWIFI_EN_3;    // 1:0 => Enable/Disable RF WIFI3 Tx
     UINT8  ucReserved[2];
 } CMD_POWER_RF_TXANT_CTRL_T, *P_CMD_POWER_RF_TXANT_CTRL_T;
 
 typedef struct _CMD_TX_POWER_SHOW_INFO_T
 {
-    UINT8    ucPowerCtrlFormatId;
-    BOOLEAN  fgTxPowerInfoEn;    // 1: Enable TxPower Show Info  0: Disable TxPower Show Info
-    UINT8    ucBandIdx;
-    UINT8    ucReserved;
+    UINT8  ucPowerCtrlFormatId;
+    UCHAR  ucTxPowerInfoEn;    // 1: Enable TxPower Show Info  0: Disable TxPower Show Info
+    UINT8  ucReserved[2];
 } CMD_TX_POWER_SHOW_INFO_T, *P_CMD_TX_POWER_SHOW_INFO_T;
 
 typedef struct _CMD_TOAE_ON_OFF_CTRL {
@@ -5102,44 +5096,51 @@ typedef struct _CMD_POWER_TEMPERATURE_CTRL_T
     UINT8    ucReserved;
 } CMD_POWER_TEMPERATURE_CTRL_T, *P_CMD_POWER_TEMPERATURE_CTRL_T;
 
-typedef struct _CMD_POWER_BOOST_TABLE_CTRL_T
-{
-    UINT8    ucPowerCtrlFormatId;
-	UINT8    ucBandIdx;
-	INT8     cPwrUpCat;
-	INT8     cPwrUpValue[7];
-    UINT8    ucReserved[2];
-} CMD_POWER_BOOST_TABLE_CTRL_T, *P_CMD_POWER_BOOST_TABLE_CTRL_T;
+typedef struct GNU_PACKED _EXT_EVENT_TXPOWER_INFO_T {
+    UINT8   ucEventCategoryID;
+    BOOLEAN fg2GEPA;
+    BOOLEAN fg5GEPA;
+    UINT8   aucReserve0;
 
-#define SKU_TABLE_SIZE_ALL      53
-#define BF_BACKOFF_ON_MODE       0
-#define BF_BACKOFF_OFF_MODE      1
-#define BF_BACKOFF_MODE          2
-#define BF_BACKOFF_CASE         10
-
-typedef struct _EXT_EVENT_TXPOWER_INFO_T {
-    UINT8    ucEventCategoryID;
-    UINT8    ucBandIdx;
-    BOOLEAN  fg2GEPA;
-    BOOLEAN  fg5GEPA;
-
-    BOOLEAN  fgSKUEnable;
-    BOOLEAN  fgPERCENTAGEEnable;
-    BOOLEAN  fgBFBACKOFFEnable;
-    BOOLEAN  fgThermalCompEnable;
+    UCHAR   ucSKUEnable_B0;
+    UCHAR   ucSKUEnable_B1;
+    UINT8   aucReserve1[2];
     
-    INT8     cSKUTable[SKU_TABLE_SIZE_ALL];
-    INT8     cThermalCompValue;
-    INT8     cPowerDrop;
-    INT8     aucReserve;
-
-    UINT32   u4RatePowerCRValue[8];     // (TMAC) Band0: 0x820F4020~0x820F403C, Band1: 0x820F4040~0x820F405C
-
-    INT8     cTxPwrBFBackoffValue[BF_BACKOFF_MODE][BF_BACKOFF_CASE];
+    INT8    cSKUTable_B0[SKU_TOTAL_SIZE];
+    UINT8   aucReserve2[3];
     
-    UINT32   u4BackoffCRValue[6];       // (BBP) Band0: 0x8207067C~82070690, Band1: 0x8207087C~82070890
+    INT8    cSKUTable_B1[SKU_TOTAL_SIZE];
+    UINT8   aucReserve3[3];
+    
+    UINT32  u4RatePowerCRValue[16];    // TMAC: 0x820F4020~0x820F405C
 
-    UINT32   u4PowerBoundCRValue;       // (TMAC) 0x820F4080
+    UCHAR   ucPERCENTAGEEnable_B0;
+    UCHAR   ucPERCENTAGEEnable_B1;
+    UINT8   aucReserve4[2];
+    
+    UINT8   ucPowerDrop_B0;
+    UINT8   ucPowerDrop_B1;
+    UCHAR   ucBFBACKOFFEnable_B0;
+    UCHAR   ucBFBACKOFFEnable_B1;
+
+    INT8    cBFBACKOFFTableOn[10];
+    UINT8   aucReserve5[2];
+
+    INT8    cBFBACKOFFTableOff[10];
+    UINT8   aucReserve6[2];
+    
+    UINT32  u4BackoffCRValue_B0[6];    // BBP: 0x8207067C~82070690
+
+    UINT32  u4BackoffCRValue_B1[6];    // BBP: 0x8207087C~82070890
+
+    UCHAR   ucPowerBoundEnable;
+    UINT8   ucPowerBoundValue;
+    UINT8   aucReserve7[2];
+
+    UINT32  u4PowerBoundCRValue;       // TMAC: 0x820F4080
+    UCHAR   ucThermalCompEnable;
+    INT8    ucThermalCompValue;
+    UINT8   aucReserve8[2];
 } EXT_EVENT_TXPOWER_INFO_T, *P_EXT_EVENT_TXPOWER_INFO_T;
 
 typedef struct _EXT_EVENT_TXPOWER_BACKUP_T {
@@ -5156,9 +5157,9 @@ typedef struct _EXT_EVENT_EPA_STATUS_T {
 
 typedef struct _CMD_ATE_MODE_CTRL_T
 {
-    UINT8    ucPowerCtrlFormatId;
-    BOOLEAN  fgATEModeEn;         // 1: Enable ATE mode  0: disable ATE mode
-    UINT8    ucReserved[2];
+    UINT8  ucPowerCtrlFormatId;
+    UCHAR  ucATEModeCtrl;       // 1: Enable ATE mode  0: disable ATE mode
+    UINT8  ucReserved[2];
 } CMD_ATE_MODE_CTRL_T, *P_CMD_ATE_MODE_CTRL_T;
 
 typedef struct _CMD_POWER_TPC_CTRL_T
@@ -5171,15 +5172,14 @@ typedef struct _CMD_POWER_TPC_CTRL_T
     UINT8  ucReserved[3];
 } CMD_POWER_TPC_CTRL_T, *P_CMD_POWER_TPC_CTRL_T;
 
-#ifdef LINK_TEST_SUPPORT
-typedef struct _CMD_CMW_TX_CSD_CTRL_T
+#ifdef NR_PD_DETECTION
+typedef struct _CMD_CMW_TX_CTRL_T
 {
     UINT8    ucCMWCtrlFormatId;
-    BOOLEAN  fgTxCsdConfigEn;
-	UINT8    ucDbdcBandIdx;
+    BOOLEAN  fgTxConfigEn;
     UINT8    ucBandIdx;
     UINT8    ucReserved;
-} CMD_CMW_TX_CSD_CTRL_T, *P_CMD_CMW_TX_CSD_CTRL_T;
+} CMD_CMW_TX_CTRL_T, *P_CMD_CMW_TX_CTRL_T;
 
 typedef struct _CMD_CMW_RX_CTRL_T
 {
@@ -5195,14 +5195,6 @@ typedef struct _CMD_CMW_TXPWR_CTRL_T
     UINT8    ucDbdcBandIdx;
     UINT8    ucBandIdx;
 } CMD_CMW_TXPWR_CTRL_T, *P_CMD_CMW_TXPWR_CTRL_T;
-
-typedef struct _CMD_CMW_TXPWR_UP_TABLE_CTRL_T
-{
-    UINT8    ucCMWCtrlFormatId;
-    UINT8    ucTxPwrUpCat;
-    UINT8    ucTxPwrUpValue[13];
-    UINT8    ucReserved;
-} CMD_CMW_TXPWR_UP_TABLE_CTRL_T, *P_CMD_CMW_TXPWR_UP_TABLE_CTRL_T;
 
 typedef struct _CMD_CMW_ACR_CTRL_T
 {
@@ -5232,7 +5224,7 @@ typedef struct _CMD_CMW_RCPI_MA_CTRL_T
     UINT8    ucMAParameter;
     UINT8    ucReserved[2];
 } CMD_CMW_RCPI_MA_CTRL_T, *P_CMD_CMW_RCPI_MA_CTRL_T;
-#endif /* LINK_TEST_SUPPORT */
+#endif /* NR_PD_DETECTION */
 
 #ifdef BCN_OFFLOAD_SUPPORT
 VOID RT28xx_UpdateBcnAndTimToMcu(
@@ -5401,23 +5393,19 @@ VOID CmdIORead32(struct _RTMP_ADAPTER *pAd, UINT32 Offset, UINT32 *Value);
 
 VOID MtCmdEfusBufferModeSet(struct _RTMP_ADAPTER *pAd, UINT8 EepromType);
 
-#ifdef FWDL_IN_PROBE
-VOID MtCmdEfusBufferModeSetNoRsp(struct _RTMP_ADAPTER *pAd, UINT8 EepromType);
-#endif
-
 NTSTATUS MtCmdPowerOnWiFiSys(struct _RTMP_ADAPTER *pAd);
 
 VOID CmdExtEventRsp(struct cmd_msg *msg, char *Data, UINT16 Len);
 
 INT32 MtCmdSendRaw(struct _RTMP_ADAPTER *pAd, UCHAR ExtendID, UCHAR *Input, INT len, UCHAR SetQuery);
 
+#if defined(CUSTOMER_RSG_FEATURE) || defined ( CUSTOMER_DCC_FEATURE)
+INT32 MtCmdGetWtblTxStat(struct _RTMP_ADAPTER *pAd, UINT32 u4Field, UINT8 ucWcid);
+#endif
 #ifdef CONFIG_ATE
 INT32 MtCmdGetTxPower(struct _RTMP_ADAPTER *pAd, UINT8 pwrType, UINT8 centerCh, UINT8 dbdc_idx, UINT8 Ch_Band, P_EXT_EVENT_ID_GET_TX_POWER_T prTxPwrResult);
 
 INT32 MtCmdSetTxPowerCtrl(struct _RTMP_ADAPTER *pAd, struct _ATE_TXPOWER TxPower);
-#ifdef ABSOLUTE_POWER_TEST
-INT32 MtCmdSetForceTxPowerCtrl(struct _RTMP_ADAPTER *pAd, UINT8 ucBandIdx, INT8 cTxPower, UINT8 ucPhyMode, UINT8 ucTxRate, UINT8 ucBW);
-#endif /* ABSOLUTE_POWER_TEST */
 #endif /* CONFIG_ATE */
 
 #ifdef MT_MAC
@@ -5622,17 +5610,13 @@ INT32 CmdETxBfStaRecRead(
 
 INT32 CmdTxBfTxPwrBackOff(
     struct _RTMP_ADAPTER *pAd,
-    UCHAR  ucBandIdx,
-    PCHAR  pacTxPwrFccBfOnCase,
-    PCHAR  pacTxPwrFccBfOffCase);
+    UCHAR  ucBand,
+    PUCHAR paucTxPwrFccBfOnCase,
+    PUCHAR paucTxPwrFccBfOffCase);
 
 INT32 CmdTxBfAwareCtrl(
     struct _RTMP_ADAPTER *pAd,
     BOOLEAN fgBfAwareCtrl);
-
-INT32 CmdTxBfeeHwCtrl(
-    struct _RTMP_ADAPTER *pAd,
-    BOOLEAN fgBfeeHwEn);
 
 INT32 CmdTxBfHwEnableStatusUpdate(
     struct _RTMP_ADAPTER *pAd,
@@ -5682,7 +5666,7 @@ INT32 MtCmdGetThermalSensorResult(struct _RTMP_ADAPTER *pAd, UINT8 ActionIdx, UI
 
 #ifdef RACTRL_FW_OFFLOAD_SUPPORT
 struct _EXT_EVENT_TX_STATISTIC_RESULT_T;
-INT32 MtCmdGetTxStatistic(struct _RTMP_ADAPTER *pAd, UINT32 u4Field, UINT8 ucBand, UINT8 ucWcid, struct _EXT_EVENT_TX_STATISTIC_RESULT_T *prTxStatResult);
+INT32 MtCmdGetTxStatistic(struct _RTMP_ADAPTER *pAd, UINT32 u4Field, UINT8 ucWcid, struct _EXT_EVENT_TX_STATISTIC_RESULT_T *prTxStatResult);
 #ifdef RACTRL_LIMIT_MAX_PHY_RATE
 INT32 MtCmdSetMaxPhyRate(struct _RTMP_ADAPTER *pAd, UINT16 u2MaxPhyRate);
 #endif /* RACTRL_LIMIT_MAX_PHY_RATE */
@@ -5722,8 +5706,7 @@ INT32 MtCmdRddCtrl(
     IN struct _RTMP_ADAPTER *pAd,
     IN UCHAR ucRddCtrl,
     IN UCHAR ucRddIdex,
-    IN UCHAR ucRddInSel,
-    IN UCHAR ucRddTpRatio);
+    IN UCHAR ucRddInSel);
 #endif /*MT_DFS_SUPPORT*/
 
 INT32 MtCmdGetEdca(struct _RTMP_ADAPTER *pAd,MT_EDCA_CTRL_T *pEdcaCtrl);
@@ -5787,7 +5770,7 @@ INT32 MtCmdCr4Query(struct _RTMP_ADAPTER *pAd, UINT32 arg0, UINT32 arg1, UINT32 
 INT32 MtCmdCr4Set(struct _RTMP_ADAPTER *pAd, UINT32 arg0, UINT32 arg1, UINT32 arg2);
 INT32 MtCmdCr4Capability(struct _RTMP_ADAPTER *pAd, UINT32 option);
 INT32 MtCmdCr4Debug(struct _RTMP_ADAPTER *pAd, UINT32 option);
-INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,struct _MT_SWITCH_CHANNEL_CFG SwChCfg);
+INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,struct _MT_SWITCH_CHANNEL_CFG *SwChCfg);
 INT32 MtCmdCr4QueryBssAcQPktNum(
     struct _RTMP_ADAPTER *pAd, 
     UINT32 u4bssbitmap);
@@ -5813,11 +5796,10 @@ VOID MtBfBackOffUnloadTable(struct _RTMP_ADAPTER *pAd);
 
 INT32 MtCmdTxPowerSKUCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgTxPowerSKUEn, UCHAR BandIdx);
 INT32 MtCmdTxPowerPercentCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgTxPowerPercentEn, UCHAR BandIdx);
-INT32 MtCmdTxPowerDropCtrl(struct _RTMP_ADAPTER *pAd, UINT8 ucPowerDrop, UCHAR BandIdx);
 INT32 MtCmdTxBfBackoffCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgTxBFBackoffEn, UCHAR BandIdx);
-INT32 MtCmdThermoCompCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgThermoCompEn, UCHAR BandIdx);
-INT32 MtCmdTxPwrRfTxAntCtrl(struct _RTMP_ADAPTER *pAd, UINT8 ucTxAntIdx);
-INT32 MtCmdTxPwrShowInfo(struct _RTMP_ADAPTER *pAd, UCHAR TxPowerInfoEn, UINT8 BandIdx);
+INT32 MtCmdTxPwrUppBoundCtrl(struct _RTMP_ADAPTER *pAd, UCHAR PwrUppBoundCtrl);
+INT32 MtCmdTxPwrRfTxAntCtrl(struct _RTMP_ADAPTER *pAd, UCHAR TxAntCtrlEn, UCHAR WIFI_En_0, UCHAR WIFI_En_1, UCHAR WIFI_En_2, UCHAR WIFI_En_3);
+INT32 MtCmdTxPwrShowInfo(struct _RTMP_ADAPTER *pAd, UCHAR TxPowerInfoEn);
 INT32 MtCmdTOAECalCtrl(struct _RTMP_ADAPTER *pAd, UCHAR TOAECtrl);
 INT32 MtCmdEDCCACtrl(struct _RTMP_ADAPTER *pAd, UCHAR BandIdx, UCHAR EDCCACtrl);
 INT32 MtCmdMUPowerCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN MUPowerForce, UCHAR MUPowerCtrl, UCHAR BandIdx);
@@ -5829,20 +5811,15 @@ INT32 MtTSSICompBackup(struct _RTMP_ADAPTER *pAd, BOOLEAN fgEnable);
 INT32 MtTSSICompCfg(struct _RTMP_ADAPTER *pAd);
 INT32 MtCmdTemperatureCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgManualMode, CHAR cTemperature);
 
-#ifdef TX_POWER_CONTROL_SUPPORT
-INT32 MtCmdTxPwrUpCtrl(struct _RTMP_ADAPTER *pAd, INT8 ucBandIdx, CHAR cPwrUpCat, CHAR cPwrUpValue[POWER_UP_CATEGORY_RATE_NUM]);
-#endif /* TX_POWER_CONTROL_SUPPORT */
-
-#ifdef LINK_TEST_SUPPORT
-INT32 MtCmdLinkTestTxCsdCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgTxCsdConfigEn, UINT8 ucDbdcBandIdx, UINT8 ucBandIdx);
+#ifdef NR_PD_DETECTION
+INT32 MtCmdLinkTestTxCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgTxConfigEn, UINT8 ucBandIdx);
 INT32 MtCmdLinkTestRxCtrl(struct _RTMP_ADAPTER *pAd, UINT8 ucRxAntIdx);
 INT32 MtCmdLinkTestTxPwrCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgTxPwrConfigEn, UINT8 ucDbdcBandIdx, UINT8 ucBandIdx);
-INT32 MtCmdLinkTestTxPwrUpTblCtrl(struct _RTMP_ADAPTER *pAd, UINT8 ucTxPwrUpCat, PUINT8 pucTxPwrUpValue);
 INT32 MtCmdLinkTestACRCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgACRConfigEn, UINT8 ucDbdcBandIdx);
 INT32 MtCmdLinkTestRcpiCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgRCPIConfigEn);
 INT32 MtCmdLinkTestSeIdxCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgSeIdxConfigEn);
 INT32 MtCmdLinkTestRcpiMACtrl(struct _RTMP_ADAPTER *pAd, UINT8 ucMAParameter);
-#endif /* LINK_TEST_SUPPORT */
+#endif /* NR_PD_DETECTION */
 
 #ifdef TPC_SUPPORT
 INT32 MtCmdTpcFeatureCtrl(struct _RTMP_ADAPTER *pAd, INT8 TpcPowerValue, UINT8 BandIdx, UINT8 CentralChannel);

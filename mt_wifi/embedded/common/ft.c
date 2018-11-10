@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -23,6 +24,7 @@
     --------    ----------    ----------------------------------------------
     Fonchi Wu   12-19-2008    
  */
+#endif /* MTK_LICENSE */
 #ifdef DOT11R_FT_SUPPORT
 
 #include "rt_config.h"
@@ -168,7 +170,7 @@ VOID FT_EnqueueAuthReply(
 	}
 
 	/* Calculate MIC in authentication-ACK frame */	
-	if (pFtIeInfo->MICCtr.field.IECnt)
+	if (pFtIeInfo && pFtIeInfo->MICCtr.field.IECnt)
 	{
 		PMAC_TABLE_ENTRY pEntry;
 		
@@ -247,6 +249,8 @@ static VOID FT_ReqActionParse(
 					pFtInfo->RicInfo.Len = ((UCHAR*)Ptr + Len)
 											- (UCHAR*)eid_ptr + 1;
 				}
+				break;
+
 			case IE_FT_RIC_DESCRIPTOR:
 				if ((pFtInfo->RicInfo.RicIEsLen + eid_ptr->Len + 2) < MAX_RICIES_LEN)
 				{
@@ -391,15 +395,8 @@ Note:
 	{
 		pFtCfg = &pAd->ApCfg.MBSSID[apidx].wdev.FtCfg;
 		pFtCfg->FtCapFlag.Dot11rFtEnable = FALSE; /* Intel TGn TestBed STA cannot connect to AP if Beacon/Probe has 11R IE in security mode. @20151211 */
-#ifdef WH_EZ_SETUP 
-		// Keep false by default as applicable for MAN,
-		// if required for other project, can be enabled by command/dat file.
-		pFtCfg->FtCapFlag.FtOverDs = FALSE;
-		pFtCfg->FtCapFlag.RsrReqCap = FALSE;
-#else
 		pFtCfg->FtCapFlag.FtOverDs = TRUE;
 		pFtCfg->FtCapFlag.RsrReqCap = TRUE;
-#endif
 
 		FT_SET_MDID(pFtCfg->FtMdId, FT_DEFAULT_MDID);
 
@@ -1342,14 +1339,24 @@ VOID FT_RrbHandler(
 	/* enqueue it into FT action state machine. */
 	if (pEntry)
 	{
+#ifdef CUSTOMER_DCC_FEATURE
+		REPORT_MGMT_FRAME_TO_MLME(pAd, Wcid, pOutBuffer, FrameLen, 
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, OPMODE_AP, wdev, pEntry->HTPhyMode.field.MODE);
+#else	
 		REPORT_MGMT_FRAME_TO_MLME(pAd, Wcid, pOutBuffer, FrameLen, 
 			0, 0, 0, 0, 0, 0, OPMODE_AP, wdev, pEntry->HTPhyMode.field.MODE);
+#endif			
 	}
 	else
 	{
 		/* Report basic phymode if pEntry = NULL  */
+#ifdef CUSTOMER_DCC_FEATURE
+		REPORT_MGMT_FRAME_TO_MLME(pAd, Wcid, pOutBuffer, FrameLen, 
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, OPMODE_AP, wdev, WMODE_CAP_5G(wdev->PhyMode)? MODE_OFDM : MODE_CCK);
+#else		
 		REPORT_MGMT_FRAME_TO_MLME(pAd, Wcid, pOutBuffer, FrameLen, 
 			0, 0, 0, 0, 0, 0, OPMODE_AP, wdev, WMODE_CAP_5G(wdev->PhyMode)? MODE_OFDM : MODE_CCK);
+#endif	
 	}
 
 	if (pOutBuffer)
@@ -1445,10 +1452,9 @@ VOID FT_ConstructGTKSubIe(
 	UINT	e_key_len;
 	UCHAR	apidx;
 	UCHAR	key_idx;
-	UCHAR	cipher_alg;
+	UINT32	cipher_alg;
 	PUINT8	gtk;
 	ULONG	TmpLen = 0;
-	UINT8	remainder;
 	FT_GTK_KEY_INFO KeyInfo;
 	UCHAR 			rsc[8];
 	struct wifi_dev *wdev = pEntry->wdev;
@@ -1475,16 +1481,6 @@ VOID FT_ConstructGTKSubIe(
 		is less than 16 octets or if it is not a multiple of 8. */
 	NdisMoveMemory(key_buf, gtk, gtk_len);
 	key_len = gtk_len;
-	if ((remainder = gtk_len & 0x07) != 0) {
-		INT	i;
-	
-		pad_len = (8 - remainder);
-		key_buf[gtk_len] = 0xDD;
-		for (i = 1; i < pad_len; i++)
-			key_buf[gtk_len + i] = 0;
-
-		key_len += pad_len;
-	}
 	if (key_len < 16) {
 		INT	i;
 		
@@ -1648,105 +1644,11 @@ UINT16	FT_AuthReqRsnValidation(
 	/* Extract the PMK-R0-Name from the received RSNIE */
 	pPmkR0Name = WPA_ExtractSuiteFromRSNIE(pFtInfo_in->RSN_IE, 
 		pFtInfo_in->RSNIE_Len, PMKID_LIST, &count);
-	if (!pPmkR0Name)
-	{
-		/* 
-			reject the Authentication Request 
-			with status code 53 ("Invalid PMKID") 
-		*/
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
-			("%s : The peer PMKID is emtpy\n", __FUNCTION__));				
-		return FT_STATUS_CODE_INVALID_PMKID;
-	}
-
+	if (pPmkR0Name) {
 #ifdef FT_RSN_DEBUG
-	hex_dump("FT PMK-R0-NAME", pPmkR0Name, count * LEN_PMK_NAME);
+		hex_dump("FT PMK-R0-NAME", pPmkR0Name, count * LEN_PMK_NAME);
 #endif /* FT_RSN_DEBUG */
 
-#ifdef WH_EZ_SETUP
-	if (IS_EZ_SETUP_ENABLED(&pAd->ApCfg.MBSSID[pEntry->func_tb_idx].wdev) || ez_is_triband()){
-
-		os_move_mem(&sec_config->PMK, &sec_group->PMK,LEN_PMK);
-		
-		FT_DerivePMKR0(sec_config->PMK, LEN_PMK,
-										 (PUINT8)pAd->ApCfg.MBSSID[pEntry->func_tb_idx].Ssid,
-										 pAd->ApCfg.MBSSID[pEntry->func_tb_idx].SsidLen,
-										 pFtCfg->FtMdId,
-										 pFtInfo_in->FtIeInfo.R0khId,	// use rokhid passed by sta
-										 pFtInfo_in->FtIeInfo.R0khIdLen,
-										 pEntry->Addr,
-										 pEntry->FT_PMK_R0,
-										 pEntry->FT_PMK_R0_NAME);
-
-        FT_DerivePMKR1(pEntry->FT_PMK_R0,
-                                        pEntry->FT_PMK_R0_NAME,
-                                        wdev->bssid, /* R1KHID*/
-                                        pEntry->Addr, 					/* S1KHID*/
-                                        pEntry->FT_PMK_R1,
-                                        pEntry->FT_PMK_R1_NAME);			
-
-
-		/* Extract the AKM suite from the received RSNIE */
-		pAkmSuite = WPA_ExtractSuiteFromRSNIE(pFtInfo_in->RSN_IE, 
-			pFtInfo_in->RSNIE_Len, AKM_SUITE, &count);
-		if(pAkmSuite == NULL){ // add check for expected value
-			/*	
-				It doesn't a negotiated AKM of Fast BSS Transition, 
-				the AP shall reject the Authentication Request with 
-				status code 43 ("Invalid AKMP"). 
-			*/
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
-				("%s : The AKM is invalid\n", __FUNCTION__));
-			return MLME_INVALID_AKMP;
-		}
-		
-		/* Extract the pairwise cipher suite from the received RSNIE */
-		pCipher = WPA_ExtractSuiteFromRSNIE(pFtInfo_in->RSN_IE, 
-			pFtInfo_in->RSNIE_Len, PAIRWISE_SUITE, &count);
-		if(pCipher == NULL){ // add check for expected value
-			/*	
-			If the non-AP STA selects a pairwise cipher suite in the RSNIE
-			that is different than the ones used in the Initial Mobility 
-			Domain association, then the AP shall reject the Authentication 
-			Request with status code 19 ("Invalid Pair-wise Cipher"). 
-			*/
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
-				("%s : The pairwise-cipher is invalid\n", __FUNCTION__));				
-			return MLME_INVALID_PAIRWISE_CIPHER;
-		}
-
-		/* Delete previous entry */
-		pR1hkEntry = FT_R1khEntryTabLookup(pAd, pEntry->FT_PMK_R1_NAME);
-		if (pR1hkEntry != NULL)
-		{
-			FT_R1khEntryDelete(pAd, pR1hkEntry);
-		}
-		/* Update R1KH table */
-		if (pCipher != NULL)
-			NdisMoveMemory(pEntry->FT_UCipher, pCipher, 4);
-
-		if (pAkmSuite != NULL)
-			NdisMoveMemory(pEntry->FT_Akm, pAkmSuite, 4);
-
-		FT_R1khEntryInsert(pAd,
-										pEntry->FT_PMK_R0_NAME,
-										pEntry->FT_PMK_R1_NAME,
-										pEntry->FT_PMK_R1,
-										pCipher,
-										pAkmSuite,
-										(pAd->ApCfg.MBSSID[pEntry->func_tb_idx].PMKCachePeriod/OS_HZ),
-										20,
-										pFtInfo_in->FtIeInfo.R0khId,
-										pFtInfo_in->FtIeInfo.R0khIdLen,
-										pEntry->Addr);
-
-
-		pR1hkEntry = FT_R1khEntryTabLookup(pAd, pEntry->FT_PMK_R1_NAME);
-
-	}
-	else
-#endif
-	{
 		/*	
 			The R1KH of the target AP uses the value of PMKR0Name 
 			and other information in the frame 
@@ -1803,57 +1705,16 @@ UINT16	FT_AuthReqRsnValidation(
 			hex_dump("Own PMKR0Name", 
 				pR1hkEntry->PmkR0Name, LEN_PMK_NAME);
 			return FT_STATUS_CODE_INVALID_PMKID;
-		}
-
-		/* Extract the AKM suite from the received RSNIE */
-		pAkmSuite = WPA_ExtractSuiteFromRSNIE(pFtInfo_in->RSN_IE, 
-			pFtInfo_in->RSNIE_Len, AKM_SUITE, &count);
-		if ((pAkmSuite == NULL) ||
-		   (RTMPEqualMemory(pAkmSuite, pR1hkEntry->AkmSuite, 4) == FALSE)) {
-			/*	
-				It doesn't a negotiated AKM of Fast BSS Transition, 
-				the AP shall reject the Authentication Request with 
-				status code 43 ("Invalid AKMP"). 
-			*/
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
-				("%s : The AKM is invalid\n", __FUNCTION__));
-			return MLME_INVALID_AKMP;
-		}
-		
-		/* Extract the pairwise cipher suite from the received RSNIE */
-		pCipher = WPA_ExtractSuiteFromRSNIE(pFtInfo_in->RSN_IE, 
-			pFtInfo_in->RSNIE_Len, PAIRWISE_SUITE, &count);
-		if ((pCipher == NULL) ||
-		   (RTMPEqualMemory(pCipher, pR1hkEntry->PairwisChipher, 4) == FALSE)) {
-			/*	
-			If the non-AP STA selects a pairwise cipher suite in the RSNIE
-			that is different than the ones used in the Initial Mobility 
-			Domain association, then the AP shall reject the Authentication 
-			Request with status code 19 ("Invalid Pair-wise Cipher"). 
-			*/
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
-				("%s : The pairwise-cipher is invalid\n", __FUNCTION__));				
-			return MLME_INVALID_PAIRWISE_CIPHER;
-		}
-		
-		/* Check the validity of R0KHID */			
-		if ((pFtInfo_in->FtIeInfo.R0khIdLen != pR1hkEntry->R0khIdLen) ||
-			(RTMPEqualMemory(pFtInfo_in->FtIeInfo.R0khId, 
-					 pR1hkEntry->R0khId, 
-					 pR1hkEntry->R0khIdLen) == FALSE)) {								
-			/*	
-				If the FTIE in the FT Request frame contains 
-				an invalid R0KH-ID, the AP shall reject the FT Request 
-				with status code 55 ("Invalid FTIE"). 
-			*/
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
-			("%s : The FTIE is invalid\n", __FUNCTION__));				
-			return FT_STATUS_CODE_INVALID_FTIE;
-		}
-
-		/* Get PMK-R1 from R1KH Table */
-		NdisMoveMemory(pEntry->FT_PMK_R1, pR1hkEntry->PmkR1Key, LEN_PMK);
-
+		}																
+	}
+	else {
+		/* 
+			reject the Authentication Request 
+			with status code 53 ("Invalid PMKID") 
+		*/
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
+			("%s : The peer PMKID is emtpy\n", __FUNCTION__));				
+		return FT_STATUS_CODE_INVALID_PMKID;
 	}
 
 	if (pR1hkEntry == NULL) {
@@ -1865,6 +1726,55 @@ UINT16	FT_AuthReqRsnValidation(
 	/* Update the Reassocation Deadline */
 	pEntry->AssocDeadLine = pR1hkEntry->RassocDeadline;
 		
+	/* Extract the AKM suite from the received RSNIE */
+	pAkmSuite = WPA_ExtractSuiteFromRSNIE(pFtInfo_in->RSN_IE, 
+		pFtInfo_in->RSNIE_Len, AKM_SUITE, &count);
+	if ((pAkmSuite == NULL) ||
+	   (RTMPEqualMemory(pAkmSuite, pR1hkEntry->AkmSuite, 4) == FALSE)) {
+		/*	
+			It doesn't a negotiated AKM of Fast BSS Transition, 
+			the AP shall reject the Authentication Request with 
+			status code 43 ("Invalid AKMP"). 
+		*/
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
+			("%s : The AKM is invalid\n", __FUNCTION__));
+		return MLME_INVALID_AKMP;
+	}
+
+	/* Extract the pairwise cipher suite from the received RSNIE */
+	pCipher = WPA_ExtractSuiteFromRSNIE(pFtInfo_in->RSN_IE, 
+		pFtInfo_in->RSNIE_Len, PAIRWISE_SUITE, &count);
+	if ((pCipher == NULL) ||
+	   (RTMPEqualMemory(pCipher, pR1hkEntry->PairwisChipher, 4) == FALSE)) {
+		/* 	
+		If the non-AP STA selects a pairwise cipher suite in the RSNIE
+		that is different than the ones used in the Initial Mobility 
+		Domain association, then the AP shall reject the Authentication 
+		Request with status code 19 ("Invalid Pair-wise Cipher"). 
+		*/
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
+			("%s : The pairwise-cipher is invalid\n", __FUNCTION__));				
+		return MLME_INVALID_PAIRWISE_CIPHER;
+	}
+
+	/* Check the validity of R0KHID */			
+	if ((pFtInfo_in->FtIeInfo.R0khIdLen != pR1hkEntry->R0khIdLen) ||
+		(RTMPEqualMemory(pFtInfo_in->FtIeInfo.R0khId, 
+				 pR1hkEntry->R0khId, 
+				 pR1hkEntry->R0khIdLen) == FALSE)) {								
+		/*	
+			If the FTIE in the FT Request frame contains 
+			an invalid R0KH-ID, the AP shall reject the FT Request 
+			with status code 55 ("Invalid FTIE"). 
+		*/
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_ERROR, 
+		("%s : The FTIE is invalid\n", __FUNCTION__));				
+		return FT_STATUS_CODE_INVALID_FTIE;
+	}
+		
+	/* Get PMK-R1 from R1KH Table */
+	NdisMoveMemory(pEntry->FT_PMK_R1, pR1hkEntry->PmkR1Key, LEN_PMK);
+
 	/* Get SNonce from Auth-req */
 	NdisMoveMemory(handshake->SNonce, pFtInfo_in->FtIeInfo.SNonce, LEN_NONCE);
 
@@ -2994,10 +2904,6 @@ INT Set_FT_Mdid(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 
 	pFtCfg = &pAd->ApCfg.MBSSID[pObj->ioctl_if].wdev.FtCfg;
 	NdisMoveMemory(pFtCfg->FtMdId, arg, FT_MDID_LEN);
-
-//#ifdef WH_EZ_SETUP
-//	Dynamic update of MdId in ez security Info not supported currently
-//#endif
 
 	return TRUE;
 }

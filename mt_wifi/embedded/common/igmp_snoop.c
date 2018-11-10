@@ -503,7 +503,7 @@ VOID IGMPSnooping(
 	IN PUCHAR pDstMacAddr,
 	IN PUCHAR pSrcMacAddr,
 	IN PUCHAR pIpHeader,
-	IN MAC_TABLE_ENTRY *pEntry,
+	IN struct wifi_dev *wdev,
 	UINT8 Wcid
 	)
 {
@@ -519,18 +519,13 @@ VOID IGMPSnooping(
 	PUCHAR pGroupIpAddr;
 	UCHAR GroupMacAddr[6];
 	PUCHAR pGroupMacAddr = (PUCHAR)&GroupMacAddr;
-	UINT8 Type = MCAT_FILTER_DYNAMIC;
-	struct wifi_dev *wdev = pEntry->wdev;
 
 	if(isIgmpPkt(pDstMacAddr, pIpHeader))
 	{
 		IpHeaderLen = (*(pIpHeader + 2) & 0x0f) * 4;
 		pIgmpHeader = pIpHeader + 2 + IpHeaderLen;
 		IgmpVerType = (UCHAR)(*(pIgmpHeader));
-#ifdef MWDS
-		if(pEntry && IS_MWDS_OPMODE_AP(pEntry))
-			Type |= MCAT_FILTER_MWDS_CLI;	// set info about message on MWDS link
-#endif
+
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("IGMP type=%0x\n", IgmpVerType));
 
 		switch(IgmpVerType)
@@ -539,22 +534,18 @@ VOID IGMPSnooping(
 		case IGMP_V2_MEMBERSHIP_REPORT: /* IGMP version 2 membership report. */
 			pGroupIpAddr = (PUCHAR)(pIgmpHeader + 4);
 				ConvertMulticastIP2MAC(pGroupIpAddr, (PUCHAR *)&pGroupMacAddr, ETH_P_IP);
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("EntryInsert IGMP Group=%02x:%02x:%02x:%02x:%02x:%02x\n",
+			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("IGMP Group=%02x:%02x:%02x:%02x:%02x:%02x\n",
 				GroupMacAddr[0], GroupMacAddr[1], GroupMacAddr[2], GroupMacAddr[3], GroupMacAddr[4], GroupMacAddr[5]));
 			
-			AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, Type, pSrcMacAddr, wdev->if_dev, Wcid);
-			
+				AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, MCAT_FILTER_DYNAMIC, pSrcMacAddr, wdev->if_dev, Wcid);
 			break;
 
 		case IGMP_LEAVE_GROUP: /* IGMP version 1 and version 2 leave group. */
 			pGroupIpAddr = (PUCHAR)(pIgmpHeader + 4);
 				ConvertMulticastIP2MAC(pGroupIpAddr, (PUCHAR *)&pGroupMacAddr, ETH_P_IP);
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("EntryDelete IGMP Group=%02x:%02x:%02x:%02x:%02x:%02x\n",
+			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("IGMP Group=%02x:%02x:%02x:%02x:%02x:%02x\n",
 				GroupMacAddr[0], GroupMacAddr[1], GroupMacAddr[2], GroupMacAddr[3], GroupMacAddr[4], GroupMacAddr[5]));
-#ifdef MWDS
-			if(pEntry && !IS_MWDS_OPMODE_AP(pEntry)) // skip entry delete for member on MWDS Cli, rely on perioic membership query & aging activity for entry deletion
-#endif
-				AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
+			AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
 			break;
 
 		case IGMP_V3_MEMBERSHIP_REPORT: /* IGMP version 3 membership report. */
@@ -579,7 +570,7 @@ VOID IGMPSnooping(
 						|| (GroupType == CHANGE_TO_EXCLUDE_MODE)
 						|| (GroupType == ALLOW_NEW_SOURCES))
 					{
-						AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, Type, pSrcMacAddr, wdev->if_dev, Wcid);	
+						AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, MCAT_FILTER_DYNAMIC, pSrcMacAddr, wdev->if_dev, Wcid);
 						break;
 					}
 
@@ -587,15 +578,11 @@ VOID IGMPSnooping(
 						|| (GroupType == MODE_IS_INCLUDE)
 						|| (GroupType == BLOCK_OLD_SOURCES))
 					{
-						if(numOfSources == 0){
-#ifdef MWDS
-								if(pEntry && !IS_MWDS_OPMODE_AP(pEntry)) // skip entry delete for member on MWDS Cli, rely on perioic membership query & aging activity for entry deletion
-#endif
-									AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
-						}
+						if(numOfSources == 0)
+							AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
 						else
-							AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, Type, pSrcMacAddr, wdev->if_dev, Wcid);
-						break;	
+							AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, MCAT_FILTER_DYNAMIC, pSrcMacAddr, wdev->if_dev, Wcid);
+						break;
 					}
 				} while(FALSE);
 				pGroup += (8 + (numOfSources * 4) + AuxDataLen);
@@ -611,36 +598,6 @@ VOID IGMPSnooping(
 	return;
 }
 
-#ifdef MWDS
-/* Indicate if Specific Pkt is an IGMP query message*/
-BOOLEAN isIGMPquery(
-	IN PRTMP_ADAPTER pAd,
-	IN PUCHAR pDstMacAddr,
-	IN PUCHAR pIpHeader)
-{
-	INT IpHeaderLen;
-	UCHAR IgmpVerType;
-	PUCHAR pIgmpHeader;
-	BOOLEAN isIGMPquery = FALSE;
-
-	if(isIgmpPkt(pDstMacAddr, pIpHeader))
-	{
-		IpHeaderLen = (*(pIpHeader + 2) & 0x0f) * 4;
-		pIgmpHeader = pIpHeader + 2 + IpHeaderLen;
-		IgmpVerType = (UCHAR)(*(pIgmpHeader));
-
-		switch(IgmpVerType)
-		{
-			case IGMP_MEMBERSHIP_QUERY:
-				MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_INFO, ("isIGMPquery-> IGMP Type=0x%x IGMP_MEMBERSHIP_QUERY\n", IgmpVerType));
-				isIGMPquery = TRUE;
-				break;
-		}
-	}
-
-	return isIGMPquery;
-}
-#endif
 
 static BOOLEAN isIgmpMacAddr(
 	IN PUCHAR pMacAddr)
@@ -915,15 +872,14 @@ INT Set_IgmpSn_AddEntry_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 		if(bGroupId == 1)
 			COPY_MAC_ADDR(GroupId, Addr);
 
-		pEntry = MacTableLookup(pAd, Addr);
+		if (bGroupId == 0) {
+			pEntry = MacTableLookup(pAd, Addr);
+		}
 		
 		/* Group-Id must be a MCAST address. */
 		if((bGroupId == 1) && IS_MULTICAST_MAC_ADDR(Addr))
 		{
-			if (pEntry)
-				AsicMcastEntryInsert(pAd, GroupId, pAd->ApCfg.MBSSID[ifIndex].wdev.bss_info_argument.ucBssIndex, MCAT_FILTER_STATIC, NULL, pDev, pEntry->wcid);
-			else	
-				AsicMcastEntryInsert(pAd, GroupId, pAd->ApCfg.MBSSID[ifIndex].wdev.bss_info_argument.ucBssIndex, MCAT_FILTER_STATIC, NULL, pDev, 0);
+			AsicMcastEntryInsert(pAd, GroupId, pAd->ApCfg.MBSSID[ifIndex].wdev.bss_info_argument.ucBssIndex, MCAT_FILTER_STATIC, NULL, pDev, 0);
 		
 		}
 		/* Group-Member must be a UCAST address. */
@@ -1018,10 +974,12 @@ INT Set_IgmpSn_DelEntry_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 
 		pEntry = MacTableLookup(pAd, Addr);
 		
-		if(bGroupId == 1)
+		if(bGroupId == 1) {
 			COPY_MAC_ADDR(GroupId, Addr);
-		else
+		} else {
+			pEntry = MacTableLookup(pAd, Addr);
 			memberCnt++;
+		}
 
 		if (memberCnt > 0) {
 			if (pEntry)
@@ -1078,6 +1036,28 @@ void rtmp_read_igmp_snoop_from_file(
 	}
 }
 
+#ifdef VENDOR_FEATURE6_SUPPORT
+static inline BOOLEAN IsExcludedMldMsg(
+	IN UINT8 MsgType) 
+{
+	BOOLEAN result = FALSE;
+	switch(MsgType)
+	{
+		case ICMPV6_MSG_TYPE_ROUTER_SOLICITATION:
+		case ICMPV6_MSG_TYPE_ROUTER_ADVERTISEMENT:
+		case ICMPV6_MSG_TYPE_NEIGHBOR_SOLICITATION:
+		case ICMPV6_MSG_TYPE_NEIGHBOR_ADVERTISEMENT:
+		case ICMPV6_MSG_TYPE_REDIRECT:
+			result = TRUE;
+			break;
+		default:
+			result = FALSE;
+			break;
+	}
+	return result;
+}
+#endif
+
 NDIS_STATUS IgmpPktInfoQuery(
 	IN PRTMP_ADAPTER pAd,
 	IN PUCHAR pSrcBufVA,
@@ -1090,7 +1070,26 @@ NDIS_STATUS IgmpPktInfoQuery(
 	{
 		BOOLEAN IgmpMldPkt = FALSE;
 		PUCHAR pIpHeader = pSrcBufVA + 12;
-
+#ifdef VENDOR_FEATURE6_SUPPORT
+		UINT16 TypeLen;
+		TypeLen = (pSrcBufVA[12] << 8) | pSrcBufVA[13];
+		if(TypeLen == ETH_TYPE_VLAN)
+			pIpHeader = pSrcBufVA + 16;
+		if(ntohs(*((UINT16 *)(pIpHeader))) == ETH_P_IPV6)
+		{
+			PRT_IPV6_HDR pIpv6Hdr = (PRT_IPV6_HDR)(pIpHeader + 2);
+			UINT32 offset = IPV6_HDR_LEN;
+			UINT8 nextProtocol = pIpv6Hdr->nextHdr;		
+			if(nextProtocol == IPV6_NEXT_HEADER_ICMPV6)
+			{
+				PRT_ICMPV6_HDR pICMPv6Hdr = (PRT_ICMPV6_HDR)(pIpHeader + 2 + offset);
+				if (IsExcludedMldMsg(pICMPv6Hdr->type) == TRUE)
+				{				
+					return NDIS_STATUS_SUCCESS;
+				}
+			}
+		}
+#endif
 		if(ntohs(*((UINT16 *)(pIpHeader))) == ETH_P_IPV6)
 			IgmpMldPkt = IPv6MulticastFilterExcluded(pSrcBufVA, pIpHeader);
 		else
@@ -1365,7 +1364,7 @@ NDIS_STATUS IgmpPktClone(
 				if (pMacEntry && IS_ENTRY_CLIENT(pMacEntry)
 					&& get_netdev_from_bssid(pAd, pMacEntry->wdev->wdev_idx) == pNetDev)
 				{
-					pMemberAddr = pMacEntry->Addr;
+					//pMemberAddr = pMacEntry->Addr;
 					bContinue = TRUE;
 					break;
 				}
@@ -1373,8 +1372,6 @@ NDIS_STATUS IgmpPktClone(
 			if (MacEntryIdx == MAX_NUMBER_OF_MAC)
 				bContinue = FALSE;
 		}
-		else
-			bContinue = FALSE;
 	}
 
 	return NDIS_STATUS_SUCCESS;
@@ -1395,7 +1392,6 @@ static inline BOOLEAN IsSupportedMldMsg(
 		case MLD_V1_LISTENER_REPORT:
 		case MLD_V1_LISTENER_DONE:
 		case MLD_V2_LISTERNER_REPORT:
-		case MLD_LISTENER_QUERY:
 			result = TRUE;
 			break;
 		default:
@@ -1597,7 +1593,7 @@ VOID MLDSnooping(
 	IN PUCHAR pDstMacAddr,
 	IN PUCHAR pSrcMacAddr,
 	IN PUCHAR pIpHeader,
-	IN MAC_TABLE_ENTRY *pEntry,
+	IN struct wifi_dev *wdev,
 	UINT8 Wcid)
 {
 	INT i;
@@ -1612,38 +1608,29 @@ VOID MLDSnooping(
 
 	UINT8 MldType;
 	PUCHAR pMldHeader;
-	UINT8 Type = MCAT_FILTER_DYNAMIC;
-	struct wifi_dev *wdev = pEntry->wdev;
 
 	if(isMldPkt(pDstMacAddr, pIpHeader, &MldType, &pMldHeader) == TRUE)
 	{
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("MLD type=%0x\n", MldType));
-#ifdef MWDS
-		if(pEntry && IS_MWDS_OPMODE_AP(pEntry))
-			Type |= MCAT_FILTER_MWDS_CLI;	// set info about message on MWDS link
-#endif
+
 		switch(MldType)
 		{
 			case MLD_V1_LISTENER_REPORT:
 				/* skip Type(1 Byte), code(1 Byte), checksum(2 Bytes), Maximum Rsp Delay(2 Bytes), Reserve(2 Bytes). */
 				pGroupIpAddr = (PUCHAR)(pMldHeader + 8);
 				ConvertMulticastIP2MAC(pGroupIpAddr, (PUCHAR *)&pGroupMacAddr, ETH_P_IPV6);
-				MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("EntryInsert Group Id=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("Group Id=%02x:%02x:%02x:%02x:%02x:%02x\n",
 						GroupMacAddr[0], GroupMacAddr[1], GroupMacAddr[2], GroupMacAddr[3], GroupMacAddr[4], GroupMacAddr[5]));
-				AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, Type, pSrcMacAddr, wdev->if_dev, Wcid);
+				AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, MCAT_FILTER_DYNAMIC, pSrcMacAddr, wdev->if_dev, Wcid);
 				break;
 
 			case MLD_V1_LISTENER_DONE:
 				/* skip Type(1 Byte), code(1 Byte), checksum(2 Bytes), Maximum Rsp Delay(2 Bytes), Reserve(2 Bytes). */
 				pGroupIpAddr = (PUCHAR)(pMldHeader + 8);
 				ConvertMulticastIP2MAC(pGroupIpAddr, (PUCHAR *)&pGroupMacAddr, ETH_P_IPV6);
-				MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("EntryDelete Group Id=%02x:%02x:%02x:%02x:%02x:%02x\n",
+				MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_TRACE, ("Group Id=%02x:%02x:%02x:%02x:%02x:%02x\n",
 						GroupMacAddr[0], GroupMacAddr[1], GroupMacAddr[2], GroupMacAddr[3], GroupMacAddr[4], GroupMacAddr[5]));
-#ifdef MWDS
-				if(pEntry && !IS_MWDS_OPMODE_AP(pEntry)) // skip entry delete for member on MWDS Cli, rely on perioic membership query & aging activity for entry deletion
-#endif
-					AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
-			
+				AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
 				break;
 
 			case MLD_V2_LISTERNER_REPORT: /* IGMP version 3 membership report. */
@@ -1668,23 +1655,18 @@ VOID MLDSnooping(
 							|| (GroupType == CHANGE_TO_EXCLUDE_MODE)
 							|| (GroupType == ALLOW_NEW_SOURCES))
 						{
-							AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, Type, pSrcMacAddr, wdev->if_dev, Wcid);
-							break;	
+							AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, MCAT_FILTER_DYNAMIC, pSrcMacAddr, wdev->if_dev, Wcid);
+							break;
 						}
-
 
 						if ((GroupType == CHANGE_TO_INCLUDE_MODE)
 							|| (GroupType == MODE_IS_INCLUDE)
 							|| (GroupType == BLOCK_OLD_SOURCES))
 						{
-							if(numOfSources == 0){
-#ifdef MWDS
-								if(pEntry && !IS_MWDS_OPMODE_AP(pEntry)) // skip entry delete for member on MWDS Cli, rely on perioic membership query & aging activity for entry deletion
-#endif
-									AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
-							}
+							if(numOfSources == 0)
+								AsicMcastEntryDelete(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, pSrcMacAddr, wdev->if_dev, Wcid);
 							else
-									AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, Type, pSrcMacAddr, wdev->if_dev, Wcid);
+								AsicMcastEntryInsert(pAd, GroupMacAddr, wdev->bss_info_argument.ucBssIndex, MCAT_FILTER_DYNAMIC, pSrcMacAddr, wdev->if_dev, Wcid);
 							break;
 						}
 					} while(FALSE);
@@ -1701,286 +1683,6 @@ VOID MLDSnooping(
 
 	return;
 }
-#ifdef MWDS
-/* Indicate if Specific Pkt is an MLD query message*/
-BOOLEAN isMLDquery(
-	IN PRTMP_ADAPTER pAd,
-	IN PUCHAR pDstMacAddr,
-	IN PUCHAR pIpHeader)
-{
-	UINT8 MldType = 0;
-	PUCHAR pMldHeader;
-	BOOLEAN isMLDquery = FALSE;
 
-	if(isMldPkt(pDstMacAddr, pIpHeader, &MldType, &pMldHeader) == TRUE)
-	{
-		switch(MldType)
-		{
-			case MLD_LISTENER_QUERY:
-				MTWF_LOG(DBG_CAT_PROTO, CATPROTO_IGMP, DBG_LVL_INFO, ("isMLDquery-> MLD type=0x%x MLD_LISTENER_QUERY\n", MldType));
-				isMLDquery = TRUE;
-				break;
-
-		}
-	}
-
-	return isMLDquery;
-}
-
-UCHAR	TYPEIPV4[] = {0x08, 0x00};
-
-/* Send an IGMP query message on particular AP interface*/
-void send_igmpv3_gen_query_pkt(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  PMAC_TABLE_ENTRY pMacEntry)
-{
-	UCHAR ALL_HOST_ADDR[MAC_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0x01}; // as per IGMP spec
-	UCHAR Header802_3[14]={0};
-	UCHAR               CustomPayload[36];
-
-	UCHAR			IpHdr[24]={0x46,0x00, // version(4bit), hdr lenght(4bit), tos
-							   0x00,0x24, // total ip datagram length
-							   0x00,0x01, // identification (random)
-							   0x00,0x00, // flag & fragmentation
-							   0x01,0x02, // TTL, Protocol type (as per igmp spec)
-							   0x44,0xD2, // hdr checksum (considered 0 for calculation and computed manually for this msg)
-							   0x00,0x00, // Source IP (0.0.0.0)
-							   0x00,0x00, // Source IP
-							   0xE0,0x00, // Dest IP (224.0.0.1 - All Host addr as per IGMP spec)
-							   0x00,0x01, // Dest IP
-							   0x94,0x04, // Router Alert (as per IPv4 Router alert spec & IGMP spec)
-							   0x00,0x00}; // Router Alert
-
-	UCHAR               IgmpGenQuery[12]={0x11,0x0A, // type(Mmbrship Query), Max Rsp Code (10 i.e 1 sec)
-		                                  0xEE,0xF5, // chksum (considered 0 for calculation and computed manually for this msg)
-		                                  0x00,0x00, // Grp addrss (general query)
-		                                  0x00,0x00, // Grp addr
-										  0x00,0x00, // rsv, S, QRC	QQIC (other routers to use defaults)
-										  0x00,0x00}; // No of Sources	(general query)
-
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,("send_igmpv3_gen_query_pkt---->\n"));
-
-	NdisZeroMemory(Header802_3,sizeof(UCHAR)*14);
-
-	MAKE_802_3_HEADER(Header802_3, ALL_HOST_ADDR, &pMacEntry->wdev->if_addr[0], TYPEIPV4);
-
-	// Using fixed payload due to checksum calculation required using one's complement
-	NdisCopyMemory(&CustomPayload[0],IpHdr,24);
-	NdisCopyMemory(&CustomPayload[24],IgmpGenQuery,12);
-
-	// Copy frame to Tx ring
-
-	// Pkt 1
-	//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,("send_igmpv3_gen_query_pkt: wdev_idx:0x%x => Send IGMPv3 Gen Query Pkt 1\n",pMacEntry->wdev->wdev_idx));
-	RTMPToWirelessSta((PRTMP_ADAPTER)pAd, pMacEntry,
-					 Header802_3, LENGTH_802_3, (PUCHAR)CustomPayload, 36, FALSE);
-
-	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_INFO, ("<----- send_igmpv3_gen_query_pkt\n"));
-}
-
-UCHAR	TYPEIPV6[] = {0x86, 0xDD};
-
-/* Send a MLD query message on particular AP interface*/
-void send_mldv2_gen_query_pkt(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  PMAC_TABLE_ENTRY pMacEntry)
-{
-	UCHAR ALL_HOST_ADDR[MAC_ADDR_LEN] = {0x33, 0x33, 0x00, 0x00, 0x00, 0x01}; // as per MLD spec
-	UCHAR Header802_3[14]={0};
-	UCHAR               CustomPayload[76];
-	BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[pMacEntry->wdev->func_idx];
-
-	UCHAR               Ipv6Hdr[40]={0x60,0x00, // version(4bit), Tclass(8bit), Flow label (4bit+)
-		                           	0x00,0x00, // Flow Label (16 bit)
-		                           	0x00,0x24, // Payload length	(Ipv6 Router alert + MLD Gen Query)
-		                           	0x00,0x01, // Next hdr (Hop y Hop Options for Router Alert), Hop Limit
-									0x00,0x00, // ipv6 src addr	(Ipv6 link-local addr)		<-------------- to update from preformed address
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0xFF,0x02, // ipv6 dst addr	(All node Ipv6 Multcast addr, as per MLD spec)
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-								   	0x00,0x01};
-
-	UCHAR			Ipv6RouterAlert[8]={0x3A,0x00, // NxtHdr (ICMPv6-MLD), Hdr Ext len
-									   0x05,0x02, // Option Type - Router Alert, Length
-									   0x00,0x00, // Value - MLD
-									   0x01,0x00}; // Padding - Pad2
-
-	UCHAR               MldGenQuery[28]={0x82,0x00, // type(MLD Mmbrship Query), Code
-		                                 0x00,0x00, // chksum						<------- to update from precomputed checksum for each mbss
-		                                 0x03,0xE8, // max rsp code (1000 ms i.e. 1 second)
-		                                 0x00,0x00, // rsvd
-										 0x00,0x00, // ipv6 grp addr (general query)
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00, // rsv, S, QRC	QQIC	(other routers to use defaults)
-										 0x00,0x00}; // No of Sources	(general query)
-
-	// Get the Link Local Src Addr for this interface
-	NdisCopyMemory(&Ipv6Hdr[8],&pMbss->ipv6LinkLocalSrcAddr[0],16);
-
-	// Get Checksum
-	MldGenQuery[2] = (pMbss->MldQryChkSum >> 8);
-	MldGenQuery[3] = (pMbss->MldQryChkSum & 0xff);
-
-	// Form the pkt to be sent
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,("send_mldv2_gen_query_pkt---->\n"));
-
-	NdisZeroMemory(Header802_3,sizeof(UCHAR)*14);
-
-	MAKE_802_3_HEADER(Header802_3, ALL_HOST_ADDR, &pMacEntry->wdev->if_addr[0], TYPEIPV6);
-
-	// Using fixed payload due to checksum calculation required using one's complement
-	NdisZeroMemory(CustomPayload,76);
-	NdisCopyMemory(&CustomPayload[0],Ipv6Hdr,40);
-	NdisCopyMemory(&CustomPayload[40],Ipv6RouterAlert,8);
-	NdisCopyMemory(&CustomPayload[48],MldGenQuery,28);
-
-	// Copy frame to Tx ring
-
-	// Pkt 1
-	//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,("send_igmpv3_gen_query_pkt: wdev_idx:0x%x => Send IGMPv3 Gen Query Pkt 1\n",pMacEntry->wdev->wdev_idx));
-	RTMPToWirelessSta((PRTMP_ADAPTER)pAd, pMacEntry,
-					 Header802_3, LENGTH_802_3, (PUCHAR)CustomPayload, 76, FALSE);
-
-	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_INFO, ("<----- send_mldv2_gen_query_pkt\n"));
-}
-
-/* For specifed MBSS, compute & store IPv6 format checksum for MLD query message to be sent on that interface*/
-void calc_mldv2_gen_query_chksum(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  BSS_STRUCT *pMbss)
-{
-	UCHAR               CustomPayload[68];
-	UINT32 sum = 0, operand = 0, exCarry = 0;
-	UINT16 chksum = 0,dataLen = 0;
-	UINT8 ctr = 0;
-
-	UCHAR ipv6LinkLocalSrcAddr[16]={0xFE,0x80, // ipv6 src addr	(Ipv6 link-local addr)		<------------------to form
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0x00,
-									0x00,0xFF,
-									0xFE,0x00,
-									0x00,0x00};
-
-	UCHAR               Ipv6PsuedoHdr[40]={ 0x00,0x00, // ipv6 src addr (Ipv6 link-local addr)		<------------------to form
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0xFF,0x02, // ipv6 dst addr (All node Ipv6 Multcast addr as per spec)
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x00,
-											0x00,0x01,
-											0x00,0x00, // Next Hdr (MLD) Pkt Len
-				                           	0x00,0x1C, // Next Hdr (MLD) Pkt Len
-				                           	0x00,0x00, // Zero
-				                           	0x00,0x3A}; // Zero, Next hdr (ICMPv6 - MLD)
-
-	UCHAR               MldGenQuery[28]={0x82,0x00, // type(MLD Mmbrship Query), Code
-		                                 0x00,0x00, // chksum		<--------- calculate
-		                                 0x03,0xE8, // max rsp code (1000 ms i.e. 1 second)
-		                                 0x00,0x00, // rsvd
-										 0x00,0x00, // ipv6 grp addr (general query)
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00,
-										 0x00,0x00, // rsv, S, QRC	QQIC	(other routers to use defaults)
-										 0x00,0x00}; // No of Sources	(general query)
-
-	//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,("calc_mldv2_gen_query_chksum --> wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x IntfAddr[%02x-%02x-%02x-%02x-%02x-%02x] \n", 
-	//	pMbss->wdev.wdev_idx,pMbss->wdev.wdev_type,pMbss->wdev.func_idx,
-	//	pMbss->wdev.if_addr[0],pMbss->wdev.if_addr[1],pMbss->wdev.if_addr[2],
-	//	pMbss->wdev.if_addr[3],pMbss->wdev.if_addr[4],pMbss->wdev.if_addr[5]));
-
-	// Form the Link Local Src Addr for this interface in EUI-64 format, as per spec
-	ipv6LinkLocalSrcAddr[8] = pMbss->wdev.if_addr[0];
-	ipv6LinkLocalSrcAddr[9] = pMbss->wdev.if_addr[1];
-	ipv6LinkLocalSrcAddr[10] = pMbss->wdev.if_addr[2];
-	ipv6LinkLocalSrcAddr[13] = pMbss->wdev.if_addr[3];
-	ipv6LinkLocalSrcAddr[14] = pMbss->wdev.if_addr[4];
-	ipv6LinkLocalSrcAddr[15] = pMbss->wdev.if_addr[5];
-
-	ipv6LinkLocalSrcAddr[8] = ipv6LinkLocalSrcAddr[8] ^ 0x02; // togle universal/local bit
-
-	NdisCopyMemory(&pMbss->ipv6LinkLocalSrcAddr[0],&ipv6LinkLocalSrcAddr[0],16);
-	NdisCopyMemory(&Ipv6PsuedoHdr[0],&ipv6LinkLocalSrcAddr[0],16);
-
-	// Rakesh: A print is required here to avoid crash during reboot. Please don't remove !!!
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,("calc_mldv2_gen_query_chksum -->"));
-
-	//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,("calc_mldv2_gen_query_chksum --> LinkLocal Ipv6Addr[%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x] \n", 
-	//	pMbss->ipv6LinkLocalSrcAddr[0],pMbss->ipv6LinkLocalSrcAddr[1],pMbss->ipv6LinkLocalSrcAddr[2],
-	//	pMbss->ipv6LinkLocalSrcAddr[3],pMbss->ipv6LinkLocalSrcAddr[4],pMbss->ipv6LinkLocalSrcAddr[5],
-	//	pMbss->ipv6LinkLocalSrcAddr[6],pMbss->ipv6LinkLocalSrcAddr[7],pMbss->ipv6LinkLocalSrcAddr[8],
-	//	pMbss->ipv6LinkLocalSrcAddr[9],pMbss->ipv6LinkLocalSrcAddr[10],pMbss->ipv6LinkLocalSrcAddr[11],
-	//	pMbss->ipv6LinkLocalSrcAddr[12],pMbss->ipv6LinkLocalSrcAddr[13],pMbss->ipv6LinkLocalSrcAddr[14],
-	//	pMbss->ipv6LinkLocalSrcAddr[15]));
-
-	// Calculate Checksum
-	NdisZeroMemory(CustomPayload,68);
-	NdisCopyMemory(&CustomPayload[0],Ipv6PsuedoHdr,40);
-	NdisCopyMemory(&CustomPayload[40],MldGenQuery,28);
-	dataLen = 68; // total size of Pseudo Hdr & MLD
-
-	// Note: current logic assumes even data len, as per IP checksum format
-	sum = 0;
-	operand = 0;
-	for(ctr = 0;ctr < dataLen; ctr += 2)
-	{
-		operand = (UINT32)(CustomPayload[ctr] << 8);
-		operand |= (UINT32)(CustomPayload[ctr+1]);
-
-		sum += operand;
-	}
-	exCarry = sum >> 16;
-	sum = sum & 0x0000ffff;
-
-	while(exCarry != 0){
-		sum += exCarry;
-		exCarry = sum >> 16;
-		sum = sum & 0x0000ffff;
-	}
-	chksum = (UINT16)sum;
-	chksum = chksum ^ 0xFFFF;
-	if(chksum == 0)
-		chksum = 0xFFFF;
-	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_INFO,("ChkSum Done: chksum: %04x \n", chksum));
-
-	NdisCopyMemory(&pMbss->MldQryChkSum,&chksum,2);
-
-	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_INFO, ("<----- calc_mldv2_gen_query_chksum\n"));
-}
-#endif
 
 #endif /* IGMP_SNOOP_SUPPORT */
-
-

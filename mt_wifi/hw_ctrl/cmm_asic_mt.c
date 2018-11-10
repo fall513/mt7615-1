@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
 	Who			When			What
 	--------	----------		----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)
@@ -1179,6 +1181,23 @@ VOID MtAsicSetBARTxCntLimit(RTMP_ADAPTER *pAd, BOOLEAN Enable, UINT32 Count)
 	MAC_IO_WRITE32(pAd, AGG_MRCR, Value);
 }
 
+#ifdef VENDOR_FEATURE6_SUPPORT
+#ifdef CONFIG_AP_SUPPORT
+static VOID MtAsicSetRTSRetryCnt(RTMP_ADAPTER *pAd)
+{
+	UINT32 Value;
+	UINT32 Count = pAd->ApCfg.rts_retry_cnt;
+
+	if(Count != 0) {
+		// TODO: RTY_MODE0/1 ??
+		MAC_IO_READ32(pAd, AGG_MRCR, &Value);
+		Value &= ~RTS_RTY_CNT_LIMIT_MASK;
+		Value |= RTS_RTY_CNT_LIMIT(Count);
+		MAC_IO_WRITE32(pAd, AGG_MRCR, Value);
+	}
+}
+#endif /* CONFIG_AP_SUPPORT */
+#endif
 #ifndef MAC_INIT_OFFLOAD
 /*
  * Init TxD short format template which will copy by PSE-Client to LMAC
@@ -4966,6 +4985,12 @@ VOID MtAsicInitMac(RTMP_ADAPTER *pAd)
 	mac_val |= RTS_PKT_NUM_THRESHOLD(3);
 	MAC_IO_WRITE32(pAd, AGG_PCR1, mac_val);
 
+#ifdef VENDOR_FEATURE6_SUPPORT 
+//Set RTS Retry from profile 
+#ifdef CONFIG_AP_SUPPORT
+	MtAsicSetRTSRetryCnt(pAd);
+#endif
+#endif
 	/* When WAPI + RDG, don't mask ORDER bit  */
 	MAC_IO_READ32(pAd, SEC_SCR, &mac_val);
 	mac_val &= 0xfffffffc;
@@ -5336,6 +5361,9 @@ INT MtSmacAsicEnableBeacon(RTMP_ADAPTER *pAd, VOID *wdev_void, UCHAR NumOfBcns)
             return FALSE;
 
 
+#ifdef RTMP_MAC_SDIO
+        MTSDIOBssBeaconStart(pAd);
+#endif /* RTMP_MAC_SDIO */
     }
 
     return TRUE;
@@ -5354,6 +5382,9 @@ INT MtSmacAsicDisableBeacon(RTMP_ADAPTER *pAd, VOID *wdev_void)
     else if (bcn_info->BcnUpdateMethod == BCN_GEN_BY_HOST_IN_PRETBTT)
     {
 
+#ifdef RTMP_MAC_SDIO
+        MTSDIOBssBeaconStop(pAd);
+#endif /* RTMP_MAC_SDIO */
 
         OperationResult = MtSmacAsicSetArbBcnQCR(pAd, wdev->OmacIdx, FALSE);
         if (OperationResult == FALSE)

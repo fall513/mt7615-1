@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __ANDES_MT_H__
 #define __ANDES_MT_H__
 
@@ -68,7 +69,8 @@
 
 #define BFBACKOFF_TABLE_SIZE            10
 #define BFBACKOFF_BBPCR_SIZE             6
-#define RATE_POWER_TMAC_SIZE             8
+#define RATE_POWER_TMAC_SIZE            16
+#define RATE_POWER_TMAC_SIZE_BAND0       8
 #define CR_COLUMN_SIZE                   4
 
 struct _RTMP_ADAPTER;
@@ -208,11 +210,7 @@ typedef enum _TX_POWER_SKU_TABLE
     VHT160M5M6,
     VHT160M7,
     VHT160M8,
-    VHT160M9,
-    TXPOWER_1SS_OFFSET,
-    TXPOWER_2SS_OFFSET,
-    TXPOWER_3SS_OFFSET,
-    TXPOWER_4SS_OFFSET
+    VHT160M9
 } TX_POWER_SKU_TABLE, *P_TX_POWER_SKU_TABLE;
 
 typedef enum _ENUM_MAX_MIN_TYPE_T {

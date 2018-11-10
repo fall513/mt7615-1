@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #ifndef __EEPROM_H__
 #define __EEPROM_H__
 
@@ -796,8 +798,7 @@ INT rtmp_ee_load_from_bin(
 
 INT rtmp_ee_write_to_bin(
 	IN struct _RTMP_ADAPTER *pAd);
-#ifdef BB_SOC
-BOOLEAN rtmp_ee_bin_read_with_range(struct _RTMP_ADAPTER *pAd, UINT16 start, UINT16 Length, UCHAR *pbuf);
+#ifdef VENDOR_FEATURE6_SUPPORT
 int rtmp_ee_bin_write_with_range(struct _RTMP_ADAPTER *pAd, USHORT start, USHORT Length, UCHAR *pbuf);
 #endif
 INT rtmp_ee_write_to_prom(struct _RTMP_ADAPTER *pAd);

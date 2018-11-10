@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -17,7 +18,7 @@
 
 
  */
-
+#endif /* MTK_LICENSE */
 
 
 #ifndef __SCS_H__

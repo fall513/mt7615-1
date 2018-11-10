@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +26,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 static UCHAR ZERO_IP_ADDR[4] = {0x00, 0x00, 0x00, 0x00};
@@ -50,36 +51,6 @@ static char link_local[] = {0xfe, 0x80};
 #endif		
 		
 #ifdef CONFIG_AP_SUPPORT
-#ifndef CONFIG_HOTSPOT_R2//#ifdef WNM_NEW_API
-void wext_send_btm_query_event_newapi(PNET_DEV net_dev, const char *peer_mac_addr,
-							   const char *btm_query, UINT16 btm_query_len)
-{
-	struct btm_query_data *query_data = NULL;
-	struct wnm_event *event_data = NULL;
-	UINT16 buflen = 0;
-	char *buf;	
-
-	buflen = sizeof(struct wnm_event) + sizeof(struct btm_query_data) + btm_query_len;
-	os_alloc_mem(NULL, (UCHAR **)&buf, buflen);
-	NdisZeroMemory(buf, buflen);
-
-	event_data = (struct wnm_event *)buf;
-	event_data->event_id = OID_802_11_WNM_EVT_BTM_QUERY;
-	event_data->event_len = sizeof(*query_data) + btm_query_len;
-
-	query_data = (struct btm_query_data *)event_data->event_body;
-	query_data->ifindex = RtmpOsGetNetIfIndex(net_dev);
-	memcpy(query_data->peer_mac_addr, peer_mac_addr, 6);
-	query_data->btm_query_len	= btm_query_len;
-	memcpy(query_data->btm_query, btm_query, btm_query_len);
-	
-	RtmpOSWrielessEventSend(net_dev, RT_WLAN_EVENT_CUSTOM, 
-					OID_802_11_WNM_EVENT, NULL, (PUCHAR)buf, buflen);
-
-	os_free_mem(buf);
-}
-
-#endif
 void wext_send_btm_query_event(PNET_DEV net_dev, const char *peer_mac_addr,
 							   const char *btm_query, UINT16 btm_query_len)
 {
@@ -108,17 +79,6 @@ void SendBTMQueryEvent(PNET_DEV net_dev, const char *peer_mac_addr,
 					   const char *btm_query, UINT16 btm_query_len, UINT8 ipc_type)
 {
 	if (ipc_type == RA_WEXT) {
-#ifndef CONFIG_HOTSPOT_R2//#ifdef WNM_NEW_API
-		if (1)
-		{
-			wext_send_btm_query_event_newapi(net_dev,
-									  peer_mac_addr,
-									  btm_query,
-									  btm_query_len);
-
-		}
-		else
-#endif
 		wext_send_btm_query_event(net_dev,
 								  peer_mac_addr,
 								  btm_query,
@@ -126,39 +86,7 @@ void SendBTMQueryEvent(PNET_DEV net_dev, const char *peer_mac_addr,
 	}
 }
 
-#ifndef CONFIG_HOTSPOT_R2//#ifdef WNM_NEW_API
-void wext_send_btm_cfm_event_newapi(PNET_DEV net_dev, const char *peer_mac_addr,
-							 const char *btm_rsp, UINT16 btm_rsp_len)
-{
-	
-	struct btm_rsp_data *rsp_data = NULL;	
-	struct wnm_event *event_data = NULL;
-	UINT16 buflen = 0;
-	char *buf;
 
-
-	buflen = sizeof(struct wnm_event) + sizeof(*rsp_data) + btm_rsp_len;
-	os_alloc_mem(NULL, (UCHAR **)&buf, buflen);
-	NdisZeroMemory(buf, buflen);
-
-	event_data = (struct wnm_event *)buf;
-	event_data->event_id = OID_802_11_WNM_EVT_BTM_RSP;
-	event_data->event_len = sizeof(struct btm_rsp_data) + btm_rsp_len;
-
-
-	rsp_data = (struct btm_rsp_data *)event_data->event_body;
-	rsp_data->ifindex = RtmpOsGetNetIfIndex(net_dev);
-	memcpy(rsp_data->peer_mac_addr, peer_mac_addr, 6);
-	rsp_data->btm_rsp_len	= btm_rsp_len;
-	memcpy(rsp_data->btm_rsp, btm_rsp, btm_rsp_len);
-
-	RtmpOSWrielessEventSend(net_dev, RT_WLAN_EVENT_CUSTOM, 
-						OID_802_11_WNM_EVENT, NULL, (PUCHAR)buf, buflen);
-
-	os_free_mem(buf);
-}
-
-#endif
 void wext_send_btm_cfm_event(PNET_DEV net_dev, const char *peer_mac_addr,
 							 const char *btm_rsp, UINT16 btm_rsp_len)
 {
@@ -189,18 +117,6 @@ void SendBTMConfirmEvent(PNET_DEV net_dev, const char *peer_mac_addr,
 						 const char *btm_rsp, UINT16 btm_rsp_len, UINT8 ipc_type)
 {
 	if (ipc_type == RA_WEXT) {
-
-#ifndef CONFIG_HOTSPOT_R2//#ifdef WNM_NEW_API
-		if (1)
-		{
-			wext_send_btm_cfm_event_newapi(net_dev,
-									  peer_mac_addr,
-									  btm_rsp,
-									  btm_rsp_len);
-
-		}
-		else
-#endif
 		wext_send_btm_cfm_event(net_dev,
 								peer_mac_addr,
 								btm_rsp,
@@ -290,14 +206,12 @@ BOOLEAN IsGratuitousARP(IN RTMP_ADAPTER *pAd,
 	UCHAR *SenderIP;
 	UCHAR *TargetIP;
 	UCHAR BroadcastMac[6]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
-	PUCHAR SourceMACAddr; 
-#ifdef CONFIG_HOTSPOT_R2   
 	UINT16 ARPOperation;
 	PWNM_CTRL pWNMCtrl = &pMbss->WNMCtrl;
 	PROXY_ARP_IPV4_ENTRY *ProxyARPEntry;
+	PUCHAR SourceMACAddr; 
 	BOOLEAN IsDrop = FALSE;
 	INT32 Ret;
-#endif
 
 	NdisMoveMemory(&ProtoType, pData, 2);
 	ProtoType = OS_NTOHS(ProtoType);
@@ -1510,12 +1424,6 @@ static VOID ReceiveBTMQuery(IN PRTMP_ADAPTER pAd,
 		return;
 	}
 	
-	if (pWNMCtrl->WNMBTMEnable == 0)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_ERROR, ("%s BTM Not Supported Drop!!\n", __FUNCTION__));
-		return;
-	}
-	
 	RTMP_SEM_EVENT_WAIT(&pWNMCtrl->BTMPeerListLock, Ret);
 	DlListForEach(BTMPeerEntry, &pWNMCtrl->BTMPeerList, BTM_PEER_ENTRY, List)
 	{
@@ -1553,10 +1461,9 @@ static VOID ReceiveBTMQuery(IN PRTMP_ADAPTER pAd,
 	DlListAddTail(&pWNMCtrl->BTMPeerList, &BTMPeerEntry->List);
 	RTMP_SEM_EVENT_UP(&pWNMCtrl->BTMPeerListLock);
 
-//	VarLen = *(WNMFrame->u.BTM_QUERY.Variable + 2);
-//	VarLen += 3;
+	VarLen = *(WNMFrame->u.BTM_QUERY.Variable + 2);
+	VarLen += 3;
 	
-	VarLen = Elem->MsgLen - (sizeof (HEADER_802_11) + 1 + sizeof(WNMFrame->u.BTM_QUERY));
 	os_alloc_mem(NULL, (UCHAR **)&Buf, sizeof(*Event) + VarLen);
 
 	if (!Buf)
@@ -1582,8 +1489,7 @@ static VOID ReceiveBTMQuery(IN PRTMP_ADAPTER pAd,
  	Len += 1;
 
 	/* FIXME */
-	Event->u.PEER_BTM_QUERY_DATA.BTMQueryLen = VarLen;
-
+	//Event->u.PEER_BTM_QUERY_DATA.BTMQueryLen;
 	Len += 2;
 
 	NdisMoveMemory(Event->u.PEER_BTM_QUERY_DATA.BTMQuery, WNMFrame->u.BTM_QUERY.Variable, 
@@ -1633,12 +1539,6 @@ static VOID ReceiveBTMRsp(IN PRTMP_ADAPTER pAd,
 		return;
 	}
 	
-	if (pWNMCtrl->WNMBTMEnable == 0)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_ERROR, ("%s BTM Not Supported Drop!!\n", __FUNCTION__));
-		return;
-	}
-
 	RTMP_SEM_EVENT_WAIT(&pWNMCtrl->BTMPeerListLock, Ret);
 	DlListForEach(BTMPeerEntry, &pWNMCtrl->BTMPeerList, BTM_PEER_ENTRY, List)
 	{
@@ -1663,10 +1563,8 @@ static VOID ReceiveBTMRsp(IN PRTMP_ADAPTER pAd,
 	if (*WNMFrame->u.BTM_RSP.Variable == 0)
 		VarLen += 6;
 
-	//VarLen += *(WNMFrame->u.BTM_RSP.Variable + VarLen + 1);
-	//VarLen += 2;
-	
-	VarLen = Elem->MsgLen - (sizeof (HEADER_802_11) + 1 + sizeof(WNMFrame->u.BTM_RSP));
+	VarLen += *(WNMFrame->u.BTM_RSP.Variable + VarLen + 1);
+	VarLen += 2;
 	
 	os_alloc_mem(NULL, (UCHAR **)&Buf, sizeof(*Event) + VarLen);
 
@@ -1693,7 +1591,7 @@ static VOID ReceiveBTMRsp(IN PRTMP_ADAPTER pAd,
  	Len += 1;
 
 	/* FIXME */
-	Event->u.PEER_BTM_RSP_DATA.BTMRspLen = VarLen;
+	//Event->u.PEER_BTM_RSP_DATA.BTMRspLen;
 	Len += 2;
 
 	NdisMoveMemory(Event->u.PEER_BTM_RSP_DATA.BTMRsp, WNMFrame->u.BTM_RSP.Variable, 
@@ -1707,35 +1605,6 @@ static VOID ReceiveBTMRsp(IN PRTMP_ADAPTER pAd,
 	return;
 }
 
-VOID BTMStartWaitBTMReqTimer(
-	IN PRTMP_ADAPTER pAd,
-	IN MLME_QUEUE_ELEM *Elem)
-{
-	PWNM_CTRL pWNMCtrl;
-	PBTM_PEER_ENTRY BTMPeerEntry;
-	PBTM_EVENT_DATA Event = (PBTM_EVENT_DATA)Elem->Msg;
-	INT32 Ret;
-	
-#ifdef CONFIG_AP_SUPPORT
-	pWNMCtrl = &pAd->ApCfg.MBSSID[Event->ControlIndex].WNMCtrl;
-#endif /* CONFIG_AP_SUPPORT */
-
-	RTMP_SEM_EVENT_WAIT(&pWNMCtrl->BTMPeerListLock, Ret);
-	DlListForEach(BTMPeerEntry, &pWNMCtrl->BTMPeerList,
-							BTM_PEER_ENTRY, List)
-	{
-		if (MAC_ADDR_EQUAL(BTMPeerEntry->PeerMACAddr, Event->PeerMACAddr))
-		{
-			
-			RTMPInitTimer(pAd, &BTMPeerEntry->WaitPeerBTMReqTimer,
-						 GET_TIMER_FUNCTION(WaitPeerBTMReqTimeout), BTMPeerEntry, FALSE);
-			
-			RTMPSetTimer(&BTMPeerEntry->WaitPeerBTMReqTimer, WaitPeerBTMReqTimeoutVale);
-			break;
-		}
-	}
-	RTMP_SEM_EVENT_UP(&pWNMCtrl->BTMPeerListLock);
-}
 
 VOID BTMSetPeerCurrentState(
 	IN PRTMP_ADAPTER pAd,
@@ -1771,15 +1640,11 @@ static VOID SendBTMQueryIndication(
 
 	BTM_EVENT_DATA *Event = (BTM_EVENT_DATA *)Elem->Msg;
 	PNET_DEV NetDev = pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.if_dev;
-#ifdef CONFIG_HOTSPOT_R2   
 	PHOTSPOT_CTRL pHSCtrl = &pAd->ApCfg.MBSSID[Event->ControlIndex].HotSpotCtrl;
-#endif
+
 	printk("%s\n", __FUNCTION__);
 
-#ifdef CONFIG_HOTSPOT_R2  
-	if (pHSCtrl->HSDaemonReady == 1)
-#endif
-	{
+	if (pHSCtrl->HSDaemonReady == 1) {
 		/* Send BTM query indication to daemon */
 		SendBTMQueryEvent(NetDev,
 						  Event->PeerMACAddr,
@@ -1787,46 +1652,9 @@ static VOID SendBTMQueryIndication(
 						  Event->u.PEER_BTM_QUERY_DATA.BTMQueryLen,
 						  RA_WEXT);
 	}
-	BTMStartWaitBTMReqTimer(pAd, Elem);
 	
 	BTMSetPeerCurrentState(pAd, Elem, WAIT_BTM_REQ); 
 }
-
-
-
-VOID WaitPeerBTMReqTimeout(
-	IN PVOID SystemSpecific1,
-	IN PVOID FunctionContext,
-	IN PVOID SystemSpecific2,
-	IN PVOID SystemSpecific3)
-{
-	BTM_PEER_ENTRY *BTMPeerEntry = (BTM_PEER_ENTRY *)FunctionContext;
-	PRTMP_ADAPTER pAd;
-	PWNM_CTRL pWNMCtrl;
-	INT32 Ret;
-	BOOLEAN Cancelled;
-	
-	printk("%s\n", __FUNCTION__);
-
-	if (!BTMPeerEntry)
-		return;
-
-	pAd = BTMPeerEntry->Priv;
-
-	RTMPReleaseTimer(&BTMPeerEntry->WaitPeerBTMReqTimer, &Cancelled);
-	
-	if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS
-							| fRTMP_ADAPTER_NIC_NOT_EXIST))
-		return;
-
-	pWNMCtrl = &pAd->ApCfg.MBSSID[BTMPeerEntry->ControlIndex].WNMCtrl;
-	RTMP_SEM_EVENT_WAIT(&pWNMCtrl->BTMPeerListLock, Ret);
-	DlListDel(&BTMPeerEntry->List);
-	RTMP_SEM_EVENT_UP(&pWNMCtrl->BTMPeerListLock);
-	os_free_mem(BTMPeerEntry);
-}
-
-BUILD_TIMER_FUNCTION(WaitPeerBTMReqTimeout);
 
 
 VOID WaitPeerBTMRspTimeout(
@@ -1874,7 +1702,7 @@ static VOID SendBTMReq(
 	PWNM_CTRL pWNMCtrl = &pAd->ApCfg.MBSSID[Event->ControlIndex].WNMCtrl;
 	UINT32 FrameLen = 0, VarLen = Event->u.BTM_REQ_DATA.BTMReqLen;
 	INT32 Ret;
-	BOOLEAN Cancelled;
+
 	RTMP_SEM_EVENT_WAIT(&pWNMCtrl->BTMPeerListLock, Ret);
 	DlListForEach(BTMPeerEntry, &pWNMCtrl->BTMPeerList,
 						BTM_PEER_ENTRY, List)
@@ -1921,27 +1749,20 @@ static VOID SendBTMReq(
 	
 	MiniportMMRequest(pAd, 0, Buf, FrameLen);
 
-
-	RTMPCancelTimer(&BTMPeerEntry->WaitPeerBTMReqTimer, &Cancelled);
-	RTMPReleaseTimer(&BTMPeerEntry->WaitPeerBTMReqTimer, &Cancelled);
-
 	RTMPSetTimer(&BTMPeerEntry->WaitPeerBTMRspTimer, WaitPeerBTMRspTimeoutVale);
 
-#if defined (CONFIG_HOTSPOT_R2) || defined (CONFIG_DOT11V_WNM)
+#ifdef CONFIG_HOTSPOT_R2
 	{
 		MAC_TABLE_ENTRY  *pEntry;
 		
 		if ((pEntry = MacTableLookup(pAd, Event->PeerMACAddr)) != NULL)
     	{	
     		UINT8 *BTMData = (UINT8 *)Event->u.BTM_REQ_DATA.BTMReq;
-
-			if(*BTMData & 0x04)	
-			{
-	    		pEntry->BTMDisassocCount = (((*(BTMData+2) << 8) | (*(BTMData+1)))*pAd->CommonCfg.BeaconPeriod)/1000;
-	    		printk("bss discount sec=%d\n", pEntry->BTMDisassocCount);
-	    		if (pEntry->BTMDisassocCount < 1)
-	    			pEntry->BTMDisassocCount = 1;
-			}
+    		
+    		pEntry->BTMDisassocCount = (((*(BTMData+2) << 8) | (*(BTMData+1)))*pAd->CommonCfg.BeaconPeriod)/1000;
+    		printk("bss discount sec=%d\n", pEntry->BTMDisassocCount);
+    		if (pEntry->BTMDisassocCount < 1)
+    			pEntry->BTMDisassocCount = 1;
     	}
 	}
 #endif	
@@ -1985,98 +1806,6 @@ static VOID SendBTMConfirm(
 	RTMP_SEM_EVENT_UP(&pWNMCtrl->BTMPeerListLock);
 
 }
-#ifndef CONFIG_HOTSPOT_R2//#ifdef WNM_NEW_API
-NDIS_STATUS wnm_handle_command(IN PRTMP_ADAPTER pAd, IN struct wnm_command *pCmd_data)
-{
-	
-	POS_COOKIE pObj = (POS_COOKIE)pAd->OS_Cookie;
-	UCHAR APIndex = pObj->ioctl_if;
-	PWNM_CTRL pWNMCtrl = &pAd->ApCfg.MBSSID[APIndex].WNMCtrl;
-	//hex_dump("11vCmd", (PUCHAR)pCmd_data, pCmd_data->command_len + 2);
-	switch (pCmd_data->command_id)
-	{
-		case OID_802_11_WNM_CMD_ENABLE:
-		{
-
-			if (pCmd_data->command_body[0] == 0)
-			{
-				/*Disable All Features*/
-				pWNMCtrl->WNMBTMEnable = 0;				
-				UpdateBeaconHandler(pAd, &pAd->ApCfg.MBSSID[APIndex].wdev,IE_CHANGE);
-			}
-			else 
-			{
-			}
-			
-		}
-			break;
-		case OID_802_11_WNM_CMD_CAP:
-		{
-
-			if (pCmd_data->command_body[0] & BTM_ENABLE_OFFSET)
-				pWNMCtrl->WNMBTMEnable = 1;
-			else
-				pWNMCtrl->WNMBTMEnable = 0;
-
-			UpdateBeaconHandler(pAd, &pAd->ApCfg.MBSSID[APIndex].wdev,IE_CHANGE);
-		}
-			break;
-		case OID_802_11_WNM_CMD_SEND_BTM_REQ:
-		{
-			
-			MAC_TABLE_ENTRY  *pEntry;
-			struct btm_req_data *req_data;
-			req_data = (struct btm_req_data *)pCmd_data->command_body;
-
-
-			if ((pEntry = MacTableLookup(pAd, req_data->peer_mac_addr)) != NULL) {
-				Send_BTM_Req(pAd,
-					req_data->peer_mac_addr,
-					req_data->btm_req,
-					req_data->btm_req_len);
-			}
-		}
-			break;
-
-		default:
-			
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_ERROR, ("%s Invalid Command %d\n", __FUNCTION__,pCmd_data->command_id ));
-			return NDIS_STATUS_INVALID_DATA;
-			break;
-
-	}
-	return NDIS_STATUS_SUCCESS;
-}
-void WNM_ReadParametersFromFile(
-	IN PRTMP_ADAPTER pAd,
-	RTMP_STRING *tmpbuf,
-	RTMP_STRING *buffer)
-{
-	INT loop;
-	RTMP_STRING *macptr;
-	if (RTMPGetKeyParameter("WNMEnable", tmpbuf, 255, buffer, TRUE))
-	{
-		for (loop=0, macptr = rstrtok(tmpbuf,";");
-				(macptr && loop < MAX_MBSSID_NUM(pAd));
-					macptr = rstrtok(NULL,";"), loop++)
-		{
-			LONG Enable;
-			Enable = simple_strtol(macptr, 0, 10);
-			pAd->ApCfg.MBSSID[loop].WNMCtrl.WNMBTMEnable =
-				(Enable > 0) ? TRUE : FALSE;
-       	    MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_TRACE, ("%s::(bDot11vWNMEnable[%d]=%d)\n",
-				__FUNCTION__, loop,
-				pAd->ApCfg.MBSSID[loop].WNMCtrl.WNMBTMEnable));
-		}
-	}
-	else 
-	{
-		for (loop = 0; loop < MAX_MBSSID_NUM(pAd); loop++)
-			pAd->ApCfg.MBSSID[loop].WNMCtrl.WNMBTMEnable = FALSE;
-	} 
-	return;
-}
-#endif
 #endif /* CONFIG_AP_SUPPORT */
 
 
@@ -2140,9 +1869,6 @@ void PeerWNMAction(IN PRTMP_ADAPTER pAd,
 VOID WNMCtrlInit(IN PRTMP_ADAPTER pAd)
 {
 	PWNM_CTRL pWNMCtrl;
-#ifndef CONFIG_HOTSPOT_R2
-	BOOLEAN WNMBTMEnable = FALSE;
-#endif
 #ifdef CONFIG_AP_SUPPORT
 	UCHAR APIndex;
 #endif /* CONFIG_AP_SUPPORT */
@@ -2151,10 +1877,6 @@ VOID WNMCtrlInit(IN PRTMP_ADAPTER pAd)
 	for (APIndex = 0; APIndex < MAX_MBSSID_NUM(pAd); APIndex++)
 	{
 		pWNMCtrl = &pAd->ApCfg.MBSSID[APIndex].WNMCtrl;
-#ifndef CONFIG_HOTSPOT_R2
-		if(pWNMCtrl->WNMBTMEnable)
-			WNMBTMEnable = pWNMCtrl->WNMBTMEnable;
-#endif
 		NdisZeroMemory(pWNMCtrl, sizeof(*pWNMCtrl));
 		RTMP_SEM_EVENT_INIT(&pWNMCtrl->BTMPeerListLock, &pAd->RscSemMemList);
 		RTMP_SEM_EVENT_INIT(&pWNMCtrl->ProxyARPListLock, &pAd->RscSemMemList);
@@ -2165,9 +1887,6 @@ VOID WNMCtrlInit(IN PRTMP_ADAPTER pAd)
 #ifdef CONFIG_HOTSPOT_R2		
 		RTMP_SEM_EVENT_INIT(&pWNMCtrl->WNMNotifyPeerListLock, &pAd->RscSemMemList);
 		DlListInit(&pWNMCtrl->WNMNotifyPeerList);
-#endif
-#ifndef CONFIG_HOTSPOT_R2		
-		pWNMCtrl->WNMBTMEnable = WNMBTMEnable;
 #endif		
 	}
 #endif 
@@ -2203,7 +1922,6 @@ VOID WNMCtrlExit(IN PRTMP_ADAPTER pAd)
 #ifdef CONFIG_HOTSPOT_R2
 	WNM_NOTIFY_PEER_ENTRY *WNMNotifyPeerEntry, *WNMNotifyPeerEntryTmp;
 #endif	
-	BOOLEAN Cancelled;
 
 #ifdef CONFIG_AP_SUPPORT
 	for (APIndex = 0; APIndex < MAX_MBSSID_NUM(pAd); APIndex++)
@@ -2216,11 +1934,6 @@ VOID WNMCtrlExit(IN PRTMP_ADAPTER pAd)
 		DlListForEachSafe(BTMPeerEntry, BTMPeerEntryTmp,
 							&pWNMCtrl->BTMPeerList, BTM_PEER_ENTRY, List)
 		{
-
-			RTMPCancelTimer(&BTMPeerEntry->WaitPeerBTMReqTimer, &Cancelled);
-			RTMPReleaseTimer(&BTMPeerEntry->WaitPeerBTMReqTimer, &Cancelled);
-			RTMPCancelTimer(&BTMPeerEntry->WaitPeerBTMRspTimer, &Cancelled);
-			RTMPReleaseTimer(&BTMPeerEntry->WaitPeerBTMRspTimer, &Cancelled);
 			DlListDel(&BTMPeerEntry->List);
 			os_free_mem(BTMPeerEntry);
 		}
@@ -2637,14 +2350,19 @@ static VOID SendWNMNotifyReq(
 	{
 		printk("no match event type:%d\n", Event->EventType);
 		os_free_mem(Buf);
+        Buf = NULL;
 	}
-	WNMSetPeerCurrentState(pAd, Elem, WAIT_WNM_NOTIFY_RSP);
+    
+    if(Buf != NULL)
+    {
+        WNMSetPeerCurrentState(pAd, Elem, WAIT_WNM_NOTIFY_RSP);
 	
-	MiniportMMRequest(pAd, 0, Buf, FrameLen);
+	    MiniportMMRequest(pAd, 0, Buf, FrameLen);
 
-	RTMPSetTimer(&WNMNotifyPeerEntry->WaitPeerWNMNotifyRspTimer, WaitPeerWNMNotifyRspTimeoutVale);
+	    RTMPSetTimer(&WNMNotifyPeerEntry->WaitPeerWNMNotifyRspTimer, WaitPeerWNMNotifyRspTimeoutVale);
 
-	os_free_mem(Buf);
+	    os_free_mem(Buf);
+    }
 }
 
 VOID SendWNMNotifyConfirm(

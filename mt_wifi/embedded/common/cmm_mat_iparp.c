@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,6 +28,7 @@
 	--------	----------		----------------------------------------------
 	Shiang      02/26/07      Init version
 */
+#endif /* MTK_LICENSE */
 #ifdef MAT_SUPPORT
 
 #include "rt_config.h"
@@ -589,12 +591,6 @@ static PUCHAR MATProto_IP_Rx(
 		{
 			if (pEntry->bReptCli)
 			{
-				PUCHAR pPktHdr, pLayerHdr;
-			
-				pPktHdr = GET_OS_PKT_DATAPTR(pSkb);
-				pLayerHdr = (pPktHdr + MAT_ETHER_HDR_LEN);
-				
-
 				/*For UDP packet, we need to check about the DHCP packet. */
 				if (*(pLayerHdr + 9) == 0x11)
 				{

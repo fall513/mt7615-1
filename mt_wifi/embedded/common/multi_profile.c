@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,7 +14,7 @@
 	Module Name:
 	multi_profile.c
 */
-
+#endif /* MTK_LICENSE */
 #ifdef MULTI_PROFILE
 #include "rt_config.h"
 
@@ -24,11 +25,7 @@
 #ifdef RT_CFG80211_SUPPORT
 #define FIRST_AP_5G_DEVNAME "wlanx"
 #else
-#if defined(BB_SOC) && !defined(MULTI_INF_SUPPORT)
-#define FIRST_AP_5G_DEVNAME "ra"
-#else
 #define FIRST_AP_5G_DEVNAME "rax"
-#endif
 #endif
 #define SECOND_AP_2G_PROFILE_PATH	"/etc/Wireless/iNIC/iNIC_ap_2G.dat"
 #define SECOND_AP_5G_PROFILE_PATH	"/etc/Wireless/iNIC/iNIC_ap_5G.dat"
@@ -36,11 +33,7 @@
 #ifdef RT_CFG80211_SUPPORT
 #define SECOND_AP_5G_DEVNAME "wlany"
 #else
-#if defined(BB_SOC) && !defined(MULTI_INF_SUPPORT)
-#define SECOND_AP_5G_DEVNAME "ra"
-#else
 #define SECOND_AP_5G_DEVNAME "ray"
-#endif
 #endif
 #define THIRD_AP_2G_PROFILE_PATH	"/etc/Wireless/WIFI3/RT2870AP_2G.dat"
 #define THIRD_AP_5G_PROFILE_PATH	"/etc/Wireless/WIFI3/RT2870AP_5G.dat"
@@ -50,7 +43,6 @@
 #else
 #define THIRD_AP_5G_DEVNAME "raz"
 #endif
-
 
 #define TEMP_STR_SIZE 256
 
@@ -225,57 +217,6 @@ static INT multi_profile_merge_separate(
 #ifdef CONFIG_AP_SUPPORT
 #ifdef MBSS_SUPPORT
 /*
-*perband
-*/
-static INT multi_profile_merge_perband(
-	struct mpf_data *data,
-	UCHAR *parm,
-	UCHAR *buf1,
-	UCHAR *buf2,
-	UCHAR *final)
-{
-	CHAR tmpbuf1[TEMP_STR_SIZE]= "";
-	CHAR tmpbuf2[TEMP_STR_SIZE]= "";
-	CHAR value[TEMP_STR_SIZE]="";
-	UCHAR i, j;
-	CHAR *tmpbuf;
-	CHAR *macptr;
-
-	if (!buf1 || !buf2) 
-		return NDIS_STATUS_FAILURE;
-
-	if(RTMPGetKeyParameter(parm, tmpbuf1, TEMP_STR_SIZE, buf1, TRUE) !=TRUE) {
-		return NDIS_STATUS_SUCCESS;
-	}
-
-	if(RTMPGetKeyParameter(parm, tmpbuf2, TEMP_STR_SIZE, buf2, TRUE) != TRUE) {
-		return NDIS_STATUS_SUCCESS;
-	}
-	os_zero_mem(value,sizeof(value));
-
-	/*check number of perband parameter mode*/
-	for (i = 0, macptr = rstrtok(tmpbuf1,";"); macptr; macptr = rstrtok(NULL,";"), i++){
-		/*do nothing*/
-	}
-	for (j = 0, macptr = rstrtok(tmpbuf2,";"); macptr; macptr = rstrtok(NULL,";"), j++){
-		/*do nothing*/
-	}
-	
-	if(i > 1 || j > 1) {
-		multi_profile_merge_separate(parm,buf1,buf2,final);
-	} else {
-		for(i = 0; i < data->total_num; i++) {
-			tmpbuf = (i < data->pf1_num) ? tmpbuf1 : tmpbuf2;
-			snprintf(value,sizeof(value),"%s%s;",value,tmpbuf);
-		}
-		RTMPSetKeyParameter(parm,value, TEMP_STR_SIZE,final, TRUE);
-	}	
-	
-	return NDIS_STATUS_SUCCESS;
-}
-
-
-/*
 * MACAddress$Idx
 */
 static INT multi_profile_merge_mac_address(
@@ -292,14 +233,14 @@ static INT multi_profile_merge_mac_address(
 	/* set file parameter to portcfg*/
 	if (RTMPGetKeyParameter("MacAddress", tmpbuf, 25, buf2, TRUE)){
 		snprintf(tok_str, sizeof(tok_str), "MacAddress%d", mpf->pf1_num);
-		RTMPSetKeyParameter(tok_str, tmpbuf, 25, final,TRUE);
+		RTMPAddKeyParameter(tok_str, tmpbuf, 25, final);
 	}
 	for (i = 1; i <= mpf->pf2_num ; i++){
 		snprintf(tok_str, sizeof(tok_str), "MacAddress%d", i);
 		if(RTMPGetKeyParameter(tok_str, tmpbuf, 25, buf2, TRUE)){
 			j = i + mpf->pf1_num;
 			snprintf(tok_str, sizeof(tok_str), "MacAddress%d",j);
-			RTMPSetKeyParameter(tok_str, tmpbuf, 25, final,TRUE);
+			RTMPAddKeyParameter(tok_str, tmpbuf, 25, final);
 		}
 	}
 	return NDIS_STATUS_SUCCESS;
@@ -781,7 +722,7 @@ static INT multi_profile_merge_mbss(
 	/*merge AutoChannelSkipList*/
 	multi_profile_merge_separate("AutoChannelSkipList",buf1,buf2,final);
 	/*merge ACSCheckTime*/
-	multi_profile_merge_separate("ACSCheckTime",buf1,buf2,final);	
+	multi_profile_merge_separate("ACSCheckTime",buf1,buf2,final);
 	/*merge security*/
 	multi_profile_merge_security(data,buf1,buf2,final);
 	/*merge WmmCapable*/
@@ -789,23 +730,23 @@ static INT multi_profile_merge_mbss(
 	/*merge NoForwarding*/
 	multi_profile_merge_separate("NoForwarding",buf1,buf2,final);
 	/*merge StationKeepAlive*/
-	multi_profile_merge_perband(data,"StationKeepAlive",buf1,buf2,final);
+	multi_profile_merge_separate("StationKeepAlive",buf1,buf2,final);
 	/*merge HideSSID*/
 	multi_profile_merge_separate("HideSSID",buf1,buf2,final);
 	/*merge HT_EXTCHA*/
-	multi_profile_merge_perband(data,"HT_EXTCHA",buf1,buf2,final);
+	multi_profile_merge_separate("HT_EXTCHA",buf1,buf2,final);
 	/*merge HT_TxStream*/
-	multi_profile_merge_perband(data,"HT_TxStream",buf1,buf2,final);
+	multi_profile_merge_separate("HT_TxStream",buf1,buf2,final);
 	/*merge HT_RxStream*/
-	multi_profile_merge_perband(data,"HT_RxStream",buf1,buf2,final);
+	multi_profile_merge_separate("HT_RxStream",buf1,buf2,final);
 	/*merge HT_MCS*/
 	multi_profile_merge_separate("HT_MCS",buf1,buf2,final);
 	/*merge HT_BW*/
-	multi_profile_merge_perband(data,"HT_BW",buf1,buf2,final);
+	multi_profile_merge_separate("HT_BW",buf1,buf2,final);
 	/*merge HT_STBC*/
-	multi_profile_merge_perband(data,"HT_STBC",buf1,buf2,final);
+	multi_profile_merge_separate("HT_STBC",buf1,buf2,final);
 	/*merge HT_LDPC*/
-	multi_profile_merge_perband(data,"HT_LDPC",buf1,buf2,final);
+	multi_profile_merge_separate("HT_LDPC",buf1,buf2,final);
 	/*merge VHT_STBC*/
 	multi_profile_merge_separate("VHT_STBC",buf1,buf2,final);
 	/*merge VHT_LDPC*/
@@ -885,7 +826,10 @@ static INT multi_profile_merge_wsc(
 		{
 			/*do nothing*/
 		}
-		RTMPGetKeyParameter("WscV2Support", WscConMode, sizeof(WscConMode), buf1, TRUE) ;
+		if (RTMPGetKeyParameter("WscV2Support", WscConMode, sizeof(WscConMode), buf1, TRUE) != TRUE) 
+		{
+			goto label_wsc_v2_done;
+		}
 		if (data->pf1_num > i)
 		{//need to append default value
 			INT append_cnt = data->pf1_num - i;
@@ -910,7 +854,10 @@ static INT multi_profile_merge_wsc(
 		{
 			/*do nothing*/
 		}
-		RTMPGetKeyParameter("WscV2Support", WscConMode2, sizeof(WscConMode2), buf2, TRUE) ;
+		if (RTMPGetKeyParameter("WscV2Support", WscConMode2, sizeof(WscConMode2), buf2, TRUE) != TRUE) 
+		{
+			goto label_wsc_v2_done;
+		}
 		if (data->pf2_num > i)
 		{//need to append default value
 			INT append_cnt = data->pf2_num - i;
@@ -943,7 +890,10 @@ label_wsc_v2_done:
 		{
 			/*do nothing*/
 		}
-		RTMPGetKeyParameter("WscConfMode", WscConMode, sizeof(WscConMode), buf1, TRUE) ;
+		if (RTMPGetKeyParameter("WscConfMode", WscConMode, sizeof(WscConMode), buf1, TRUE) != TRUE) 
+		{
+			goto label_WscConfMode_done;
+		}
 		if (data->pf1_num > i)
 		{//need to append default value
 			INT append_cnt = data->pf1_num - i;
@@ -967,7 +917,10 @@ label_wsc_v2_done:
 		{
 			/*do nothing*/
 		}
-		RTMPGetKeyParameter("WscConfMode", WscConMode2, sizeof(WscConMode2), buf2, TRUE) ;
+		if (RTMPGetKeyParameter("WscConfMode", WscConMode2, sizeof(WscConMode2), buf2, TRUE) != TRUE) 
+		{
+			goto label_WscConfMode_done;
+		}
 		if (data->pf2_num > i)
 		{//need to append default value
 			INT append_cnt = data->pf2_num - i;
@@ -996,7 +949,10 @@ label_WscConfMode_done:
 		{
 			/*do nothing*/
 		}
-		RTMPGetKeyParameter("WscConfStatus", WscConMode, sizeof(WscConMode), buf1, TRUE) ;
+		if (RTMPGetKeyParameter("WscConfStatus", WscConMode, sizeof(WscConMode), buf1, TRUE) != TRUE) 
+		{
+			goto label_WscConfStatus_done;
+		}
 		if (data->pf1_num > i)
 		{//need to append default value
 			INT append_cnt = data->pf1_num - i;
@@ -1021,7 +977,10 @@ label_WscConfMode_done:
 		{
 			/*do nothing*/
 		}
-		RTMPGetKeyParameter("WscConfStatus", WscConMode2, sizeof(WscConMode2), buf2, TRUE) ;
+		if (RTMPGetKeyParameter("WscConfStatus", WscConMode2, sizeof(WscConMode2), buf2, TRUE) != TRUE) 
+		{
+			goto label_WscConfStatus_done;
+		}
 		if (data->pf2_num > i)
 		{//need to append default value
 			INT append_cnt = data->pf2_num - i;
@@ -1188,85 +1147,6 @@ static INT multi_profile_merge_apcli(
 }
 #endif /*APCLI_SUPPORT*/
 
-#ifdef BAND_STEERING
-static INT multi_profile_merge_bandsteering(
-	struct mpf_data *data,
-	CHAR *buf1,
-	CHAR *buf2,
-	CHAR *final)
-{
-	//multi_profile_merge_separate("BndStrgBssIdx",buf1,buf2,final);
-	//return NDIS_STATUS_SUCCESS;
-
-	CHAR tmpbuf[TEMP_STR_SIZE]= "";
-	CHAR tmpbuf2[TEMP_STR_SIZE]= "";
-	CHAR value[TEMP_STR_SIZE]="";
-	RTMP_STRING *macptr = NULL;
-	int i=0;
-
-	if (!buf1 || !buf2) 
-		return NDIS_STATUS_FAILURE;
-
-	if(RTMPGetKeyParameter("BndStrgBssIdx", tmpbuf, TEMP_STR_SIZE, buf1, TRUE)) {
-		for (i = 0, macptr = rstrtok(tmpbuf,";"); macptr; macptr = rstrtok(NULL,";"), i++)
-		{
-			if(i == data->pf1_num)
-				break;
-			
-			if(i == 0)
-				snprintf((value + strlen(value)),sizeof(value),"%s",macptr);
-			else
-				snprintf((value + strlen(value)),sizeof(value),";%s",macptr);
-		}
-		if(i < data->pf1_num)
-		{
-			for(; i < data->pf1_num; i++){
-				if(i == 0)
-					snprintf((value + strlen(value)),sizeof(value),"%s","1");
-				else
-					snprintf((value + strlen(value)),sizeof(value),";%s","0");
-			}
-		}	
-	}else{
-		for(i = 0; i < data->pf1_num; i++)
-		{
-			if(i==0)
-				snprintf((value + strlen(value)),sizeof(value),"%s","1");
-			else
-				snprintf((value + strlen(value)),sizeof(value),";%s","0");
-		}
-	}
-	
-	if(RTMPGetKeyParameter("BndStrgBssIdx", tmpbuf2, TEMP_STR_SIZE, buf2, TRUE)){
-		for (i = 0, macptr = rstrtok(tmpbuf2,";"); macptr; macptr = rstrtok(NULL,";"), i++)
-		{
-			if(i == data->pf2_num)
-				break;
-			snprintf((value + strlen(value)),sizeof(value),";%s",macptr);
-		}
-		if(i < data->pf2_num)
-		{
-			for(; i < data->pf2_num; i++){
-				if(i == 0)
-					snprintf((value + strlen(value)),sizeof(value),";%s","1");
-				else
-					snprintf((value + strlen(value)),sizeof(value),";%s","0");
-			}
-		}
-	}else{
-		for(i = 0; i < data->pf2_num; i++)
-		{
-			if(i==0)
-				snprintf((value + strlen(value)),sizeof(value),";%s","1");
-			else
-				snprintf((value + strlen(value)),sizeof(value),";%s","0");
-		}
-	}
-	RTMPSetKeyParameter("BndStrgBssIdx",value, TEMP_STR_SIZE,final, TRUE);	 
-	return NDIS_STATUS_SUCCESS;
-}
-#endif
-
 /*
 * BssidNum
 */
@@ -1315,6 +1195,17 @@ static INT multi_profile_merge_frag(
 {
 	/*Fragment Threshold*/
 	multi_profile_merge_separate("FragThreshold", buf1, buf2, final);
+
+	return NDIS_STATUS_SUCCESS;
+}
+
+static INT multi_profile_merge_gi(
+		CHAR *buf1, CHAR *buf2, CHAR *final)
+{
+	/*HT_GI*/
+	multi_profile_merge_separate("HT_GI", buf1, buf2, final);
+	/*VHT_SGI*/
+	//multi_profile_merge_separate("VHT_SGI", buf1, buf2, final);
 
 	return NDIS_STATUS_SUCCESS;
 }
@@ -1630,28 +1521,6 @@ static INT multi_profile_merge_txbf(
 
     return NDIS_STATUS_SUCCESS;
 }
-
-#ifdef TXBF_BY_CHANNEL
-/*
-*  TXBF by channel merge function for multiple profile mode 
-*/
-static INT multi_profile_merge_bandnobf(
-	CHAR *buf1,
-	CHAR *buf2,
-	CHAR *final)
-{
-    CHAR tmpbuf[64]="";
-	UCHAR len = sizeof(tmpbuf);
-
-	/*merge BandNoBf*/
-	if (RTMPGetKeyParameter("BandNoBf", tmpbuf, len, buf2, TRUE) == TRUE){
-		RTMPSetKeyParameter("BandNoBf",tmpbuf, len,final, TRUE);
-	}
-
-    return NDIS_STATUS_SUCCESS;
-}
-#endif /* TXBF_BY_CHANNEL */
-
 #endif /*TXBF_SUPPORT*/
 
 /*
@@ -1676,22 +1545,13 @@ static INT multi_profile_merge_txpwr(
 
     /*merge TxPower*/
     multi_profile_merge_separate("TxPower",buf1,buf2,final);
-
-#ifdef TX_POWER_CONTROL_SUPPORT
-	/*merge Tx Power Boost Table*/
-	multi_profile_merge_separate("PowerUpCckOfdm",buf1,buf2,final);
-	multi_profile_merge_separate("PowerUpHT20",buf1,buf2,final);
-	multi_profile_merge_separate("PowerUpHT40",buf1,buf2,final);
-	multi_profile_merge_separate("PowerUpVHT20",buf1,buf2,final);
-	multi_profile_merge_separate("PowerUpVHT40",buf1,buf2,final);
-	multi_profile_merge_separate("PowerUpVHT80",buf1,buf2,final);
-	multi_profile_merge_separate("PowerUpVHT160",buf1,buf2,final);
-#endif /* TX_POWER_CONTROL_SUPPORT */	
-
+    
     return NDIS_STATUS_SUCCESS;
 }
 
-#ifdef LINK_TEST_SUPPORT
+
+#ifdef NR_PD_DETECTION
+
 /*
 *  LinkTestSupport merge function for multiple profile mode 
 */
@@ -1706,118 +1566,8 @@ static INT multi_profile_merge_linktest(
 
     return NDIS_STATUS_SUCCESS;
 }
-#endif /* LINK_TEST_SUPPORT */
 
-#ifdef MWDS
-static INT multi_profile_merge_mwds(
-        CHAR *buf1,
-        CHAR *buf2,
-        CHAR *final)
-{
-        /*merge ApMWDS*/
-     multi_profile_merge_separate("ApMWDS",buf1,buf2,final);
-
-        /*merge ApCliMWDS*/
-     multi_profile_merge_separate("ApCliMWDS",buf1,buf2,final);
-
-     return NDIS_STATUS_SUCCESS;
-}
-#endif
-
-#ifdef CONFIG_AP_SUPPORT
-#ifdef DOT11R_FT_SUPPORT
-static INT multi_profile_merge_ft(
-	struct mpf_data *data,
-	CHAR *buf1,
-	CHAR *buf2,
-	CHAR *final)
-{
-    /*merge FtMdId*/
-	multi_profile_merge_increase(data,1,"FtMdId",buf1,buf2,final);
-
-	/*merge FtSupport */
-	multi_profile_merge_separate("FtSupport",buf1,buf2,final);
-
-	return NDIS_STATUS_SUCCESS;
-	
-}
-#endif
-#endif
-#ifdef DOT11K_RRM_SUPPORT
-static INT multi_profile_merge_rrm(
-	struct mpf_data *data,
-	CHAR *buf1,
-	CHAR *buf2,
-	CHAR *final)
-{
-	/*merge FtSupport */
-	multi_profile_merge_separate("RRMEnable",buf1,buf2,final);
-
-	return NDIS_STATUS_SUCCESS;
-	
-}
-#endif
-#ifdef WH_EZ_SETUP
-#ifdef CONFIG_AP_SUPPORT
-static INT multi_profile_merge_ez_setup(
-	CHAR *buf1,
-	CHAR *buf2,
-	CHAR *final)
-{
-
-	/*merge EzEnable*/
-	multi_profile_merge_separate("EzEnable",buf1,buf2,final);
-
-	/*merge EzConfStatus*/
-	multi_profile_merge_separate("EzConfStatus",buf1,buf2,final);
-
-	/*merge EzGroupID*/
-	multi_profile_merge_separate("EzGroupID",buf1,buf2,final);
-
-	/*merge EzGenGroupID*/
-	multi_profile_merge_separate("EzGenGroupID",buf1,buf2,final);
-
-	/*merge EzOpenGroupID*/
-	multi_profile_merge_separate("EzOpenGroupID",buf1,buf2,final);
-
-	/*merge EzPushBW */
-	multi_profile_merge_separate("EzPushBW",buf1,buf2,final);
-
-	/*merge ApCliEzEnable*/
-	multi_profile_merge_separate("ApCliEzEnable",buf1,buf2,final);
-
-	/*merge ApCliEzConfStatus*/
-	multi_profile_merge_separate("ApCliEzConfStatus",buf1,buf2,final);
-
-	/*merge ApCliEzGroupID*/
-	multi_profile_merge_separate("ApCliEzGroupID",buf1,buf2,final);
-
-	/*merge ApCliEzGenGroupID*/
-	multi_profile_merge_separate("ApCliEzGenGroupID",buf1,buf2,final);
-
-	/*merge ApCliEzOpenGroupID*/
-	multi_profile_merge_separate("ApCliEzOpenGroupID",buf1,buf2,final);
-
-	/*merge ApCliEzRssiThreshold*/
-	multi_profile_merge_separate("ApCliEzRssiThreshold",buf1,buf2,final);
-
-	/*merge ApCliHideSSID*/
-	multi_profile_merge_separate("ApCliHideSSID",buf1,buf2,final);
-
-	/*merge EzEnable*/
-	multi_profile_merge_separate("EzDefaultSsid",buf1,buf2,final);
-
-	/*merge EzEnable*/
-	multi_profile_merge_separate("EzDefaultPmk",buf1,buf2,final);
-
-	/*merge EzEnable*/
-	multi_profile_merge_separate("EzDefaultPmkValid",buf1,buf2,final);
-
-	return NDIS_STATUS_SUCCESS;
-
-}
-#endif /*CONFIG_AP_SUPPORT */
-#endif /* WH_EZ_SETUP */
+#endif /* NR_PD_DETECTION */
 
 /*
 * set second profile and merge it.
@@ -1855,13 +1605,11 @@ static INT multi_profile_merge(
 		if(multi_profile_merge_apcli(buf1,buf2,final) != NDIS_STATUS_SUCCESS)
 			return retval;
 #endif /*APCLI_SUPPORT*/
-
-#ifdef BAND_STEERING
-		if(multi_profile_merge_bandsteering(data,buf1,buf2,final) != NDIS_STATUS_SUCCESS)
-			return retval;
-#endif /* BAND_STEERING */
 	}
 #endif /*CONFIG_AP_SUPPORT*/
+	if (multi_profile_merge_gi(buf1, buf2, final) != NDIS_STATUS_SUCCESS)
+		return retval;
+
 	if (multi_profile_merge_protection(buf1, buf2, final) != NDIS_STATUS_SUCCESS)
 		return retval;
 
@@ -1874,12 +1622,6 @@ static INT multi_profile_merge(
 #ifdef TXBF_SUPPORT
     if (multi_profile_merge_txbf(buf2,buf1,final) != NDIS_STATUS_SUCCESS)
         return retval;
-	
-#ifdef TXBF_BY_CHANNEL
-	if (multi_profile_merge_bandnobf(buf2,buf1,final) != NDIS_STATUS_SUCCESS)
-		return retval;
-#endif /* TXBF_BY_CHANNEL */
-
 #endif /*TXBF_SUPPORT*/
 	if(multi_profile_merge_2g_only(buf1,buf2,final) != NDIS_STATUS_SUCCESS)
 		return retval;
@@ -1899,10 +1641,10 @@ static INT multi_profile_merge(
     if (multi_profile_merge_txpwr(buf1,buf2,final) != NDIS_STATUS_SUCCESS)
         return retval;
 
-#ifdef LINK_TEST_SUPPORT
+#ifdef NR_PD_DETECTION
     if (multi_profile_merge_linktest(buf1,buf2,final) != NDIS_STATUS_SUCCESS)
         return retval;
-#endif /* LINK_TEST_SUPPORT */
+#endif /* NR_PD_DETECTION */
 
 #ifdef IGMP_SNOOP_SUPPORT
 	if(multi_profile_merge_igmp(buf1, buf2, final) != NDIS_STATUS_SUCCESS)
@@ -1911,37 +1653,6 @@ static INT multi_profile_merge(
 
 	if(multi_profile_merge_edcca(buf1, buf2, final) != NDIS_STATUS_SUCCESS)
 		return retval;
-
-#ifdef MWDS
-        if(multi_profile_merge_mwds(buf1, buf2, final) != NDIS_STATUS_SUCCESS){
-                return retval;
-        }
-#endif
-
-#ifdef CONFIG_AP_SUPPORT
-#ifdef DOT11R_FT_SUPPORT
-	if(multi_profile_merge_ft(data,buf1,buf2,final) != NDIS_STATUS_SUCCESS)
-			return retval;
-#endif
-#endif
-#ifdef DOT11K_RRM_SUPPORT
-	if(multi_profile_merge_rrm(data,buf1,buf2,final) != NDIS_STATUS_SUCCESS)
-			return retval;
-#endif
-#ifdef WH_EZ_SETUP
-#ifdef CONFIG_AP_SUPPORT
-		IF_DEV_CONFIG_OPMODE_ON_AP(ad){
-			/*merge easy setup */
-			if(multi_profile_merge_ez_setup(buf1,buf2,final) != NDIS_STATUS_SUCCESS)
-			{
-			
-				EZ_DEBUG(DBG_CAT_CLIENT, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" multi_profile_merge_ez_setup Failed !!\n"));
-				return retval;
-			}
-		}
-#endif /*CONFIG_AP_SUPPORT*/
-#endif /* WH_EZ_SETUP */
-
 
 	data->enable = TRUE;
 	/*adjust specific device name*/
@@ -2033,23 +1744,6 @@ INT	multi_profile_devname_req(struct _RTMP_ADAPTER *ad, UCHAR *final_name, UCHAR
 	return NDIS_STATUS_SUCCESS;
 }
 
-#ifdef DSCP_QOS_MAP_SUPPORT
-INT multi_profile_get_bss_num(struct _RTMP_ADAPTER *ad, UINT8 profile_num)
-{
-	struct mpf_data *data;
-	
-	if(!ad->multi_pf_ctrl)
-		return 0;
-	
-	data = (struct mpf_data*) ad->multi_pf_ctrl;
-
-	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF,("MultiProfile profile1 BssNum %d for profile2 BssNum %d \n",data->pf1_num,data->pf2_num));
-	if(profile_num == 1)
-		return data->pf1_num;
-	else
-		return data->pf2_num;
-}
-#endif
 INT	multi_profile_apcli_devname_req(struct _RTMP_ADAPTER *ad, UCHAR *final_name, INT *ifidx)
 {
 	INT card_idx = 0;
@@ -2070,14 +1764,28 @@ INT	multi_profile_apcli_devname_req(struct _RTMP_ADAPTER *ad, UCHAR *final_name,
 	if(*ifidx == 1) {
 		/* apcli1 is 2.4G, name is apclix0*/
 		dev_name = mtb[card_idx].prefix;
-#if defined(BB_SOC) && !defined(MULTI_INF_SUPPORT)
-		snprintf(final_name,32,"%s","apcli");
-#else
 		snprintf(final_name,32,"%s%c",final_name,dev_name[2]);
-#endif
 	}
 	return NDIS_STATUS_SUCCESS;
 }
+
+#ifdef DSCP_QOS_MAP_SUPPORT
+INT multi_profile_get_bss_num(struct _RTMP_ADAPTER *ad, UINT8 profile_num)
+{
+	struct mpf_data *data;
+	
+	if(!ad->multi_pf_ctrl)
+		return 0;
+	
+	data = (struct mpf_data*) ad->multi_pf_ctrl;
+
+	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF,("MultiProfile profile1 BssNum %d for profile2 BssNum %d \n",data->pf1_num,data->pf2_num));
+	if(profile_num == 1)
+		return data->pf1_num;
+	else
+		return data->pf2_num;
+}
+#endif
 /*
 *
 */

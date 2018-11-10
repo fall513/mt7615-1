@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -23,6 +24,7 @@
      Who         When          What
      --------    ----------    ----------------------------------------------
  */
+#endif /* MTK_LICENSE */
 #ifdef IDS_SUPPORT
 
 #include "rt_config.h"
@@ -83,7 +85,7 @@ VOID RTMPHandleIdsEvent(
 	{		
 		if ((FloodFrameThreshold[j] > 0) && (FloodFrameCount[j] > FloodFrameThreshold[j]))
 		{						
-			RTMPSendWirelessEvent(pAd, IW_FLOOD_AUTH_EVENT_FLAG + j, NULL, MAIN_MBSSID, 0);	
+			RTMPSendWirelessEvent(pAd, IW_FLOOD_AUTH_EVENT_FLAG + j, NULL, MAX_MBSSID_NUM(pAd), 0);	
 			/*MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("flooding traffic event(%d) - %d\n", IW_FLOOD_AUTH_EVENT_FLAG + j, FloodFrameCount[j])); */
 		}
 	}	
@@ -236,7 +238,11 @@ BOOLEAN RTMPSpoofedMgmtDetection(
 			RcvdRssi = RTMPMaxRssi(pAd, 
 								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_0), 
 								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_1), 
-								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2));
+								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2)
+#ifdef CUSTOMER_DCC_FEATURE
+								,ConvertToRssi(pAd, &rssi_info, RSSI_IDX_3)
+#endif
+								);
 		
 			switch (FC->SubType) 
 			{
@@ -298,7 +304,12 @@ VOID RTMPConflictSsidDetection(
 	IN UCHAR			SsidLen,
 	IN CHAR				Rssi0,
 	IN CHAR				Rssi1,
-	IN CHAR				Rssi2)
+	IN CHAR				Rssi2
+#ifdef CUSTOMER_DCC_FEATURE
+	,
+	IN CHAR				Rssi3
+#endif
+)
 {
 	INT	i;
 	
@@ -313,10 +324,17 @@ VOID RTMPConflictSsidDetection(
 			rssi_info.raw_rssi[0] = Rssi0;
 			rssi_info.raw_rssi[1] = Rssi1;
 			rssi_info.raw_rssi[2] = Rssi2;
+#ifdef CUSTOMER_DCC_FEATURE
+			rssi_info.raw_rssi[3] = Rssi3;
+#endif
 			
 			RcvdRssi = RTMPMaxRssi(pAd, ConvertToRssi(pAd, &rssi_info, RSSI_IDX_0),
 						ConvertToRssi(pAd, &rssi_info, RSSI_IDX_1),
-						ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2));
+						ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2)
+#ifdef CUSTOMER_DCC_FEATURE
+						,ConvertToRssi(pAd, &rssi_info, RSSI_IDX_3)
+#endif
+									);
 
 			pAd->ApCfg.MBSSID[i].RcvdConflictSsidCount ++;
 			pAd->ApCfg.MBSSID[i].RssiOfRcvdConflictSsid = RcvdRssi;
@@ -347,7 +365,11 @@ BOOLEAN RTMPReplayAttackDetection(
 
 			RcvdRssi = RTMPMaxRssi(pAd, ConvertToRssi(pAd, &rssi_info, RSSI_IDX_0),
 									ConvertToRssi(pAd, &rssi_info, RSSI_IDX_1),
-									ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2));
+									ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2)
+#ifdef CUSTOMER_DCC_FEATURE
+									,ConvertToRssi(pAd, &rssi_info, RSSI_IDX_3)
+#endif
+									);
 		
 			pAd->ApCfg.MBSSID[i].RcvdReplayAttackCount ++;
 			pAd->ApCfg.MBSSID[i].RssiOfRcvdReplayAttack = RcvdRssi;

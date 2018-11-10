@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -17,7 +18,7 @@
  
     Abstract:
 */
-
+#endif /* MTK_LICENSE */
 
 #include "rt_config.h"
 #include "bgnd_scan.h"
@@ -311,12 +312,6 @@ VOID BackgroundScanStateMachineInit(
 	StateMachineSetAction(Sm, BGND_SCAN_IDLE, BGND_SWITCH_CHANNEL, (STATE_MACHINE_FUNC)BackgroundSwitchChannelAction);	
 	StateMachineSetAction(Sm, BGND_SCAN_IDLE, BGND_RDD_REQ, (STATE_MACHINE_FUNC)DfsZeroWaitStartAction);
 	StateMachineSetAction(Sm, BGND_RDD_DETEC, BGND_RDD_TIMEOUT, (STATE_MACHINE_FUNC)DfsZeroWaitStopAction);
-
-#ifdef MT_DFS_SUPPORT	
-	StateMachineSetAction(Sm, BGND_SCAN_IDLE, BGND_DEDICATE_RDD_REQ, (STATE_MACHINE_FUNC)DedicatedZeroWaitStartAction);
-	StateMachineSetAction(Sm, BGND_RDD_DETEC, BGND_OUTBAND_RADAR_FOUND, (STATE_MACHINE_FUNC)DedicatedZeroWaitRunningAction);
-	StateMachineSetAction(Sm, BGND_RDD_DETEC, BGND_OUTBAND_SWITCH, (STATE_MACHINE_FUNC)DedicatedZeroWaitRunningAction);
-#endif	
 }
 
 VOID BackgroundScanInit (
@@ -867,11 +862,9 @@ VOID DfsZeroWaitTimeout(
 	
 #ifdef MT_DFS_SUPPORT
 	UPDATE_MT_ZEROWAIT_DFS_STATE(pAd, DFS_OFF_CHNL_CAC_TIMEOUT);
-#ifdef DFS_DBG_LOG_3
     MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: Status=%d", 
                                                        __FUNCTION__, 
                                                        GET_MT_ZEROWAIT_DFS_STATE(pAd)));
-#endif    
 #endif
 	
 	MlmeEnqueue(pAd, BGND_SCAN_STATE_MACHINE, BGND_RDD_TIMEOUT, 0, NULL, 0);
@@ -900,21 +893,23 @@ VOID DfsZeroWaitStartAction(
 	UCHAR		channel_idx;
 	MT_BGND_SCAN_NOTIFY BgScNotify;
 	MT_SWITCH_CHANNEL_CFG *CurrentSwChCfg;
-	BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[0];
-	struct wifi_dev *wdev = &pMbss->wdev;
+
+    BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[0];
+    struct wifi_dev *wdev = &pMbss->wdev;
 	
-	if(wdev == NULL)
-	{
-	
-		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: wdev == NULL! \n", __FUNCTION__));
-		return;
-	}
-	
+    if(wdev == NULL)
+    {
+        
+        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: wdev == NULL! \n", __FUNCTION__));
+        return;
+    }
 	pAd->BgndScanCtrl.BgndScanStatMachine.CurrState = BGND_RDD_DETEC;
+
 	CurrentSwChCfg = &(pAd->BgndScanCtrl.CurrentSwChCfg[0]);	
 	
 	BgScNotify.NotifyFunc =  (0x2 << 5 | 0xf);
 	BgScNotify.BgndScanStatus = 1;//start
+	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("DfsZeroWaitStartAction Notify NotifyFunc=%x, Status=%d", BgScNotify.NotifyFunc, BgScNotify.BgndScanStatus));
 	MtCmdBgndScanNotify(pAd, BgScNotify);
 	
     //Disable BF, MU
@@ -945,6 +940,9 @@ VOID DfsZeroWaitStartAction(
 	BgndScanCfg.Reason = CH_SWITCH_BACKGROUND_SCAN_START;
 	BgndScanCfg.RxPath =0x0C; /* Distribute 2 Rx for background scan */
 	BgndScanCfg.TxStream = 2;
+	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s Start DFS Zero Wait Bandidx=%d,	BW=%d, CtrlCh=%d, CenCh=%d, Reason=%d, RxPath=%d\n", 
+		__FUNCTION__, BgndScanCfg.BandIdx, BgndScanCfg.Bw, BgndScanCfg.ControlChannel,
+		BgndScanCfg.CentralChannel, BgndScanCfg.Reason, BgndScanCfg.RxPath));
 	MtCmdBgndScan(pAd, BgndScanCfg);
 
 	//Fill band0 BgndScanCfg
@@ -955,6 +953,9 @@ VOID DfsZeroWaitStartAction(
 	BgndScanCfg.Reason = CH_SWITCH_BACKGROUND_SCAN_START;
 	BgndScanCfg.RxPath =0x03; /* Keep 2 Rx for original service */
 	BgndScanCfg.TxStream = 2;
+	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s Start DFS Zero Wait Bandidx=%d,	BW=%d, CtrlCh=%d, CenCh=%d, Reason=%d, RxPath=%d\n", 
+		__FUNCTION__, BgndScanCfg.BandIdx, BgndScanCfg.Bw, BgndScanCfg.ControlChannel,
+		BgndScanCfg.CentralChannel, BgndScanCfg.Reason, BgndScanCfg.RxPath));
 	MtCmdBgndScan(pAd, BgndScanCfg);
 
     /* Enable band1 DFS */
@@ -982,38 +983,27 @@ VOID DfsZeroWaitStopAction(
 	UCHAR	i;
 	BOOL	Cancelled;
 	BACKGROUND_SCAN_CTRL *BgndScanCtrl = &pAd->BgndScanCtrl;
-	BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[0];
-	struct wifi_dev *wdev = &pMbss->wdev;
 
 	RTMPCancelTimer(&BgndScanCtrl->DfsZeroWaitTimer, &Cancelled);	
-	BgndScanCtrl->BgndScanStatMachine.CurrState = BGND_SCAN_IDLE;
-	CurrentSwChCfg = &(BgndScanCtrl->CurrentSwChCfg[0]);
-
-	if (wdev == NULL)
-	{
-#ifdef DFS_DBG_LOG_0	
-		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: wdev == NULL! \n", __FUNCTION__));
-#endif		
-		pAd->Dot11_H.RDMode = RD_NORMAL_MODE;
-#ifdef MT_DFS_SUPPORT		
-		UPDATE_MT_ZEROWAIT_DFS_STATE(pAd, DFS_IDLE);
-#endif
-		return;
-	}
+    BgndScanCtrl->BgndScanStatMachine.CurrState = BGND_SCAN_IDLE;
+    CurrentSwChCfg = &(BgndScanCtrl->CurrentSwChCfg[0]);
 
 #ifdef MT_DFS_SUPPORT
-	/* Disable Band1 DFS */
-	WrapDfsRadarDetectStop(pAd);
+    MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]RadarDetected=%d, state=%d\n",
+                                                         __FUNCTION__,
+                                                         BgndScanCtrl->RadarDetected,
+                                                         GET_MT_ZEROWAIT_DFS_STATE(pAd)));
+	
+    /* Disable Band1 DFS */
+        WrapDfsRadarDetectStop(pAd);
 #endif /* MT_DFS_SUPPORT */
 	
 	/* RxStream to RxPath */
 	RxStreamNums = CurrentSwChCfg->RxStream; 
 	if (RxStreamNums > 4) {
-#ifdef DFS_DBG_LOG_0
 		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-			("%s():illegal RxStreamNums(%d) \n",
-			__FUNCTION__, RxStreamNums));
-#endif
+            		("%s():illegal RxStreamNums(%d) \n",
+            		__FUNCTION__, RxStreamNums));
 		RxStreamNums = 4;
 	}
 
@@ -1028,6 +1018,9 @@ VOID DfsZeroWaitStopAction(
 	BgndScanCfg.RxPath =RxPath; /* return to 4 Rx */
 	BgndScanCfg.TxStream = CurrentSwChCfg->TxStream;
 	
+	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s Stop Scan Bandidx=%d, BW=%d, CtrlCh=%d, CenCh=%d, Reason=%d, RxPath=%d\n", 
+		__FUNCTION__, BgndScanCfg.BandIdx, BgndScanCfg.Bw, BgndScanCfg.ControlChannel,
+		BgndScanCfg.CentralChannel, BgndScanCfg.Reason, BgndScanCfg.RxPath));
 	MtCmdBgndScan(pAd, BgndScanCfg);
 	//Notify RA background scan stop
 	BgScNotify.NotifyFunc =  (BgndScanCfg.TxStream << 5 | 0xf);
@@ -1044,331 +1037,148 @@ VOID DfsZeroWaitStopAction(
 #endif /* CFG_SUPPORT_MU_MIMO */
   
 #ifdef MT_DFS_SUPPORT    
+    MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]RadarDetected=%d, state=%d\n",
+                                                         __FUNCTION__,
+                                                         BgndScanCtrl->RadarDetected,
+                                                         GET_MT_ZEROWAIT_DFS_STATE(pAd)));
 
-	/* MBSS Zero Wait Stop flow */
-	if (CHK_MT_ZEROWAIT_DFS_STATE(pAd,DFS_MBSS_CAC))
-	{        
-		return;
-	}
+    /* MBSS Zero Wait Stop flow */
+    if (CHK_MT_ZEROWAIT_DFS_STATE(pAd,DFS_MBSS_CAC))
+    {        
+        return;
+    }
 
-	if ((BgndScanCtrl->RadarDetected !=1)
+    if ((BgndScanCtrl->RadarDetected !=1)
 #ifdef MAC_REPEATER_SUPPORT
 		&& (!(CHK_MT_ZEROWAIT_DFS_STATE(pAd, DFS_OFF_CHNL_CAC_TIMEOUT) && (pAd->ApCfg.bMACRepeaterEn == TRUE)))
 #endif		
 	)
-	{   
+    {    
+        BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[0];
+        struct wifi_dev *wdev = &pMbss->wdev;
+        if (wdev == NULL)
+        {
+            MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: wdev == NULL! \n", __FUNCTION__));
 
-		pAd->Dot11_H.RDMode = RD_SWITCHING_MODE;
-		if (CHK_MT_ZEROWAIT_DFS_STATE(pAd, DFS_OFF_CHNL_CAC_TIMEOUT))
-		{   
-		/* Off-Channel CAC timeout: Band1 DFS channel is safe for using */
-#ifdef DFS_DBG_LOG_3		
-			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]Currstate:CAC_TIMEOUT, Switch to CH%d! \n",
-							__FUNCTION__,
-							pAd->BgndScanCtrl.DfsZeroWaitChannel));
-#endif		
+            pAd->Dot11_H.RDMode = RD_NORMAL_MODE; 
+            UPDATE_MT_ZEROWAIT_DFS_STATE(pAd, DFS_IDLE);
+	    return;
+	}
 
-			rtmp_set_channel(pAd, wdev, pAd->BgndScanCtrl.DfsZeroWaitChannel);
-		}	
-		else if (CHK_MT_ZEROWAIT_DFS_STATE(pAd, DFS_CAC))
-		{
-			UCHAR   Channel;          
+        MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("[%s]ZeroWaitStop,no radar, state=%d\n",
+                                                         __FUNCTION__,
+                                                         GET_MT_ZEROWAIT_DFS_STATE(pAd)));
+        pAd->Dot11_H.RDMode = RD_SWITCHING_MODE;
+        if (CHK_MT_ZEROWAIT_DFS_STATE(pAd, DFS_OFF_CHNL_CAC_TIMEOUT))
+        {   /* Off-Channel CAC timeout: Band1 DFS channel is safe for using */
+            MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]Currstate:CAC_TIMEOUT, Switch to CH%d! \n",
+                                                         __FUNCTION__,
+                                                         pAd->BgndScanCtrl.DfsZeroWaitChannel));
+
+		    rtmp_set_channel(pAd, wdev, pAd->BgndScanCtrl.DfsZeroWaitChannel);
+	    }	
+        else if (CHK_MT_ZEROWAIT_DFS_STATE(pAd, DFS_CAC))
+        {
+            UCHAR   Channel;          
             
-			/* Off-Channel CAC period -> set new channel(nonDFS/DFS) */
-			if((BgndScanCtrl->DfsZeroWaitChannel == 0)
-			|| (RadarChannelCheck(pAd, BgndScanCtrl->DfsZeroWaitChannel) == FALSE)
+            /* Off-Channel CAC period -> set new channel(nonDFS/DFS) */
+            if((BgndScanCtrl->DfsZeroWaitChannel == 0)
+                || (RadarChannelCheck(pAd, BgndScanCtrl->DfsZeroWaitChannel) == FALSE)
 #ifdef MAC_REPEATER_SUPPORT                
-			|| (pAd->ApCfg.bMACRepeaterEn)
+                || (pAd->ApCfg.bMACRepeaterEn)
 #endif /* MAC_REPEATER_SUPPORT */
-			)
-			{  
-				/* 1. set nonDFS Channel case and next step is APStop/APStartUp 
-				2. Previous is CAC state and repeater dynamic enable */
-				Channel  = BgndScanCtrl->DfsZeroWaitChannel;              
-				MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]Currstate:DFS_CAC, Switch to CH%d! \n",
-									__FUNCTION__, Channel));
+		)
+            {  
+               /* 1. set nonDFS Channel case and next step is APStop/APStartUp 
+                  2. Previous is CAC state and repeater dynamic enable 
+               */
+               Channel  = BgndScanCtrl->DfsZeroWaitChannel;              
+               MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]Currstate:DFS_CAC, Switch to CH%d! \n",
+                                                         __FUNCTION__,
+                                                         Channel));
 
-				UPDATE_MT_ZEROWAIT_DFS_STATE(pAd, DFS_IDLE);
+               UPDATE_MT_ZEROWAIT_DFS_STATE(pAd, DFS_IDLE);
                
 #ifdef MAC_REPEATER_SUPPORT
-				//Disable DFS zero wait support  for repeater mode dynamic enable
-				if (pAd->ApCfg.bMACRepeaterEn)
-				{
-					BgndScanCtrl->DfsZeroWaitSupport = FALSE;
-					UPDATE_MT_ZEROWAIT_DFS_Support(pAd, FALSE);
-				}
+               //Disable DFS zero wait support  for repeater mode dynamic enable
+               if (pAd->ApCfg.bMACRepeaterEn)
+               {
+                   BgndScanCtrl->DfsZeroWaitSupport = FALSE;
+                   UPDATE_MT_ZEROWAIT_DFS_Support(pAd, FALSE);
+               }
 #endif /* MAC_REPEATER_SUPPORT */
 
                /* Do ChSwAnn by Set_Channel_Proc */ 
-				rtmp_set_channel(pAd, wdev, Channel);
-			}
-			else
-			{   
-				/* Ori CAC -> set DFS channel case
-				Next Step is ZeroWaitStart and still is CAC state */
+               rtmp_set_channel(pAd, wdev, Channel);
+            }
+            else
+            {   /* Ori CAC -> set DFS channel case
+                   Next Step is ZeroWaitStart and still is CAC state */
                       
-				/* Re-select a non-DFS channel. */
-				Channel = WrapDfsRandomSelectChannel(pAd, TRUE, 0); /* Skip DFS CH */    
+                /* Re-select a non-DFS channel. */
+                Channel = WrapDfsRandomSelectChannel(pAd, TRUE); /* Skip DFS CH */    
                
-				/* Assign DfsZeroWait Band0 CH and update into BgnScan.CurrSwChCfg */
-				CurrentSwChCfg->ControlChannel = Channel;
-				CurrentSwChCfg->CentralChannel = DfsGetCentCh(pAd, Channel, CurrentSwChCfg->Bw);
+                /* Assign DfsZeroWait Band0 CH and update into BgnScan.CurrSwChCfg */
+                CurrentSwChCfg->ControlChannel = Channel;
+                CurrentSwChCfg->CentralChannel = DfsGetCentCh(pAd, Channel, CurrentSwChCfg->Bw);
                 
-				MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s][CAC Period->Set DFS Ch]New nonDfsCh=%d, DfsCh=%d\n",
-									__FUNCTION__,
-									Channel,
-									BgndScanCtrl->DfsZeroWaitChannel));
+                MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s][CAC Period->Set DFS Ch]New nonDfsCh=%d, DfsCh=%d\n",
+                                                                 __FUNCTION__,
+                                                                 Channel,
+                                                                 BgndScanCtrl->DfsZeroWaitChannel));
                 
-				if (HcUpdateChannel(pAd,Channel) != 0)
-				{                  
-#ifdef DFS_DBG_LOG_0
+                if (HcUpdateChannel(pAd,Channel) != 0)
+                {
+                    
+                    MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("[%s]Update Channel%d fail\n",__FUNCTION__, Channel));                
+                }
+                pAd->Dot11_H.CSCount = 0;
+                pAd->Dot11_H.new_channel = Channel;   
+                pAd->Dot11_H.RDMode = RD_SWITCHING_MODE; // New add
 
-					MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("[%s]Update Channel%d fail\n",__FUNCTION__, Channel));                
-#endif
-
-				}
-				
-				pAd->Dot11_H.CSCount = 0;
-				pAd->Dot11_H.new_channel = Channel;   
-				pAd->Dot11_H.RDMode = RD_SWITCHING_MODE; // New add
-
-				if (HcUpdateCsaCntByChannel(pAd, Channel) != 0)
-				{
-#ifdef DFS_DBG_LOG_0				
-					MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("[%s]Update CsaCnt by Channel%d fail\n",__FUNCTION__, Channel));
-#endif
-				}          
-			}
-		}
-	}
-	else
-	{   
-		/*1. Radar detected during off-channel CAC*/
+                if (HcUpdateCsaCntByChannel(pAd, Channel) != 0)
+                {
+                    MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("[%s]Update CsaCnt by Channel%d fail\n",__FUNCTION__, Channel));
+                }          
+            }
+        }
+    }
+    else
+    {   
+        /*1. Radar detected during off-channel CAC*/
 		/*2. Repeater enable during off-channel CAC*/
-#ifdef DFS_DBG_LOG_3
-		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]ZeroWaitStop,have radar(or repeater En during off-channel CAC), state=%d\n",
-								__FUNCTION__,
-								GET_MT_ZEROWAIT_DFS_STATE(pAd)));
-#endif		
+        MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]ZeroWaitStop,have radar(or repeater En during off-channel CAC), state=%d\n",
+                                                         __FUNCTION__,
+                                                         GET_MT_ZEROWAIT_DFS_STATE(pAd)));
 
-		if (CHK_MT_ZEROWAIT_DFS_STATE(pAd, DFS_RADAR_DETECT))
-		{
-			DfsSetZeroWaitCacSecond(pAd) ; 
-			WrapDfsRddReportHandle(pAd,HW_RDD1);
-			/* OffChl CAC period -> detected radar -> band1 Non-Dfs CH is single work CH */
-			//UPDATE_MT_ZEROWAIT_DFS_STATE(pAd, DFS_IDLE);
+        if (CHK_MT_ZEROWAIT_DFS_STATE(pAd, DFS_RADAR_DETECT))
+        {
+            DfsSetZeroWaitCacSecond(pAd) ; 
+            WrapDfsRddReportHandle(pAd,HW_RDD1);
+            /* OffChl CAC period -> detected radar -> band1 Non-Dfs CH is single work CH */
+            //UPDATE_MT_ZEROWAIT_DFS_STATE(pAd, DFS_IDLE);
 
-			/* Enable Tx Queues and ACK */
-			//MtCmdSetDfsTxStart(pAd, DBDC_BAND0);
+            /* Enable Tx Queues and ACK */
+            //MtCmdSetDfsTxStart(pAd, DBDC_BAND0);
 
 #ifdef MAC_REPEATER_SUPPORT
-			//Disable DFS zero wait support  for repeater mode dynamic enable
-			if (pAd->ApCfg.bMACRepeaterEn)
-			{
-				BgndScanCtrl->DfsZeroWaitSupport = FALSE;
-				UPDATE_MT_ZEROWAIT_DFS_Support(pAd, FALSE);
-			}
+            //Disable DFS zero wait support  for repeater mode dynamic enable
+            if (pAd->ApCfg.bMACRepeaterEn)
+            {
+                BgndScanCtrl->DfsZeroWaitSupport = FALSE;
+                UPDATE_MT_ZEROWAIT_DFS_Support(pAd, FALSE);
+            }
 #endif /* MAC_REPEATER_SUPPORT */
-		}
+        }
 
         //pAd->Dot11_H.RDMode = RD_NORMAL_MODE;
         //BgndScanCtrl->RadarDetected = FALSE;
          
         /* Recover Band1 TX */
         //DfsCacNormalStart(pAd);
-	}
+    }
 #endif /* MT_DFS_SUPPORT */
 }
-
-#ifdef MT_DFS_SUPPORT
-VOID DedicatedZeroWaitStartAction(
-                IN RTMP_ADAPTER *pAd,
-                IN MLME_QUEUE_ELEM *Elem)
-{
-	MT_BGND_SCAN_CFG BgndScanCfg;
-	MT_SWITCH_CHANNEL_CFG *CurrentSwChCfg;
-	MT_BGND_SCAN_NOTIFY BgScNotify;
-	CHAR OutBandCh = GET_BGND_PARAM(pAd, OUTBAND_CH);
-	CHAR OutBandBw = GET_BGND_PARAM(pAd, OUTBAND_BW);
-	CHAR InBandCh = GET_BGND_PARAM(pAd, INBAND_CH);
-	CHAR InBandBw = GET_BGND_PARAM(pAd, INBAND_BW);
-
-	pAd->BgndScanCtrl.BgndScanStatMachine.CurrState = BGND_RDD_DETEC;
-	
-	CurrentSwChCfg = &(pAd->BgndScanCtrl.CurrentSwChCfg[0]);
-	
-	os_zero_mem(&BgndScanCfg,sizeof(MT_BGND_SCAN_CFG));
-
-	BgScNotify.NotifyFunc =  (0x2 << 5 | 0xf);
-	BgScNotify.BgndScanStatus = 1;//start
-	
-	MtCmdBgndScanNotify(pAd, BgScNotify);
-
-    //Disable BF, MU
-#if defined(MT_MAC) && (!defined(MT7636)) && defined(TXBF_SUPPORT)		
-	//BfSwitch(pAd, 0);
-	DynamicTxBfDisable(pAd, TRUE);
-#endif
-#ifdef CFG_SUPPORT_MU_MIMO
-	MuSwitch(pAd, 0);
-#endif /* CFG_SUPPORT_MU_MIMO */
-
-	BgndScanCfg.ControlChannel = OutBandCh;
-	BgndScanCfg.CentralChannel= DfsPrimToCent(OutBandCh, OutBandBw);
-	BgndScanCfg.Bw = OutBandBw;	
-	BgndScanCfg.TxStream = 2;
-	BgndScanCfg.RxPath = 0x0c;
-	BgndScanCfg.Reason = CH_SWITCH_BACKGROUND_SCAN_START;
-	BgndScanCfg.BandIdx = 1;
-
-#ifdef DFS_DBG_LOG
-	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\x1b[1;33m [%s]  Bandidx=%d, BW=%d, CtrlCh=%d, CenCh=%d, Reason=%d, RxPath=%d \x1b[m \n", 
-			__FUNCTION__, BgndScanCfg.BandIdx, BgndScanCfg.Bw, BgndScanCfg.ControlChannel,
-			BgndScanCfg.CentralChannel, BgndScanCfg.Reason, BgndScanCfg.RxPath));
-#endif
-	
-	MtCmdBgndScan(pAd, BgndScanCfg);
-
-
-	BgndScanCfg.ControlChannel = InBandCh;
-	BgndScanCfg.CentralChannel = CurrentSwChCfg->CentralChannel;
-	BgndScanCfg.Bw = InBandBw;	
-	BgndScanCfg.TxStream = 2;
-	BgndScanCfg.RxPath = 0x03;
-	BgndScanCfg.Reason = CH_SWITCH_BACKGROUND_SCAN_START;
-	BgndScanCfg.BandIdx = 0;
-
-#ifdef DFS_DBG_LOG
-	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\x1b[1;33m [%s]  Bandidx=%d, BW=%d, CtrlCh=%d, CenCh=%d, Reason=%d, RxPath=%d \x1b[m \n", 
-			__FUNCTION__, BgndScanCfg.BandIdx, BgndScanCfg.Bw, BgndScanCfg.ControlChannel,
-			BgndScanCfg.CentralChannel, BgndScanCfg.Reason, BgndScanCfg.RxPath));	
-#endif
-	
-	MtCmdBgndScan(pAd, BgndScanCfg);
-
-	/*Start Band1 radar detection*/
-	DfsDedicatedOutBandRDDStart(pAd);
-
-}
-
-VOID DedicatedZeroWaitRunningAction(
-                IN RTMP_ADAPTER *pAd,
-                IN MLME_QUEUE_ELEM *Elem)
-{
-	MT_BGND_SCAN_CFG BgndScanCfg;
-	CHAR OutBandCh;
-	CHAR OutBandBw;
-	
-	DfsDedicatedOutBandRDDRunning(pAd);
-	
-	OutBandCh = GET_BGND_PARAM(pAd, OUTBAND_CH);
-	OutBandBw = GET_BGND_PARAM(pAd, OUTBAND_BW);
-
-	if(OutBandCh == 0)
-	{
-		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\x1b[1;33m [%s] No available outband Channel \x1b[m \n", 
-			__FUNCTION__));
-		DedicatedZeroWaitStop(pAd);
-		return;
-	}
-	
-	pAd->BgndScanCtrl.BgndScanStatMachine.CurrState = BGND_RDD_DETEC;
-		
-	os_zero_mem(&BgndScanCfg,sizeof(MT_BGND_SCAN_CFG));
-
-	BgndScanCfg.ControlChannel = OutBandCh;
-	BgndScanCfg.CentralChannel= DfsPrimToCent(OutBandCh, OutBandBw);
-	BgndScanCfg.Bw = OutBandBw;	
-	BgndScanCfg.TxStream = 2;
-	BgndScanCfg.RxPath = 0x0c;
-	BgndScanCfg.Reason = CH_SWITCH_BACKGROUND_SCAN_RUNNING;
-	BgndScanCfg.BandIdx = 1;
-
-#ifdef DFS_DBG_LOG
-	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\x1b[1;33m [%s] Bandidx=%d, BW=%d, CtrlCh=%d, CenCh=%d, Reason=%d, RxPath=%d \x1b[m \n", 
-			__FUNCTION__, BgndScanCfg.BandIdx, BgndScanCfg.Bw, BgndScanCfg.ControlChannel,
-			BgndScanCfg.CentralChannel, BgndScanCfg.Reason, BgndScanCfg.RxPath));
-#endif
-	
-	MtCmdBgndScan(pAd, BgndScanCfg);
-
-	/*Start Band1 radar detection*/
-	DfsDedicatedOutBandRDDStart(pAd);
-
-}
-
-VOID DedicatedZeroWaitStop(
-                IN RTMP_ADAPTER *pAd)
-{
-	MT_BGND_SCAN_CFG BgndScanCfg;
-	MT_BGND_SCAN_NOTIFY BgScNotify;
-	MT_SWITCH_CHANNEL_CFG *CurrentSwChCfg;
-	UCHAR	RxStreamNums =0;
-	UCHAR	RxPath =0;
-	UCHAR	i;
-	CHAR InBandCh = GET_BGND_PARAM(pAd, ORI_INBAND_CH);
-	CHAR InBandBw = GET_BGND_PARAM(pAd, ORI_INBAND_BW);
-	BACKGROUND_SCAN_CTRL *BgndScanCtrl = &pAd->BgndScanCtrl;
-
-	CurrentSwChCfg = &(BgndScanCtrl->CurrentSwChCfg[0]);
-
-	if(!IS_SUPPORT_DEDICATED_ZEROWAIT_DFS(pAd))
-		return;
-
-	if(!GET_BGND_STATE(pAd, BGND_RDD_DETEC))
-		return;
-	BgndScanCtrl->BgndScanStatMachine.CurrState = BGND_SCAN_IDLE;
-
-	DfsDedicatedOutBandRDDStop(pAd);
-
-	/* RxStream to RxPath */
-	RxStreamNums = CurrentSwChCfg->RxStream; 
-	if (RxStreamNums > 4) {
-#ifdef DFS_DBG_LOG_0
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-			("\x1b[1;33m %s():illegal RxStreamNums(%d) \x1b[m \n",
-			__FUNCTION__, RxStreamNums));
-#endif
-		RxStreamNums = 4;
-	}
-
-	for (i = 0; i < RxStreamNums; i++)
-		RxPath |= 1 << i;
-
-
-	BgndScanCfg.BandIdx=0;
-	BgndScanCfg.Bw = InBandBw;
-	BgndScanCfg.ControlChannel= InBandCh;
-	BgndScanCfg.CentralChannel = DfsPrimToCent(InBandCh, InBandBw);
-	BgndScanCfg.Reason = CH_SWITCH_BACKGROUND_SCAN_STOP;
-	BgndScanCfg.RxPath = RxPath; /* return to 4 Rx */
-	BgndScanCfg.TxStream = CurrentSwChCfg->TxStream;
-
-#ifdef DFS_DBG_LOG
-	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("[%s] Bandidx=%d, BW=%d, CtrlCh=%d, CenCh=%d, Reason=%d, RxPath=%d\n", 
-			__FUNCTION__, BgndScanCfg.BandIdx, BgndScanCfg.Bw, BgndScanCfg.ControlChannel,
-			BgndScanCfg.CentralChannel, BgndScanCfg.Reason, BgndScanCfg.RxPath));	
-#endif	
-	MtCmdBgndScan(pAd, BgndScanCfg);
-
-
-	//Notify RA background scan stop
-	BgScNotify.NotifyFunc =  (BgndScanCfg.TxStream << 5 | 0xf);
-	BgScNotify.BgndScanStatus = 0;//stop
-	
-	MtCmdBgndScanNotify(pAd, BgScNotify);
-		
-//Enable BF, MU
-#if defined(MT_MAC) && (!defined(MT7636)) && defined(TXBF_SUPPORT)		
-	//BfSwitch(pAd, 1);
-	DynamicTxBfDisable(pAd, FALSE); 
-#endif
-#ifdef CFG_SUPPORT_MU_MIMO
-	MuSwitch(pAd, 1);
-#endif /* CFG_SUPPORT_MU_MIMO */
-}
-
-#endif
 
 VOID BackgroundScanTest(
 	IN PRTMP_ADAPTER pAd,

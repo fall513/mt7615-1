@@ -43,9 +43,10 @@
 #endif /* MEM_ALLOC_INFO_SUPPORT */
 
 #if defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
-#include "../../../../../../net/nat/hw_nat/ra_nat.h"
-#include "../../../../../../net/nat/hw_nat/frame_engine.h"
+#include "../../../../../../../net/nat/hw_nat/ra_nat.h"
+#include "../../../../../../../net/nat/hw_nat/frame_engine.h"
 #endif
+
 
 /* TODO */
 #undef RT_CONFIG_IF_OPMODE_ON_AP
@@ -62,6 +63,11 @@
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3)
+
+#include "rtmp.h"
+
+#define FOE_MAGIC_WLAN 76
+
 static inline void *netdev_priv(struct net_device *dev)
 {
 	return dev->priv;
@@ -1571,7 +1577,7 @@ static int RtmpOSNetDevRequestName(
 
 		slotNameLen = strlen(suffixName);
 		ASSERT(((slotNameLen + prefixLen) < IFNAMSIZ));
-		strcat(desiredName, suffixName);
+		strncat(desiredName, suffixName, strlen(suffixName));
 
 		existNetDev = RtmpOSNetDevGetByName(dev, &desiredName[0]);
 		if (existNetDev == NULL)
@@ -1584,7 +1590,7 @@ static int RtmpOSNetDevRequestName(
 #ifdef HOSTAPD_SUPPORT
 		*pIoctlIF = ifNameIdx;
 #endif /*HOSTAPD_SUPPORT */
-		strcpy(&dev->name[0], &desiredName[0]);
+		strncpy(&dev->name[0], &desiredName[0], sizeof(dev->name) - 1);
 		Status = NDIS_STATUS_SUCCESS;
 	} else {
 		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -1743,7 +1749,7 @@ static void RALINK_ET_DrvInfoGet(
 	struct net_device *pDev,
 	struct ethtool_drvinfo *pInfo)
 {
-	strcpy(pInfo->driver, "RALINK WLAN");
+	strncpy(pInfo->driver, "RALINK WLAN", sizeof(pInfo->driver) - 1);
 
 
 	sprintf(pInfo->bus_info, "CSR 0x%lx", pDev->base_addr);
@@ -2058,7 +2064,7 @@ VOID RtmpDrvAllMacPrint(
 				printk("%s", msg);
 				macAddr += AddrStep;
 			}
-			sprintf(msg, "\nDump all MAC values to %s\n", fileName);
+			snprintf(msg, 1024, "\nDump all MAC values to %s\n", fileName);
 		}
 		filp_close(file_w, NULL);
 	}
@@ -2109,8 +2115,7 @@ VOID RtmpDrvAllE2PPrint(
 				eepAddr += AddrStep;
 				pMacContent += (AddrStep >> 1);
 			}
-			sprintf(msg, "\nDump all EEPROM values to %s\n",
-				fileName);
+			snprintf(msg, 1024, "\nDump all EEPROM values to %s\n", fileName);
 		}
 		filp_close(file_w, NULL);
 	}
@@ -2479,7 +2484,7 @@ VOID RtmpOsPktNatMagicTag(IN PNDIS_PACKET pNetPkt)
 #if !defined(CONFIG_RA_NAT_NONE)
 #if defined (CONFIG_RA_HW_NAT)  || defined (CONFIG_RA_HW_NAT_MODULE)
 	struct sk_buff *pRxPkt = RTPKT_TO_OSPKT(pNetPkt);
-	FOE_MAGIC_TAG(pRxPkt) = FOE_MAGIC_WLAN;
+	FOE_MAGIC_TAG(pRxPkt) = 76;//FOE_MAGIC_WLAN; *******************************
 #endif /* CONFIG_RA_HW_NAT || CONFIG_RA_HW_NAT_MODULE */
 #endif /* CONFIG_RA_NAT_NONE */
 }

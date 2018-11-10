@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +26,7 @@
 	--------	----------  ----------------------------------------------
 	Name		Date	    Modification logs
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __CMM_CMD_H__
 #define __CMM_CMD_H__
 
@@ -99,13 +100,12 @@ enum {
 #endif/*INTERNAL_CAPTURE_SUPPORT*/
 
 #if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
-CMDTHRED_PRECAL_TXLPF,
-CMDTHRED_PRECAL_TXIQ,
-CMDTHRED_PRECAL_TXDC,
-CMDTHRED_PRECAL_RXFI,
-CMDTHRED_PRECAL_RXFD,
+    CMDTHRED_PRECAL_TXLPF,
+    CMDTHRED_PRECAL_TXIQ,
+    CMDTHRED_PRECAL_TXDC,
+    CMDTHRED_PRECAL_RXFI,
+    CMDTHRED_PRECAL_RXFD,
 #endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */
-
 
 	CMDTHRED_DOT11H_SWITCH_CHANNEL,
 	CMDTHREAD_END_CMD_ID,

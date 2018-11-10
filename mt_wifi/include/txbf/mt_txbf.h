@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -13,26 +14,16 @@
 	Module Name:
 	mt_txbf.h
 */
-
+#endif /* MTK_LICENSE */
 
 #ifndef _RT_TXBF_H_
 #define _RT_TXBF_H_
 
 #ifdef TXBF_SUPPORT
 
-/* #define TXBF_BY_CHANNEL disable for MSP check */ 
-#define TXBF_DYNAMIC_DISABLE
-
 struct _RTMP_ADAPTER;
 struct _MAC_TABLE_ENTRY;
 struct _VHT_CAP_INFO;
-
-#ifdef TXBF_DYNAMIC_DISABLE
-/*  used in rStaRecBf.ucAutoSoundingCtrl
- *   if set, BF is dynamically disabled
- */
-#define DYNAMIC_TXBF_DISABLE	BIT(6)
-#endif /* TXBF_DYNAMIC_DISABLE */
 
 // Divider phase calibration closed loop definition
 #define RX0TX0     0
@@ -168,10 +159,278 @@ typedef struct _CMD_STAREC_BF {
     UINT_8  ucReserved[2];
 } CMD_STAREC_BF, *P_CMD_STAREC_BF;
 
+#ifdef RT_BIG_ENDIAN
 typedef union _PFMU_PROFILE_TAG1
 {
     struct 
     {
+    	/* DWORD0 */
+        UINT_32 ucMemAddr2RowIdx    : 5; // [31 : 27] : row index : 0 ~ 63
+        UINT_32 ucMemAddr2ColIdx    : 3; // [26 : 24] : column index : 0 ~ 5
+        UINT_32 ucMemAddr1RowIdx    : 6; // [23 : 18] : row index : 0 ~ 63
+        UINT_32 ucMemAddr1ColIdx    : 3; // [17 : 15] : column index : 0 ~ 5
+        UINT_32 ucRMSD              : 3; // [14:12]   : RMSD value from CE
+        UINT_32 ucInvalidProf       : 1; // [11]      : 0:default, 1: This profile number is invalid by SW
+        UINT_32 ucSU_MU             : 1; // [10]      : 0:SU, 1: MU
+        UINT_32 ucDBW               : 2; // [9:8]     : 0/1/2/3: DW20/40/80/160NC
+        UINT_32 ucTxBf              : 1; // [7]       : 0: iBF, 1: eBF
+        UINT_32 ucProfileID         : 7; // [6:0]     : 0 ~ 63
+
+    	/* DWORD1 */
+        UINT_32 ucReserved1         : 1; // [63]      : Reserved
+        UINT_32 ucHtcExist          : 1; // [62]      : HtcExist
+        UINT_32 ucCodeBook          : 2; // [61:60]   : Code book
+        UINT_32 ucLM                : 2; // [59 : 58] : 0/1/2
+        UINT_32 ucNgroup            : 2; // [57 : 56] : Ngroup
+        UINT_32 ucNcol              : 2; // [55 : 54] : Ncol
+        UINT_32 ucNrow              : 2; // [53 : 52] : Nrow
+        UINT_32 ucReserved          : 1; // [51]      : Reserved
+        UINT_32 ucMemAddr4RowIdx    : 6; // [50 : 45] : row index : 0 ~ 63
+        UINT_32 ucMemAddr4ColIdx    : 3; // [44 : 42] : column index : 0 ~ 5
+        UINT_32 ucMemAddr3RowIdx    : 6; // [41 : 36] : row index : 0 ~ 63
+        UINT_32 ucMemAddr3ColIdx    : 3; // [35 : 33] : column index : 0 ~ 5
+        UINT_32 ucMemAddr2RowIdxMsb : 1; // [32]      : MSB of row index
+
+    	/* DWORD2 */
+        UINT_32 ucSNR_STS3          : 8; // [95:88]   : SNR_STS3
+        UINT_32 ucSNR_STS2          : 8; // [87:80]   : SNR_STS2
+        UINT_32 ucSNR_STS1          : 8; // [79:72]   : SNR_STS1
+        UINT_32 ucSNR_STS0          : 8; // [71:64]   : SNR_STS0
+
+    	/* DWORD3 */
+        UINT_32 ucReserved2         : 24; // reserved
+    	UINT_32 ucIBfLnaIdx         : 8; // [103:96]  : iBF LNA index
+    } rField;
+    UINT_32 au4RawData[4];
+} PFMU_PROFILE_TAG1, *P_PFMU_PROFILE_TAG1;
+
+typedef union _PFMU_PROFILE_TAG2
+{
+    struct 
+    {
+        /* DWORD0 */
+        UINT_32 ucMCSThS1SS      : 4; // [31:28]  : MCS TH short 1SS
+        UINT_32 ucMCSThL1SS      : 4; // [27:24]  : MCS TH long 1SS
+        UINT_32 ucReserved1      : 1; // [23]     : Reserved
+        UINT_32 ucRMSDThd        : 3; // [22:20]  : RMSD Threshold
+        UINT_32 ucSEIdx          : 5; // [19:15]  : SE index
+        UINT_32 ucReserved0      : 3; // [14:12]  : Reserved
+        UINT_32 u2SmartAnt       : 12;// [11:0]   : Smart Ant config
+
+        /* DWORD1 */
+        UINT_32 ucReserved2      : 8; // [63:56]  : Reserved
+        UINT_32 uciBfTimeOut     : 8; // [55:48]  : iBF timeout limit
+        UINT_32 ucMCSThS3SS      : 4; // [47:44]  : MCS TH short 3SS
+        UINT_32 ucMCSThL3SS      : 4; // [43:40]  : MCS TH long 3SS
+        UINT_32 ucMCSThS2SS      : 4; // [39:36]  : MCS TH short 2SS
+        UINT_32 ucMCSThL2SS      : 4; // [35:32]  : MCS TH long 2SS
+
+        /* DWORD2 */
+        UINT_32 u2Reserved5      : 10;// [95:86]  : Reserved
+        UINT_32 uciBfNrow        : 2; // [85:84]  : iBF desired Nrow = 1 ~ 4
+        UINT_32 uciBfNcol        : 2; // [83:82]  : iBF desired Ncol = 1 ~ 3
+        UINT_32 uciBfDBW         : 2; // [81:80]  : iBF desired DBW 0/1/2/3 : BW20/40/80/160NC
+        UINT_32 ucReserved4      : 8; // [79:72]  : Reserved
+        UINT_32 ucReserved3      : 8; // [71:64]  : Reserved
+    }rField;
+    UINT_32 au4RawData[3];
+} PFMU_PROFILE_TAG2, *P_PFMU_PROFILE_TAG2;
+
+typedef union _PFMU_PN
+{
+    struct
+    {
+        /* DWORD0 */
+        UINT_32 u2CMM_1STS_Tx2   : 10;
+        UINT_32 u2CMM_1STS_Tx1   : 11;
+        UINT_32 u2CMM_1STS_Tx0   : 11;
+
+        /* DWORD1 */
+        UINT_32 u2CMM_2STS_Tx1   : 9;
+        UINT_32 u2CMM_2STS_Tx0   : 11;
+        UINT_32 u2CMM_1STS_Tx3   : 11;
+        UINT_32 u2CMM_1STS_Tx2Msb: 1;
+
+        /* DWORD2 */
+        UINT_32 u2CMM_3STS_Tx0   : 8;
+        UINT_32 u2CMM_2STS_Tx3   : 11;
+        UINT_32 u2CMM_2STS_Tx2   : 11;
+        UINT_32 u2CMM_2STS_Tx1Msb: 2;
+
+        /* DWORD3 */
+        UINT_32 u2CMM_3STS_Tx3   : 7;
+        UINT_32 u2CMM_3STS_Tx2   : 11;
+        UINT_32 u2CMM_3STS_Tx1   : 11;
+        UINT_32 u2CMM_3STS_Tx0Msb: 3;
+
+        /* DWORD4 */
+        UINT_32 reserved         : 28;
+        UINT_32 u2CMM_3STS_Tx3Msb: 4;
+    }rField;
+    UINT_32 au4RawData[5];
+}PFMU_PN, *P_PFMU_PN;
+
+typedef union _PFMU_PN_DBW20
+{
+    struct
+    {
+        /* DWORD0 */
+        UINT_32 u2DBW20_1STS_Tx2   : 10;
+        UINT_32 u2DBW20_1STS_Tx1   : 11;
+        UINT_32 u2DBW20_1STS_Tx0   : 11;
+
+        /* DWORD1 */
+        UINT_32 u2DBW20_2STS_Tx1   : 9;
+        UINT_32 u2DBW20_2STS_Tx0   : 11;
+        UINT_32 u2DBW20_1STS_Tx3   : 11;
+        UINT_32 u2DBW20_1STS_Tx2Msb: 1;
+
+        /* DWORD2 */
+        UINT_32 u2DBW20_3STS_Tx0   : 8;
+        UINT_32 u2DBW20_2STS_Tx3   : 11;
+        UINT_32 u2DBW20_2STS_Tx2   : 11;
+        UINT_32 u2DBW20_2STS_Tx1Msb: 2;
+
+        /* DWORD3 */
+        UINT_32 u2DBW20_3STS_Tx3   : 7;
+        UINT_32 u2DBW20_3STS_Tx2   : 11;
+        UINT_32 u2DBW20_3STS_Tx1   : 11;
+        UINT_32 u2DBW20_3STS_Tx0Msb: 3;
+
+        /* DWORD4 */
+        UINT_32 reserved           : 28;
+        UINT_32 u2DBW20_3STS_Tx3Msb: 4;
+    }rField;
+    UINT_32 au4RawData[5];
+}PFMU_PN_DBW20M, *P_PFMU_PN_DBW20M;
+
+typedef union _PFMU_PN_DBW40
+{
+    struct
+    {
+        /* DWORD0 */
+        UINT_32 u2DBW40_1STS_Tx2   : 10;
+        UINT_32 u2DBW40_1STS_Tx1   : 11;
+        UINT_32 u2DBW40_1STS_Tx0   : 11;
+
+        /* DWORD1 */
+        UINT_32 u2DBW40_2STS_Tx1   : 9;
+        UINT_32 u2DBW40_2STS_Tx0   : 11;
+        UINT_32 u2DBW40_1STS_Tx3   : 11;
+        UINT_32 u2DBW40_1STS_Tx2Msb: 1;
+
+        /* DWORD2 */
+        UINT_32 u2DBW40_3STS_Tx0   : 8;
+        UINT_32 u2DBW40_2STS_Tx3   : 11;
+        UINT_32 u2DBW40_2STS_Tx2   : 11;
+        UINT_32 u2DBW40_2STS_Tx1Msb: 2;
+
+        /* DWORD3 */
+        UINT_32 u2DBW40_3STS_Tx3   : 7;
+        UINT_32 u2DBW40_3STS_Tx2   : 11;
+        UINT_32 u2DBW40_3STS_Tx1   : 11;
+        UINT_32 u2DBW40_3STS_Tx0Msb: 3;
+
+        /* DWORD4 */
+        UINT_32 reserved           : 28;
+        UINT_32 u2DBW40_3STS_Tx3Msb: 4;
+    }rField;
+    UINT_32 au4RawData[5];
+}PFMU_PN_DBW40M, *P_PFMU_PN_DBW40M;
+
+typedef union _PFMU_PN_DBW80
+{
+    struct
+    {
+    	/* DWORD0 */
+        UINT_32 u2DBW80_1STS_Tx2   : 10;
+        UINT_32 u2DBW80_1STS_Tx1   : 11;
+        UINT_32 u2DBW80_1STS_Tx0   : 11;
+
+    	/* DWORD1 */
+        UINT_32 u2DBW80_2STS_Tx1   : 9;
+        UINT_32 u2DBW80_2STS_Tx0   : 11;
+        UINT_32 u2DBW80_1STS_Tx3   : 11;
+        UINT_32 u2DBW80_1STS_Tx2Msb: 1;
+
+    	/* DWORD2 */
+        UINT_32 u2DBW80_3STS_Tx0   : 8;
+        UINT_32 u2DBW80_2STS_Tx3   : 11;
+        UINT_32 u2DBW80_2STS_Tx2   : 11;
+        UINT_32 u2DBW80_2STS_Tx1Msb: 2;
+
+    	/* DWORD3 */
+        UINT_32 u2DBW80_3STS_Tx3   : 7;
+        UINT_32 u2DBW80_3STS_Tx2   : 11;
+        UINT_32 u2DBW80_3STS_Tx1   : 11;
+        UINT_32 u2DBW80_3STS_Tx0Msb: 3;
+
+    	/* DWORD4 */
+        UINT_32 reserved           : 28;
+        UINT_32 u2DBW80_3STS_Tx3Msb: 4;
+    }rField;
+    UINT_32 au4RawData[5];
+}PFMU_PN_DBW80M, *P_PFMU_PN_DBW80M;
+
+typedef union _PFMU_PN_DBW80_80
+{
+    struct
+    {
+    	/* DWORD0 */
+        UINT_32 u2DBW160_2STS_Tx0  : 10;
+        UINT_32 u2DBW160_1STS_Tx1  : 11;
+        UINT_32 u2DBW160_1STS_Tx0  : 11;
+
+    	/* DWORD1 */
+        UINT_32 reserved           : 20;
+        UINT_32 u2DBW160_2STS_Tx1  : 11;
+        UINT_32 u2DBW160_2STS_Tx0Msb: 1;
+    }rField;
+    UINT_32 au4RawData[2];
+}PFMU_PN_DBW80_80M, *P_PFMU_PN_DBW80_80M;
+
+typedef union _PFMU_DATA
+{
+    struct
+    {
+        /* DWORD0 */
+        UINT_32 ucPsi31          : 7;
+        UINT_32 u2Phi21          : 9;
+        UINT_32 ucPsi21          : 7;
+        UINT_32 u2Phi11          : 9;
+
+        /* DWORD1 */
+        UINT_32 ucPsi32          : 7;
+        UINT_32 u2Phi22          : 9;
+        UINT_32 ucPsi41          : 7;
+        UINT_32 u2Phi31          : 9;
+
+        /* DWORD2 */
+        UINT_32 ucPsi43          : 7;
+        UINT_32 u2Phi33          : 9;
+        UINT_32 ucPsi42          : 7;
+        UINT_32 u2Phi32          : 9;
+
+        /* DWORD3 */
+        UINT_32 u2Reserved       : 16;
+        UINT_32 u2dSNR03         : 4;
+        UINT_32 u2dSNR02         : 4;
+        UINT_32 u2dSNR01         : 4;
+        UINT_32 u2dSNR00         : 4;
+
+        /* DWORD4 */
+	UINT_32 u4Reserved;
+    }rField;
+    UINT_32 au4RawData[5];
+}PFMU_DATA, *P_PFMU_DATA;
+
+#else
+
+typedef union _PFMU_PROFILE_TAG1
+{
+    struct 
+    {
+    	/* DWORD0 */
         UINT_32 ucProfileID         : 7; // [6:0]     : 0 ~ 63
         UINT_32 ucTxBf              : 1; // [7]       : 0: iBF, 1: eBF
         UINT_32 ucDBW               : 2; // [9:8]     : 0/1/2/3: DW20/40/80/160NC
@@ -182,6 +441,7 @@ typedef union _PFMU_PROFILE_TAG1
         UINT_32 ucMemAddr1RowIdx    : 6; // [23 : 18] : row index : 0 ~ 63
         UINT_32 ucMemAddr2ColIdx    : 3; // [26 : 24] : column index : 0 ~ 5
         UINT_32 ucMemAddr2RowIdx    : 5; // [31 : 27] : row index : 0 ~ 63
+    	/* DWORD1 */
         UINT_32 ucMemAddr2RowIdxMsb : 1; // [32]      : MSB of row index
         UINT_32 ucMemAddr3ColIdx    : 3; // [35 : 33] : column index : 0 ~ 5
         UINT_32 ucMemAddr3RowIdx    : 6; // [41 : 36] : row index : 0 ~ 63
@@ -195,11 +455,14 @@ typedef union _PFMU_PROFILE_TAG1
         UINT_32 ucCodeBook          : 2; // [61:60]   : Code book
         UINT_32 ucHtcExist          : 1; // [62]      : HtcExist
         UINT_32 ucReserved1         : 1; // [63]      : Reserved
+    	/* DWORD2 */
         UINT_32 ucSNR_STS0          : 8; // [71:64]   : SNR_STS0
         UINT_32 ucSNR_STS1          : 8; // [79:72]   : SNR_STS1
         UINT_32 ucSNR_STS2          : 8; // [87:80]   : SNR_STS2
         UINT_32 ucSNR_STS3          : 8; // [95:88]   : SNR_STS3
-	    UINT_32 ucIBfLnaIdx         : 8; // [103:96]  : iBF LNA index
+    	/* DWORD3 */
+        UINT_32 ucIBfLnaIdx         : 8; // [103:96]  : iBF LNA index
+        UINT_32 ucReserved2         : 24; //     : Reserved
     } rField;
     UINT_32 au4RawData[4];
 } PFMU_PROFILE_TAG1, *P_PFMU_PROFILE_TAG1;
@@ -208,6 +471,7 @@ typedef union _PFMU_PROFILE_TAG2
 {
     struct 
     {
+    	/* DWORD0 */
         UINT_32 u2SmartAnt       : 12;// [11:0]   : Smart Ant config
         UINT_32 ucReserved0      : 3; // [14:12]  : Reserved
         UINT_32 ucSEIdx          : 5; // [19:15]  : SE index
@@ -215,12 +479,14 @@ typedef union _PFMU_PROFILE_TAG2
         UINT_32 ucReserved1      : 1; // [23]     : Reserved
         UINT_32 ucMCSThL1SS      : 4; // [27:24]  : MCS TH long 1SS
         UINT_32 ucMCSThS1SS      : 4; // [31:28]  : MCS TH short 1SS
+    	/* DWORD1 */
         UINT_32 ucMCSThL2SS      : 4; // [35:32]  : MCS TH long 2SS
         UINT_32 ucMCSThS2SS      : 4; // [39:36]  : MCS TH short 2SS
         UINT_32 ucMCSThL3SS      : 4; // [43:40]  : MCS TH long 3SS
         UINT_32 ucMCSThS3SS      : 4; // [47:44]  : MCS TH short 3SS
         UINT_32 uciBfTimeOut     : 8; // [55:48]  : iBF timeout limit
         UINT_32 ucReserved2      : 8; // [63:56]  : Reserved
+    	/* DWORD2 */
         UINT_32 ucReserved3      : 8; // [71:64]  : Reserved
         UINT_32 ucReserved4      : 8; // [79:72]  : Reserved
         UINT_32 uciBfDBW         : 2; // [81:80]  : iBF desired DBW 0/1/2/3 : BW20/40/80/160NC
@@ -235,21 +501,26 @@ typedef union _PFMU_PN
 {
     struct
     {
+    	/* DWORD0 */
         UINT_32 u2CMM_1STS_Tx0   : 11;
         UINT_32 u2CMM_1STS_Tx1   : 11;
         UINT_32 u2CMM_1STS_Tx2   : 10;
+    	/* DWORD1 */
         UINT_32 u2CMM_1STS_Tx2Msb: 1;
         UINT_32 u2CMM_1STS_Tx3   : 11;
         UINT_32 u2CMM_2STS_Tx0   : 11;
         UINT_32 u2CMM_2STS_Tx1   : 9;
+    	/* DWORD2 */
         UINT_32 u2CMM_2STS_Tx1Msb: 2;
         UINT_32 u2CMM_2STS_Tx2   : 11;
         UINT_32 u2CMM_2STS_Tx3   : 11;
         UINT_32 u2CMM_3STS_Tx0   : 8;
+    	/* DWORD3 */
         UINT_32 u2CMM_3STS_Tx0Msb: 3;
         UINT_32 u2CMM_3STS_Tx1   : 11;
         UINT_32 u2CMM_3STS_Tx2   : 11;
         UINT_32 u2CMM_3STS_Tx3   : 7;
+    	/* DWORD4 */
         UINT_32 u2CMM_3STS_Tx3Msb: 4;
         UINT_32 reserved         : 28;
     }rField;
@@ -260,21 +531,26 @@ typedef union _PFMU_PN_DBW20
 {
     struct
     {
+    	/* DWORD0 */
         UINT_32 u2DBW20_1STS_Tx0   : 11;
         UINT_32 u2DBW20_1STS_Tx1   : 11;
         UINT_32 u2DBW20_1STS_Tx2   : 10;
+    	/* DWORD1 */
         UINT_32 u2DBW20_1STS_Tx2Msb: 1;
         UINT_32 u2DBW20_1STS_Tx3   : 11;
         UINT_32 u2DBW20_2STS_Tx0   : 11;
         UINT_32 u2DBW20_2STS_Tx1   : 9;
+    	/* DWORD2 */
         UINT_32 u2DBW20_2STS_Tx1Msb: 2;
         UINT_32 u2DBW20_2STS_Tx2   : 11;
         UINT_32 u2DBW20_2STS_Tx3   : 11;
         UINT_32 u2DBW20_3STS_Tx0   : 8;
+    	/* DWORD3 */
         UINT_32 u2DBW20_3STS_Tx0Msb: 3;
         UINT_32 u2DBW20_3STS_Tx1   : 11;
         UINT_32 u2DBW20_3STS_Tx2   : 11;
         UINT_32 u2DBW20_3STS_Tx3   : 7;
+    	/* DWORD4 */
         UINT_32 u2DBW20_3STS_Tx3Msb: 4;
         UINT_32 reserved           : 28;
     }rField;
@@ -285,21 +561,26 @@ typedef union _PFMU_PN_DBW40
 {
     struct
     {
+    	/* DWORD0 */
         UINT_32 u2DBW40_1STS_Tx0   : 11;
         UINT_32 u2DBW40_1STS_Tx1   : 11;
         UINT_32 u2DBW40_1STS_Tx2   : 10;
+    	/* DWORD1 */
         UINT_32 u2DBW40_1STS_Tx2Msb: 1;
         UINT_32 u2DBW40_1STS_Tx3   : 11;
         UINT_32 u2DBW40_2STS_Tx0   : 11;
         UINT_32 u2DBW40_2STS_Tx1   : 9;
+    	/* DWORD2 */
         UINT_32 u2DBW40_2STS_Tx1Msb: 2;
         UINT_32 u2DBW40_2STS_Tx2   : 11;
         UINT_32 u2DBW40_2STS_Tx3   : 11;
         UINT_32 u2DBW40_3STS_Tx0   : 8;
+    	/* DWORD3 */
         UINT_32 u2DBW40_3STS_Tx0Msb: 3;
         UINT_32 u2DBW40_3STS_Tx1   : 11;
         UINT_32 u2DBW40_3STS_Tx2   : 11;
         UINT_32 u2DBW40_3STS_Tx3   : 7;
+    	/* DWORD4 */
         UINT_32 u2DBW40_3STS_Tx3Msb: 4;
         UINT_32 reserved           : 28;
     }rField;
@@ -310,21 +591,26 @@ typedef union _PFMU_PN_DBW80
 {
     struct
     {
+    	/* DWORD0 */
         UINT_32 u2DBW80_1STS_Tx0   : 11;
         UINT_32 u2DBW80_1STS_Tx1   : 11;
         UINT_32 u2DBW80_1STS_Tx2   : 10;
+    	/* DWORD1 */
         UINT_32 u2DBW80_1STS_Tx2Msb: 1;
         UINT_32 u2DBW80_1STS_Tx3   : 11;
         UINT_32 u2DBW80_2STS_Tx0   : 11;
         UINT_32 u2DBW80_2STS_Tx1   : 9;
+    	/* DWORD2 */
         UINT_32 u2DBW80_2STS_Tx1Msb: 2;
         UINT_32 u2DBW80_2STS_Tx2   : 11;
         UINT_32 u2DBW80_2STS_Tx3   : 11;
         UINT_32 u2DBW80_3STS_Tx0   : 8;
+    	/* DWORD3 */
         UINT_32 u2DBW80_3STS_Tx0Msb: 3;
         UINT_32 u2DBW80_3STS_Tx1   : 11;
         UINT_32 u2DBW80_3STS_Tx2   : 11;
         UINT_32 u2DBW80_3STS_Tx3   : 7;
+    	/* DWORD4 */
         UINT_32 u2DBW80_3STS_Tx3Msb: 4;
         UINT_32 reserved           : 28;
     }rField;
@@ -335,9 +621,11 @@ typedef union _PFMU_PN_DBW80_80
 {
     struct
     {
+    	/* DWORD0 */
         UINT_32 u2DBW160_1STS_Tx0  : 11;
         UINT_32 u2DBW160_1STS_Tx1  : 11;
         UINT_32 u2DBW160_2STS_Tx0  : 10;
+    	/* DWORD1 */
         UINT_32 u2DBW160_2STS_Tx0Msb: 1;
         UINT_32 u2DBW160_2STS_Tx1  : 11;
         UINT_32 reserved           : 20;
@@ -349,18 +637,22 @@ typedef union _PFMU_DATA
 {
     struct
     {
+    	/* DWORD0 */
         UINT_32 u2Phi11          : 9;
         UINT_32 ucPsi21          : 7;
         UINT_32 u2Phi21          : 9;
         UINT_32 ucPsi31          : 7;
+    	/* DWORD1 */
         UINT_32 u2Phi31          : 9;
         UINT_32 ucPsi41          : 7;
         UINT_32 u2Phi22          : 9;
         UINT_32 ucPsi32          : 7;
+    	/* DWORD2 */
         UINT_32 u2Phi32          : 9;
         UINT_32 ucPsi42          : 7;
         UINT_32 u2Phi33          : 9;
         UINT_32 ucPsi43          : 7;
+    	/* DWORD3 */
         UINT_32 u2dSNR00         : 4;
         UINT_32 u2dSNR01         : 4;
         UINT_32 u2dSNR02         : 4;
@@ -369,7 +661,7 @@ typedef union _PFMU_DATA
     }rField;
     UINT_32 au4RawData[5];
 }PFMU_DATA, *P_PFMU_DATA;
-
+#endif
 typedef struct _PFMU_HALF_DATA
 {
     UINT_16 u2SubCarrIdx;
@@ -411,8 +703,7 @@ typedef enum _BF_ACTION_CATEGORY
     BF_APCLIENT_CLUSTER,
     BF_AWARE_CTRL,
     BF_HW_ENABLE_STATUS_UPDATE,
-    BF_REPT_CLONED_STA_TO_NORMAL_STA,
-    BF_BFEE_HW_CTRL
+    BF_REPT_CLONED_STA_TO_NORMAL_STA
 } BF_ACTION_CATEGORY;   
 
 // Indices of valid rows in Implicit and Explicit profiles for 20 and 40 MHz
@@ -532,13 +823,6 @@ void mt_WrapSetETxBFCap(
     IN  struct wifi_dev   *wdev,
     IN  HT_BF_CAP       *pTxBFCap);
 
-#ifdef TXBF_BY_CHANNEL
-void mt_WrapSetETxBFCapByChannel(
-    IN struct _RTMP_ADAPTER  *pAd,
-    IN HT_BF_CAP             *pTxBFCap,
-    IN UCHAR                 Channel);
-#endif /* TXBF_BY_CHANNEL */
-
 #ifdef VHT_TXBF_SUPPORT
 BOOLEAN mt_clientSupportsVhtETxBF(
     IN struct _RTMP_ADAPTER   *pAd,
@@ -552,14 +836,6 @@ void mt_WrapSetVHTETxBFCap(
     IN struct _RTMP_ADAPTER  *pAd,
     IN struct wifi_dev *wdev,
     IN struct _VHT_CAP_INFO  *pTxBFCap);
-
-#ifdef TXBF_BY_CHANNEL
-void mt_WrapSetVHTETxBFCapByChannel(
-    IN  struct _RTMP_ADAPTER *pAd,
-    IN  struct _VHT_CAP_INFO *pTxBFCap,
-    IN  UCHAR Channel);
-#endif /* TXBF_BY_CHANNEL */
-
 #endif /* VHT_TXBF_SUPPORT */
 
 
@@ -700,12 +976,6 @@ INT mt_Trigger_Sounding_Packet(
 VOID TxBfProfileMemAllocMap(
     IN PUCHAR                pBuf);
 
-#ifdef TXBF_DYNAMIC_DISABLE
-INT DynamicTxBfDisable(
-	IN	struct _RTMP_ADAPTER	*pAd, 
-	IN	BOOLEAN					fgDisable);
-#endif /* TXBF_DYNAMIC_DISABLE */
-
 VOID StaRecBfUpdate(
    IN struct _MAC_TABLE_ENTRY *pEntry,
    IN P_CMD_STAREC_BF        pCmdStaRecBf);
@@ -739,13 +1009,6 @@ void displayTagfield(
     IN struct _RTMP_ADAPTER  *pAd,
 	IN	int		profileNum,
 	IN	BOOLEAN implicitProfile);
-
-#ifdef TXBF_BY_CHANNEL
-VOID SwitchBfByChannel(
-    IN struct _RTMP_ADAPTER *pAd,
-	IN UCHAR                 Channel);
-#endif /* TXBF_BY_CHANNEL */
-
 #endif // TXBF_SUPPORT //
 
 #endif // _RT_TXBF_H_

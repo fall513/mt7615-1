@@ -1,4 +1,4 @@
-
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +26,7 @@
     Who       When            What
     ------    ----------      ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #ifdef WDS_SUPPORT
 
 #include "rt_config.h"
@@ -569,6 +569,12 @@ MAC_TABLE_ENTRY *FindWdsEntry(
 					  pRxBlk->rx_signal.raw_rssi[1],
 					  pRxBlk->rx_signal.raw_rssi[2],
 					  pRxBlk->rx_signal.raw_rssi[3],
+#ifdef CUSTOMER_DCC_FEATURE
+					  pRxBlk->rx_signal.raw_snr[0],
+					  pRxBlk->rx_signal.raw_snr[1],
+					  pRxBlk->rx_signal.raw_snr[2],
+					  pRxBlk->rx_signal.raw_snr[3],
+#endif                      
 					  (rxd_base != NULL) ? rxd_base->RxD1.ChFreq : 0,
 					  0,
 					  OPMODE_AP,

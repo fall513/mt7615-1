@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -26,7 +27,7 @@
 	Who          When          What
 	---------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #include "rtmp_comm.h"
 #include "cut_through.h"
 #include "os/rt_linux_cmm.h"
@@ -67,6 +68,7 @@ VOID dump_ct_token_list(PKT_TOKEN_CB *tokenCb, INT type)
     else
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s(): Unkown type(%d)\n", __FUNCTION__, type));
+	os_free_mem(token_list);
         return;
     }
 
@@ -992,9 +994,6 @@ INT cut_through_deinit(PKT_TOKEN_CB **ppPktTokenCb)
 		os_free_mem(FPTxElement);
 	}
 
-#ifdef CONFIG_TX_DELAY
-	hrtimer_cancel(&pAd->que_agg_timer);	
-#endif
 	NdisFreeSpinLock(&pAd->FastPathTxQueLock);
 	NdisFreeSpinLock(&pAd->MgmtQueLock);
 	NdisFreeSpinLock(&pAd->FastPathTxFreeQueLock);
@@ -1020,13 +1019,8 @@ INT cut_through_deinit(PKT_TOKEN_CB **ppPktTokenCb)
 		NdisFreeSpinLock(&pktTokenCb->TxBlockLock[Index]);
 	}
 
-	if (pktTokenCb != NULL)
-	{
-		os_free_mem((VOID *)pktTokenCb);
-		*ppPktTokenCb = NULL;
-		return FALSE;
-	}
-
+	os_free_mem((VOID *)pktTokenCb);
+	*ppPktTokenCb = NULL;
 	return TRUE;
 }
 
@@ -1162,13 +1156,18 @@ INT cut_through_init(VOID **ppPktTokenCb, VOID *pAd)
 
 	ad->FastPathTxQueNum = 0;
 #ifdef CONFIG_TX_DELAY
-	ad->TxProcessBatchCnt = 4;
 	ad->force_deq = FALSE;
 	ad->que_agg_en = FALSE;
 	ad->que_agg_timeout_value = QUE_AGG_TIMEOUT;
 	ad->min_pkt_len = MIN_AGG_PKT_LEN;
-	hrtimer_init(&ad->que_agg_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	ad->que_agg_timer.function = que_agg_timeout;
+	ad->max_pkt_len = MAX_AGG_PKT_LEN;
+	ad->tx_process_batch_cnt = TX_BATCH_CNT;
+	MtCmdCr4Set(pAd, CR4_SET_ID_CONFIG_TX_DELAY_MODE,
+			TX_DELAY_MODE_ARG1_TX_BATCH_CNT, ad->tx_process_batch_cnt);
+	MtCmdCr4Set(pAd, CR4_SET_ID_CONFIG_TX_DELAY_MODE,
+			TX_DELAY_MODE_ARG1_TX_DELAY_TIMEOUT_US, ad->que_agg_timeout_value);
+	MtCmdCr4Set(pAd, CR4_SET_ID_CONFIG_TX_DELAY_MODE,
+			TX_DELAY_MODE_ARG1_PKT_LENGTHS, ad->min_pkt_len);
 #endif
 	ad->FPTxElementFullNum = 0;
 	ad->MgmtQueNum = 0;
@@ -1185,6 +1184,8 @@ INT cut_through_init(VOID **ppPktTokenCb, VOID *pAd)
 		{
 			MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
 						("can not allocate FPTxElement\n"));
+	
+			os_free_mem((VOID *)pktTokenCb);
 			return FALSE;
 		}
 

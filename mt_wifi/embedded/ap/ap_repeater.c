@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +27,7 @@
     --------------  ----------      ----------------------------------------------
     Arvin				11-16-2012      created
 */
-
+#endif /* MTK_LICENSE */
 #ifdef MAC_REPEATER_SUPPORT
 
 #include "rt_config.h"
@@ -584,8 +585,11 @@ UINT32 ReptTxPktCheckHandler(
 				RTMP_CHIP_CAP *cap = &pAd->chipCap;
 
 				if (pApCliEntry->InsRepCmdCount > GET_MAX_REPEATER_ENTRY_NUM(cap))
+				{
+					pApCliEntry->ReptFullCount++;
 					return INSERT_REPT_ENTRY;
-
+				}
+			
                 pMacEntry = MacTableLookup(pAd, (pSrcBufVA + MAC_ADDR_LEN));
                 if (pMacEntry && IS_ENTRY_CLIENT(pMacEntry))
                 {

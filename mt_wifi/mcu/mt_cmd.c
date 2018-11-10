@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,7 +14,7 @@
 	Module Name:
 	mt_cmd.c
 */
-
+#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)
@@ -1164,10 +1165,6 @@ INT32 MtCmdRfTestIcapParamSet(
 	prIcapInfo->u4SourceAddressLSB = cpu2le32(SourceAddressLSB);
 	prIcapInfo->u4SourceAddressMSB = cpu2le32(SourceAddressMSB);
 	prIcapInfo->u4Band = cpu2le32(Band);
-	if (prIcapInfo->u4TriggerEvent == CAP_FREE_RUN)
-	    prIcapInfo->fgRingCapEn = cpu2le32(CAP_RING_MODE_DISABLE);
-	else
-	    prIcapInfo->fgRingCapEn = cpu2le32(CAP_RING_MODE_ENABLE);
     
     MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s : \n prIcapInfo->fgTrigger = 0x%08x\n"
     " prIcapInfo->fgRingCapEn = 0x%08x\n prIcapInfo->u4TriggerEvent = 0x%08x\n prIcapInfo->u4CaptureNode = 0x%08x\n"
@@ -1967,14 +1964,6 @@ INT32 MtCmdChannelSwitch(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg)
 	}
 
 
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd)){
-		EZ_DEBUG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-			("control_chl = %d\n",SwChCfg.ControlChannel));
-	}
-	else
-#endif
-	{
 	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
         ("%s: control_chl = %d,control_ch2=%d, central_chl = %d DBDCIdx= %d, Band= %d \n",
         __FUNCTION__, SwChCfg.ControlChannel, SwChCfg.ControlChannel2, SwChCfg.CentralChannel, SwChCfg.BandIdx, SwChCfg.Channel_Band));
@@ -1982,7 +1971,7 @@ INT32 MtCmdChannelSwitch(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg)
 	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
                 ("BW = %d,TXStream = %d, RXStream = %d, scan(%d)\n",
             SwChCfg.Bw, SwChCfg.TxStream, SwChCfg.RxStream, SwChCfg.bScan));
-	}
+
 
 	msg = MtAndesAllocCmdMsg(pAd, sizeof(CmdChanSwitch));
 	if (!msg)
@@ -2032,22 +2021,22 @@ INT32 MtCmdChannelSwitch(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg)
 		}
 #endif
 #ifdef MT_DFS_SUPPORT
-			DfsSetScanRunning(pAd, TRUE);
+		DfsSetScanRunning(pAd, TRUE);
 #endif
 
 	}
 #ifdef MT_DFS_SUPPORT
-	else
+    else
+    {
+        if(SwChCfg.DfsParam.bDfsCheck)
 	{
-		if(SwChCfg.bDfsCheck)
-		{
-			CmdChanSwitch.ucSwitchReason = CH_SWITCH_DFS;
-		}
-		DfsSetScanRunning(pAd, FALSE);
+		CmdChanSwitch.ucSwitchReason = CH_SWITCH_DFS;
 	}
+	DfsSetScanRunning(pAd, FALSE);
+    }
 #endif
 
-    /* check Tx Power setting from UI. */
+	/* check Tx Power setting from UI. */
 	if ((pAd->CommonCfg.TxPowerPercentage[SwChCfg.BandIdx] > 90) && (pAd->CommonCfg.TxPowerPercentage[SwChCfg.BandIdx] < 100))
 		TxPowerDrop = 0;
 	else if ((pAd->CommonCfg.TxPowerPercentage[SwChCfg.BandIdx] > 60) && (pAd->CommonCfg.TxPowerPercentage[SwChCfg.BandIdx] <= 90))  /* reduce Pwr for 1 dB. */
@@ -2061,9 +2050,9 @@ INT32 MtCmdChannelSwitch(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg)
 	else if ((pAd->CommonCfg.TxPowerPercentage[SwChCfg.BandIdx] > 0) && (pAd->CommonCfg.TxPowerPercentage[SwChCfg.BandIdx] <= 9))   /* reduce Pwr for 12 dB. */
 		TxPowerDrop = 12;
 
-	CmdChanSwitch.cTxPowerDrop = TxPowerDrop;
+	CmdChanSwitch.ucTxPowerDrop = TxPowerDrop;
 
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,(" TxPowerDrop = 0x%x \n", CmdChanSwitch.cTxPowerDrop));
+	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,(" TxPowerDrop = 0x%x \n", CmdChanSwitch.ucTxPowerDrop));
 
 	for (SKUIdx = 0; SKUIdx < SKU_SIZE; SKUIdx++)
 	{
@@ -2246,7 +2235,7 @@ error:
 #endif
 
 
-INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
+INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG *pSwChCfg)
 {
 	struct cmd_msg *msg;
 	struct _EXT_CMD_CHAN_SWITCH_T CmdChanSwitch;
@@ -2257,8 +2246,6 @@ INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
     UCHAR fg5Gband = 0;
 #endif
 
-
-	MT_SWITCH_CHANNEL_CFG *pSwChCfg = &SwChCfg;
 	UCHAR RxPath=0;
 
 	if (pSwChCfg->CentralChannel== 0)
@@ -2271,7 +2258,7 @@ INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
 	if(pSwChCfg->Bw==BW_160 || pSwChCfg->Bw==BW_8080)
 	{
 			/*if bw 160, 1 stream use WIFI (0,2), 2 stream use WIFI (0,1,2,3)*/
-			RxPath = (SwChCfg.RxStream > 1) ? 0xf:0x5;
+			RxPath = (pSwChCfg->RxStream > 1) ? 0xf:0x5;
 			/*bw160 & 80+80 should always apply 4 TxStream*/
 			if (pSwChCfg->TxStream == 1)
 			{
@@ -2284,9 +2271,9 @@ INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
 	}else
 	{
 		/*for normal case*/
-	    for (i = 0; i < SwChCfg.RxStream ; i++)
+	    for (i = 0; i < pSwChCfg->RxStream ; i++)
 	    {
-	    	RxPath |= (1 << (i+(SwChCfg.BandIdx*2)));
+			RxPath |= (1 << (i+(pSwChCfg->BandIdx*2)));
 	    }
 	}
 
@@ -2329,7 +2316,7 @@ INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
 
 
 #ifdef COMPOS_TESTMODE_WIN
-	if(SwChCfg.isMCC)
+	if(pSwChCfg->isMCC)
 	{
 		// MCC
 		CmdChanSwitch.ucSwitchReason = CH_SWITCH_INTERNAL_USED_BY_FW_3;
@@ -2338,7 +2325,7 @@ INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
 #endif
 		CmdChanSwitch.ucSwitchReason = CH_SWITCH_BY_NORMAL_TX_RX;
 
-	if (SwChCfg.bScan)
+	if (pSwChCfg->bScan)
 	{
 
 #if defined (MT7615)
@@ -2351,7 +2338,7 @@ INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
 #ifdef MT_DFS_SUPPORT
     else
     {
-        if(SwChCfg.bDfsCheck)
+        if(pSwChCfg->DfsParam.bDfsCheck)
         {
 		CmdChanSwitch.ucSwitchReason = CH_SWITCH_DFS;
         }
@@ -2390,7 +2377,7 @@ INT MtCmdSetTxRxPath(struct _RTMP_ADAPTER *pAd,MT_SWITCH_CHANNEL_CFG SwChCfg)
 		TxStream = pAd->Antenna.field.TxPath;
 	}
 
-	mt_FillSkuParameter(pAd,SwChCfg.ControlChannel, fg5Gband, TxStream, CmdChanSwitch.aucTxPowerSKU);
+	mt_FillSkuParameter(pAd,pSwChCfg->ControlChannel, fg5Gband, TxStream, CmdChanSwitch.aucTxPowerSKU);
 #endif
 
 	MtAndesAppendCmdMsg(msg, (char *)&CmdChanSwitch, sizeof(CmdChanSwitch));
@@ -2822,53 +2809,6 @@ error:
                 ("%s:(ret = %d)\n", __FUNCTION__, ret));
 	return ret;
 }
-
-#ifdef ABSOLUTE_POWER_TEST
-INT32 MtCmdSetForceTxPowerCtrl(RTMP_ADAPTER *pAd, UINT8 ucBandIdx, INT8 cTxPower, UINT8 ucPhyMode, UINT8 ucTxRate, UINT8 ucBW)
-{
-	struct cmd_msg *msg;
-	CMD_POWER_RATE_TXPOWER_CTRL_T CmdTxPwrCtrl;
-	INT32 ret = 0;
-    struct _CMD_ATTRIBUTE attr = {0};
-
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: Band(%d), TxMode(%d), MCS(%d), BW(%d), TxPower(%d)\n",
-														__FUNCTION__, ucBandIdx, ucPhyMode, ucTxRate, ucBW, cTxPower));
-
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_POWER_RATE_TXPOWER_CTRL_T));
-	if (!msg)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-	
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_TX_POWER_FEATURE_CTRL);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 8);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
-
-    MtAndesInitCmdMsg(msg, attr);
-    NdisZeroMemory(&CmdTxPwrCtrl, sizeof(CmdTxPwrCtrl));
-
-	CmdTxPwrCtrl.ucPowerCtrlFormatId  = TX_RATE_POWER_CTRL;
-	CmdTxPwrCtrl.ucPhyMode            = ucPhyMode;
-	CmdTxPwrCtrl.ucTxRate             = ucTxRate;
-	CmdTxPwrCtrl.ucBW                 = ucBW;
-	CmdTxPwrCtrl.ucBandIdx            = ucBandIdx;
-	CmdTxPwrCtrl.cTxPower             = cTxPower;
-
-	MtAndesAppendCmdMsg(msg, (char *)&CmdTxPwrCtrl, sizeof(CmdTxPwrCtrl));
-	ret  = pAd->chipOps.MtCmdTx(pAd,msg);
-
-error:
-	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_INFO,
-                ("%s:(ret = %d)\n", __FUNCTION__, ret));
-	return ret;
-}
-#endif /* ABSOLUTE_POWER_TEST */
 #endif /* CONFIG_ATE */
 #endif /* COMPOS_WIN */
 
@@ -4278,9 +4218,9 @@ error:
 
 INT32 CmdTxBfTxPwrBackOff(
           RTMP_ADAPTER *pAd,
-          UCHAR        ucBandIdx,
-          PCHAR        pacTxPwrFccBfOnCase,
-          PCHAR        pacTxPwrFccBfOffCase)
+          UCHAR        ucBand,
+          PUCHAR       paucTxPwrFccBfOnCase,
+          PUCHAR       paucTxPwrFccBfOffCase)
 {
 	struct cmd_msg *msg;
 	INT32 ret = 0;
@@ -4288,7 +4228,7 @@ INT32 CmdTxBfTxPwrBackOff(
     struct _CMD_ATTRIBUTE attr = {0};
 
 	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-        ("%s: ucBandIdx = %d\n", __FUNCTION__, ucBandIdx));
+        ("%s: ucBand = %d\n", __FUNCTION__, ucBand));
 
 	msg = MtAndesAllocCmdMsg(pAd, sizeof(EXT_CMD_BF_TX_PWR_BACK_OFF_T));
 
@@ -4299,9 +4239,9 @@ INT32 CmdTxBfTxPwrBackOff(
 	}
 
 	rTxPwrBackOff.ucCmdCategoryID = BF_TX_POWER_BACK_OFF;
-	rTxPwrBackOff.ucBandIdx       = ucBandIdx;
-	os_move_mem(rTxPwrBackOff.acTxPwrFccBfOnCase, pacTxPwrFccBfOnCase, 10);
-	os_move_mem(rTxPwrBackOff.acTxPwrFccBfOffCase, pacTxPwrFccBfOffCase, 10);
+	rTxPwrBackOff.ucBand          = ucBand;
+	os_move_mem(rTxPwrBackOff.aucTxPwrFccBfOnCase, paucTxPwrFccBfOnCase, 10);
+	os_move_mem(rTxPwrBackOff.aucTxPwrFccBfOffCase, paucTxPwrFccBfOffCase, 10);
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -4415,52 +4355,6 @@ error:
 
 	return ret;	
 }
-
-
-INT32 CmdTxBfeeHwCtrl(
-          RTMP_ADAPTER *pAd,
-          BOOLEAN       fgBfeeHwEn)
-{
-	struct cmd_msg *msg;
-	INT32 ret = 0;
-	EXT_CMD_BFEE_HW_CTRL_T rTxBfeeHwCtrl;
-    struct _CMD_ATTRIBUTE attr = {0};
-
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-        ("%s: fgTxBfeeHwEnable = %d\n", __FUNCTION__, fgBfeeHwEn));
-
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(EXT_CMD_BFEE_HW_CTRL_T));
-
-	if (!msg)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-
-	rTxBfeeHwCtrl.ucCmdCategoryID = BF_BFEE_HW_CTRL;
-	rTxBfeeHwCtrl.fgBfeeHwCtrl    = fgBfeeHwEn;
-
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_BF_ACTION);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, MT_IGNORE_PAYLOAD_LEN_CHECK);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
-
-    MtAndesInitCmdMsg(msg, attr);
-	MtAndesAppendCmdMsg(msg, (char *)&rTxBfeeHwCtrl, sizeof(EXT_CMD_BFEE_HW_CTRL_T));
-
-	ret = pAd->chipOps.MtCmdTx(pAd, msg);
-
-error:
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-        ("%s:(ret = %d)\n", __FUNCTION__, ret));
-
-	return ret;	
-}
-
 #endif /* MT_MAC && TXBF_SUPPORT */
 
 
@@ -4538,86 +4432,6 @@ VOID MtCmdEfusBufferModeSet(RTMP_ADAPTER *pAd, UINT8 EepromType)
 		ret = NDIS_STATUS_FAILURE;
 		goto error;
 	}
-#ifdef RT_BIG_ENDIAN
-	CmdEfuseBufferMode->ucCount = cpu2le16(CmdEfuseBufferMode->ucCount);
-#endif
- 	MtAndesAppendCmdMsg(msg, (char *)CmdEfuseBufferMode,
-                    sizeof(EXT_CMD_EFUSE_BUFFER_MODE_T));
-	ret = pAd->chipOps.MtCmdTx(pAd, msg);
-	goto done;
-
-error:
-	if (msg)
-    {
-		MtAndesFreeCmdMsg(msg);
-    }
-done:
-	if (CmdEfuseBufferMode)
-		os_free_mem(CmdEfuseBufferMode);
-
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,
-	        ("%s:(ret = %d)\n", __FUNCTION__, ret));
-	return;
-}
-
-#ifdef FWDL_IN_PROBE
-VOID MtCmdEfusBufferModeSetNoRsp(RTMP_ADAPTER *pAd, UINT8 EepromType)
-{
-	struct cmd_msg *msg = NULL;
-	EXT_CMD_EFUSE_BUFFER_MODE_T *CmdEfuseBufferMode = NULL;
-	int ret = 0;
-    struct _CMD_ATTRIBUTE attr = {0};
-
-	os_alloc_mem(pAd, (UCHAR **)&CmdEfuseBufferMode, sizeof(EXT_CMD_EFUSE_BUFFER_MODE_T));
-	if (!CmdEfuseBufferMode)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-
-
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(EXT_CMD_EFUSE_BUFFER_MODE_T));
-
-	if (!msg)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_EFUSE_BUFFER_MODE);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 60000);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 8);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, CmdEfuseBufferModeRsp);
-
-    MtAndesInitCmdMsg(msg, attr);
-	os_zero_mem(CmdEfuseBufferMode, sizeof(EXT_CMD_EFUSE_BUFFER_MODE_T));
-
-	switch(EepromType)
-    {
-	case EEPROM_EFUSE:
-    	CmdEfuseBufferMode->ucSourceMode = EEPROM_MODE_EFUSE;
-    	CmdEfuseBufferMode->ucCount = 0;
-    	break;
-	case EEPROM_FLASH:
-		CmdEfuseBufferMode->ucSourceMode = EEPROM_MODE_BUFFER;
-		if(pAd->chipOps.bufferModeEfuseFill)
-		{
-        	pAd->chipOps.bufferModeEfuseFill(pAd, CmdEfuseBufferMode);
-        }
-			else
-		{
-			/*force to efuse mode*/
-			CmdEfuseBufferMode->ucSourceMode = EEPROM_MODE_EFUSE;
-			CmdEfuseBufferMode->ucCount = 0;
-		}
-		break;
-    default:
-		ret = NDIS_STATUS_FAILURE;
-		goto error;
-	}
 
  	MtAndesAppendCmdMsg(msg, (char *)CmdEfuseBufferMode,
                     sizeof(EXT_CMD_EFUSE_BUFFER_MODE_T));
@@ -4637,7 +4451,6 @@ done:
 	        ("%s:(ret = %d)\n", __FUNCTION__, ret));
 	return;
 }
-#endif
 
 /*****************************************
 	ExT_CID = 0x27
@@ -5267,14 +5080,10 @@ static VOID MtCmdGetTxStatisticRsp(struct cmd_msg *msg, INT8 *Data, UINT16 Len)
             le2cpu32(prEventExtCmdResult->u4TotalTxCount);
         prTxStat->u4TotalTxFailCount =
             le2cpu32(prEventExtCmdResult->u4TotalTxFailCount);
-        prTxStat->u4CurrBwTxCnt=
-            le2cpu32(prEventExtCmdResult->u4CurrBwTxCnt);
-        prTxStat->u4CurrBwTxFailCnt=
-            le2cpu32(prEventExtCmdResult->u4CurrBwTxFailCnt);
-        prTxStat->u4OtherBwTxCnt=
-            le2cpu32(prEventExtCmdResult->u4OtherBwTxCnt);
-        prTxStat->u4OtherBwTxFailCnt=
-            le2cpu32(prEventExtCmdResult->u4OtherBwTxFailCnt);
+        prTxStat->u4TotalCurrBwTxCnt=
+            le2cpu32(prEventExtCmdResult->u4TotalCurrBwTxCnt);
+        prTxStat->u4TotalOtherBwTxCnt=
+            le2cpu32(prEventExtCmdResult->u4TotalOtherBwTxCnt);
     }
     if (prTxStat->u4Field & GET_TX_STAT_LAST_TX_RATE)
     {
@@ -5286,16 +5095,9 @@ static VOID MtCmdGetTxStatisticRsp(struct cmd_msg *msg, INT8 *Data, UINT16 Len)
         os_move_mem(&prTxStat->rEntryTxRate,
                 &prEventExtCmdResult->rEntryTxRate, sizeof(RA_PHY_CFG_T));
     }
-    if (prTxStat->u4Field & GET_TX_STAT_ENTRY_TX_CNT)
-    {
-        prTxStat->u4EntryTxCount =
-            le2cpu32(prEventExtCmdResult->u4EntryTxCount);
-        prTxStat->u4EntryTxFailCount =
-            le2cpu32(prEventExtCmdResult->u4EntryTxFailCount);
-    }
 }
 
-INT32 MtCmdGetTxStatistic(struct _RTMP_ADAPTER *pAd, UINT32 u4Field, UINT8 ucBand,
+INT32 MtCmdGetTxStatistic(struct _RTMP_ADAPTER *pAd, UINT32 u4Field,
         UINT8 ucWcid, P_EXT_EVENT_TX_STATISTIC_RESULT_T prTxStatResult)
 {
 	struct cmd_msg *msg;
@@ -5327,7 +5129,6 @@ INT32 MtCmdGetTxStatistic(struct _RTMP_ADAPTER *pAd, UINT32 u4Field, UINT8 ucBan
     MtAndesInitCmdMsg(msg, attr);
 	rTxStatCmd.u4Field = cpu2le32(u4Field);
     rTxStatCmd.ucWlanIdx = ucWcid;
-    rTxStatCmd.ucBandIdx = ucBand;
 	MtAndesAppendCmdMsg(msg, (char *)&rTxStatCmd, sizeof(rTxStatCmd));
 
 	ret  = pAd->chipOps.MtCmdTx(pAd,msg);
@@ -6621,59 +6422,6 @@ error:
 	return Ret;
 }
 #endif/*RED_SUPPORT*/
-#ifdef MWDS
-
-/*****************************************
-    ExT_CID = 0x80
-*****************************************/
-INT32 MtCmdSetMwdsEnable(RTMP_ADAPTER *pAd, UINT8 McuDest, UINT32 en)
-{
-
-    struct cmd_msg *msg;
-    INT32 Ret = 0;
-    UINT32 Val;
-#if (NEW_MCU_INIT_CMD_API)
-    struct _CMD_ATTRIBUTE attr = {0};
-#endif /* NEW_MCU_INIT_CMD_API */
-
-    msg = MtAndesAllocCmdMsg(pAd, sizeof(UINT32));
-
-	if (!msg)
-	{
-		Ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-
-#if (NEW_MCU_INIT_CMD_API)
-    SET_CMD_ATTR_MCU_DEST(attr, McuDest);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MWDS_SUPPORT);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
-
-    MtAndesInitCmdMsg(msg, attr);
-#else
-    MtAndesInitCmdMsg(msg, McuDest, EXT_CID, CMD_SET, EXT_CMD_ID_MWDS_SUPPORT,
-                        FALSE, 0, FALSE, FALSE, 0, NULL, NULL);
-#endif /* NEW_MCU_INIT_CMD_API */
-
-    Val = cpu2le32(en);
-    MtAndesAppendCmdMsg(msg, (char *)&Val,
-                                    sizeof(Val));
-
-    Ret  = pAd->chipOps.MtCmdTx(pAd,msg);
-
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%s:(ret = %d)\n", __FUNCTION__, Ret));
-    return Ret;
-error:
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s:(ret = %d)\n", __FUNCTION__, Ret));
-	return Ret;
-}
-
-#endif
 
 /*****************************************
     ExT_CID = 0x75
@@ -6856,14 +6604,6 @@ INT32 MtCmdATETest(struct _RTMP_ADAPTER *pAd, struct _EXT_CMD_ATE_TEST_MODE_T *p
     SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_ATE_TEST_MODE);
     //SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
     SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET); // for iBF phase calibration
-    /* Make sure FW command configuration completed for store TX packet in PLE first
-           Use aucReserved[1] for uxATEIdx extension feasibility
-        */
-    if (param->aucReserved[1] == INIT_CMD_SET_AND_WAIT_RETRY_RSP) {
-        SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
-        param->aucReserved[1] = 0;
-    }
-
     SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
     SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 8);
     SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
@@ -7017,7 +6757,6 @@ INT32 MtCmdATESetSlotTime(RTMP_ADAPTER *pAd, UINT8 SlotTime,
 INT32 MtCmdATESetPowerDropLevel(RTMP_ADAPTER *pAd, UINT8 PowerDropLevel, UCHAR BandIdx)
 {
 	INT32 ret = 0;
-    INT8 TxPowerDrop = 0;
 	struct _EXT_CMD_ATE_TEST_MODE_T ATE_param;
 	UINT8 testmode_en = 0;
 #ifdef CONFIG_ATE
@@ -7026,38 +6765,10 @@ INT32 MtCmdATESetPowerDropLevel(RTMP_ADAPTER *pAd, UINT8 PowerDropLevel, UCHAR B
         testmode_en = 1;
     }
 #endif
-
-    
-    /* update Tx Power Drop value according to Power Drop Level */
-    if ((PowerDropLevel > 90) && (PowerDropLevel < 100))
-    {
-        TxPowerDrop = 0;
-    }
-    else if ((PowerDropLevel > 60) && (PowerDropLevel <= 90))  /* reduce Pwr for 1 dB. */
-    {
-        TxPowerDrop = 1;
-    }
-    else if ((PowerDropLevel > 30) && (PowerDropLevel <= 60))  /* reduce Pwr for 3 dB. */
-    {
-        TxPowerDrop = 3;
-    }
-    else if ((PowerDropLevel > 15) && (PowerDropLevel <= 30))  /* reduce Pwr for 6 dB. */
-    {
-        TxPowerDrop = 6;
-    }
-    else if ((PowerDropLevel >  9) && (PowerDropLevel <= 15))  /* reduce Pwr for 9 dB. */
-    {
-        TxPowerDrop = 9;
-    }
-    else if ((PowerDropLevel >  0) && (PowerDropLevel <=  9))  /* reduce Pwr for 12 dB. */
-    {
-        TxPowerDrop = 12;
-    }
-
 	os_zero_mem(&ATE_param, sizeof(ATE_param));
 	ATE_param.ucAteTestModeEn = testmode_en;
 	ATE_param.ucAteIdx = EXT_ATE_SET_POWER_PERCENTAGE_LEVEL;
-	ATE_param.Data.rPowerLevelSet.cPowerDropLevel = TxPowerDrop;
+	ATE_param.Data.rPowerLevelSet.ucPowerDropLevel = PowerDropLevel;
 	ATE_param.Data.rPowerLevelSet.ucBand = BandIdx;
 	ret = MtCmdATETest(pAd, &ATE_param);
 	return ret;
@@ -7561,6 +7272,48 @@ done:
 	return;
 }
 
+#if defined(CUSTOMER_RSG_FEATURE) || defined(CUSTOMER_DCC_FEATURE)
+/*****************************************
+	ExT_CID =
+*****************************************/
+INT32 MtCmdGetWtblTxStat(RTMP_ADAPTER *pAd, UINT32 u4Field,UINT8 ucWcid)
+{
+
+	struct cmd_msg *msg;
+	INT32 Ret = 0;
+	EXT_CMD_GET_WTBL_TX_COUNT_T WtblTxCntCmd;
+//	EXT_EVENT_WTBL_TX_COUNTER_RESULT_T CmdWtblTxCounterResult;
+    struct _CMD_ATTRIBUTE attr = {0};
+
+	msg = MtAndesAllocCmdMsg(pAd, sizeof(WtblTxCntCmd));
+	if (!msg)
+    {
+        Ret = NDIS_STATUS_RESOURCES;
+	    goto error;
+    }
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_GET_WTBL_TX_COUNTER);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_QUERY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+
+    MtAndesInitCmdMsg(msg, attr);
+    os_zero_mem(&WtblTxCntCmd, sizeof(WtblTxCntCmd));
+    WtblTxCntCmd.u4Field = u4Field;
+    WtblTxCntCmd.ucWlanIdx = ucWcid;
+    MtAndesAppendCmdMsg(msg, (char *)&WtblTxCntCmd, sizeof(WtblTxCntCmd));
+    Ret  = pAd->chipOps.MtCmdTx(pAd,msg);
+
+error:
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%s:(ret = %d)\n", __FUNCTION__, Ret));
+	return Ret;
+}
+	
+#endif
 
 /*****************************************
 	CID
@@ -8516,12 +8269,12 @@ static VOID MtCmdGetRXDCOCCalResultRsp(struct cmd_msg *msg, INT8 *Data, UINT16 L
 	    }
 	}
 }
-//! Levarage from MP1.0 CL 170210
-EXT_CMD_GET_RXDCOC_RESULT_T CmdDCOCResult;
+
 INT32 MtCmdGetRXDCOCCalResult(RTMP_ADAPTER *pAd, BOOLEAN DirectionToCR
 	,UINT16 CentralFreq,UINT8 BW,UINT8 Band,BOOLEAN IsSecondary80,BOOLEAN DoRuntimeCalibration, RXDCOC_RESULT_T *pRxDcocResult)
 {
     struct cmd_msg *msg;
+    EXT_CMD_GET_RXDCOC_RESULT_T CmdDCOCResult;
     
     struct _CMD_ATTRIBUTE attr = {0};
     INT32 ret = 0;
@@ -8771,9 +8524,8 @@ static INT32 MtCmdSetTxLpfCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
     INT32 ret = 0;
     INT32 Len = 0;
 
-	/*Len = TxLpfCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdTxLpfInfo);*/
-	Len = TxLpfCalInfoAlloc(pAd, rlmCache, &pCmdTxLpfInfo);
-
+    //Len = TxLpfCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdTxLpfInfo);
+    Len = TxLpfCalInfoAlloc(pAd, rlmCache, &pCmdTxLpfInfo);
     if (Len == 0)
     {
         ret = NDIS_STATUS_RESOURCES;
@@ -8787,13 +8539,13 @@ static INT32 MtCmdSetTxLpfCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
         goto error;
     }
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-	("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x, cPreCalTemp %d\x1b[m\n", 
-	__FUNCTION__, Len,
-	((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->ucDataToFromFlash,
-	((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->ucDataValid,
-	((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->u2BitMap,
-	((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->cPreCalTemp));
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+    ("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x, cPreCalTemp %d\x1b[m\n", 
+            __FUNCTION__, Len,
+            ((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->ucDataToFromFlash,
+            ((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->ucDataValid,
+            ((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->u2BitMap,
+            ((P_TXLPF_CAL_INFO_T)pCmdTxLpfInfo)->cPreCalTemp));
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -8827,8 +8579,8 @@ static INT32 MtCmdSetTxIqCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
     INT32 ret = 0;
     INT32 Len = 0;
 
-	/*Len = TxIqCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdTxIqInfo);*/
-	Len = TxIqCalInfoAlloc(pAd, rlmCache, &pCmdTxIqInfo);
+    //Len = TxIqCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdTxIqInfo);
+    Len = TxIqCalInfoAlloc(pAd, rlmCache, &pCmdTxIqInfo);
     if (Len == 0)
     {
         ret = NDIS_STATUS_RESOURCES;
@@ -8842,12 +8594,12 @@ static INT32 MtCmdSetTxIqCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
         goto error;
     }
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-	("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x\x1b[m\n", 
-	__FUNCTION__, Len,
-	((P_TXIQ_CAL_INFO_T)pCmdTxIqInfo)->ucDataToFromFlash,
-	((P_TXIQ_CAL_INFO_T)pCmdTxIqInfo)->ucDataValid,
-	((P_TXIQ_CAL_INFO_T)pCmdTxIqInfo)->u2BitMap));
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+    ("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x\x1b[m\n", 
+            __FUNCTION__, Len,
+            ((P_TXIQ_CAL_INFO_T)pCmdTxIqInfo)->ucDataToFromFlash,
+            ((P_TXIQ_CAL_INFO_T)pCmdTxIqInfo)->ucDataValid,
+            ((P_TXIQ_CAL_INFO_T)pCmdTxIqInfo)->u2BitMap));
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -8881,8 +8633,8 @@ static INT32 MtCmdSetTxDcCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
     INT32 ret = 0;
     INT32 Len = 0;
 
-	/*Len = TxDcCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdTxDcInfo);*/
-	Len = TxDcCalInfoAlloc(pAd, rlmCache, &pCmdTxDcInfo);    
+    //Len = TxDcCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdTxDcInfo);
+    Len = TxDcCalInfoAlloc(pAd, rlmCache, &pCmdTxDcInfo);
     if (Len == 0)
     {
         ret = NDIS_STATUS_RESOURCES;
@@ -8896,12 +8648,12 @@ static INT32 MtCmdSetTxDcCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
         goto error;
     }
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-	("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x\x1b[m\n", 
-	__FUNCTION__, Len,
-	((P_TXDC_CAL_INFO_T)pCmdTxDcInfo)->ucDataToFromFlash,
-	((P_TXDC_CAL_INFO_T)pCmdTxDcInfo)->ucDataValid,
-	((P_TXDC_CAL_INFO_T)pCmdTxDcInfo)->u2BitMap));
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+    ("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x\x1b[m\n", 
+            __FUNCTION__, Len,
+            ((P_TXDC_CAL_INFO_T)pCmdTxDcInfo)->ucDataToFromFlash,
+            ((P_TXDC_CAL_INFO_T)pCmdTxDcInfo)->ucDataValid,
+            ((P_TXDC_CAL_INFO_T)pCmdTxDcInfo)->u2BitMap));
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -8935,8 +8687,8 @@ static INT32 MtCmdSetRxFiCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
     INT32 ret = 0;
     INT32 Len = 0;
 
-	/*Len = RxFiCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdRxFiInfo);*/
-	Len = RxFiCalInfoAlloc(pAd, rlmCache, &pCmdRxFiInfo);    
+    //Len = RxFiCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdRxFiInfo);
+    Len = RxFiCalInfoAlloc(pAd, rlmCache, &pCmdRxFiInfo);
     if (Len == 0)
     {
         ret = NDIS_STATUS_RESOURCES;
@@ -8950,12 +8702,12 @@ static INT32 MtCmdSetRxFiCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
         goto error;
     }
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-	("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x\x1b[m\n", 
-	__FUNCTION__, Len,
-	((P_RXFI_CAL_INFO_T)pCmdRxFiInfo)->ucDataToFromFlash,
-	((P_RXFI_CAL_INFO_T)pCmdRxFiInfo)->ucDataValid,
-	((P_RXFI_CAL_INFO_T)pCmdRxFiInfo)->u2BitMap));
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+    ("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x\x1b[m\n", 
+            __FUNCTION__, Len,
+            ((P_RXFI_CAL_INFO_T)pCmdRxFiInfo)->ucDataToFromFlash,
+            ((P_RXFI_CAL_INFO_T)pCmdRxFiInfo)->ucDataValid,
+            ((P_RXFI_CAL_INFO_T)pCmdRxFiInfo)->u2BitMap));
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -8977,7 +8729,6 @@ error:
 
     if (pCmdRxFiInfo != NULL)
         os_free_mem(pCmdRxFiInfo);
-
     return ret;
 }
 
@@ -8990,9 +8741,8 @@ static INT32 MtCmdSetRxFdCal(RTMP_ADAPTER *pAd, VOID* rlmCache, UINT32 chGroup)
     INT32 ret = 0;
     INT32 Len = 0;
 
-	/*Len = RxFdCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdRxFdInfo, chGroup);*/
-	Len = RxFdCalInfoAlloc(pAd, rlmCache, &pCmdRxFdInfo, chGroup);
-
+    //Len = RxFdCalInfoAlloc(pAd, pAd->rlmCalCache, &pCmdRxFdInfo, chGroup);
+    Len = RxFdCalInfoAlloc(pAd, rlmCache, &pCmdRxFdInfo, chGroup);
     if (Len == 0)
     {
         ret = NDIS_STATUS_RESOURCES;
@@ -9006,13 +8756,13 @@ static INT32 MtCmdSetRxFdCal(RTMP_ADAPTER *pAd, VOID* rlmCache, UINT32 chGroup)
         goto error;
     }
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-	("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x, u4ChGroupId %d\x1b[m\n", 
-	__FUNCTION__, Len,
-	((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->ucDataToFromFlash,
-	((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->ucDataValid,
-	((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->u2BitMap,
-	((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->u4ChGroupId));
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+    ("\x1b[35m%s: size %d, ucDataToFromFlash %d, ucDataValid %d, u2BitMap %x, u4ChGroupId %d\x1b[m\n", 
+            __FUNCTION__, Len,
+            ((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->ucDataToFromFlash,
+            ((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->ucDataValid,
+            ((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->u2BitMap,
+            ((P_RXFD_CAL_INFO_T)pCmdRxFdInfo)->u4ChGroupId));
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -9034,7 +8784,6 @@ error:
 
     if (pCmdRxFdInfo != NULL)
         os_free_mem(pCmdRxFdInfo);
-	
     return ret;
 }
 
@@ -9077,12 +8826,10 @@ static INT32 MtCmdSetRlmPorCal(RTMP_ADAPTER *pAd, VOID* rlmCache)
 error:
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-	("\x1b[41m %s: (ret = %d)\x1b[m \n", __FUNCTION__, ret));
-
+            ("\x1b[41m %s: (ret = %d)\x1b[m \n", __FUNCTION__, ret));
 
     if (pCmdRlmPorInfo != NULL)
         os_free_mem(pCmdRlmPorInfo);
-	
     return ret;
 }
 
@@ -9091,7 +8838,7 @@ VOID rlmCalCacheApply(RTMP_ADAPTER *pAd, VOID* rlmCache)
     UINT32 chGroup;
 
     // if DBDC_mode or CalCacheApply =1 , run rlmCalCacheApply
-    if ((pAd->CommonCfg.CalCacheApply == 0) && (pAd->CommonCfg.dbdc_mode==0))
+    if((pAd->CommonCfg.CalCacheApply == 0) && (pAd->CommonCfg.dbdc_mode==0))
         return;
     
     if (!rlmCalCacheDone(rlmCache))
@@ -9114,308 +8861,311 @@ VOID rlmCalCacheApply(RTMP_ADAPTER *pAd, VOID* rlmCache)
 #ifdef PRE_CAL_TRX_SET2_SUPPORT
 INT32 MtCmdGetPreCalResult(RTMP_ADAPTER *pAd, UINT8 CalId, UINT16 PreCalBitMap)
 {
-	struct cmd_msg *msg;
-	EXT_CMD_GET_PRECAL_RESULT_T PreCalCtrl;
-	INT32 ret = 0;
+    struct cmd_msg *msg;
+    EXT_CMD_GET_PRECAL_RESULT_T PreCalCtrl;
+    INT32 ret = 0;
 #if (NEW_MCU_INIT_CMD_API)
-	struct _CMD_ATTRIBUTE attr = {0};
+    struct _CMD_ATTRIBUTE attr = {0};
 #endif
 
-	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-	("%s----------------->\n",__FUNCTION__));
+    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+    ("%s----------------->\n",__FUNCTION__));
 
     PreCalCtrl.u2PreCalBitMap = cpu2le16(PreCalBitMap);
-	PreCalCtrl.ucCalId = CalId;
+    PreCalCtrl.ucCalId = CalId;
      
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(PreCalCtrl));
-	if (!msg)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
+    msg = MtAndesAllocCmdMsg(pAd, sizeof(PreCalCtrl));
+    if (!msg)
+    {
+        ret = NDIS_STATUS_RESOURCES;
+        goto error;
+    }
     
-	SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-	SET_CMD_ATTR_TYPE(attr, EXT_CID);
-	SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_PRE_CAL_RESULT);
-	SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
-	SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 60000);
-	SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, MT_IGNORE_PAYLOAD_LEN_CHECK);
-	SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-	SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_PRE_CAL_RESULT);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 60000);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, MT_IGNORE_PAYLOAD_LEN_CHECK);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
 
-	MtAndesInitCmdMsg(msg, attr);
+    MtAndesInitCmdMsg(msg, attr);
 
-	MtAndesAppendCmdMsg(msg, (char *)&PreCalCtrl, sizeof(PreCalCtrl));
+    MtAndesAppendCmdMsg(msg, (char *)&PreCalCtrl, sizeof(PreCalCtrl));
     
-	ret  = pAd->chipOps.MtCmdTx(pAd,msg);
+
+    ret  = pAd->chipOps.MtCmdTx(pAd,msg);
         
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-	("%s:(ret = %d)\n", __FUNCTION__, ret));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+    ("%s:(ret = %d)\n", __FUNCTION__, ret));
 
-	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-	("%s<-----------------\n",__FUNCTION__));
+    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+    ("%s<-----------------\n",__FUNCTION__));
 
-	return ret;
+    return ret;
         
 error:
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
-	("%s:(ret = %d)\n", __FUNCTION__, ret));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
+    ("%s:(ret = %d)\n", __FUNCTION__, ret));
            
-	return ret;
+    return ret;
 }
 
 INT32 MtCmdPreCalReStoreProc(RTMP_ADAPTER *pAd, INT32 *pPreCalBuffer)
 {
-	UINT32 IDOffset, LenOffset, Offset, Length;          
-	UINT32 CalDataSize, chGroup;
-	ULONG HeaderSize;
-	UINT16 BitMap;
-	RLM_CAL_CACHE *prlmFlash = NULL; 
-	extern int DebugLevel;
+    UINT32 IDOffset, LenOffset, Offset, Length;          
+    UINT32 CalDataSize, chGroup;
+    ULONG HeaderSize;
+    UINT16 BitMap;
+    RLM_CAL_CACHE *prlmFlash = NULL; 
+    extern int DebugLevel;
 
-	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-	("%s----------------->\n",__FUNCTION__));
+    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+    ("%s----------------->\n",__FUNCTION__));
 
-	/* Initialization */
-	IDOffset = 0;
-	LenOffset = 1; //Skip ID field
+    /* Initialization */
+    IDOffset = 0;
+    LenOffset = 1; //Skip ID field
     
-	/* Allocate memory for temp cahce buffer*/
-	if (os_alloc_mem(pAd, (UCHAR **)&prlmFlash, sizeof(RLM_CAL_CACHE)))
-	{
-		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-		("\x1b[41m %s: Not enough memory for dynamic allocating !!!! \x1b[m\n", __FUNCTION__));
+    /* Allocate memory for temp cahce buffer
+*/
+    if (os_alloc_mem(pAd, (UCHAR **)&prlmFlash, sizeof(RLM_CAL_CACHE)))
+    {
+        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+        ("\x1b[41m %s: Not enough memory for dynamic allocating !!!! \x1b[m\n", __FUNCTION__));
         
-		return NDIS_STATUS_FAILURE;
-	}
+        return NDIS_STATUS_FAILURE;
+    }
 
-	os_zero_mem(prlmFlash, sizeof(RLM_CAL_CACHE));
-      
-	if (*(pPreCalBuffer + IDOffset) == PRECAL_TXLPF)
-	{
-		P_TXLPF_CAL_INFO_T pCalData = &prlmFlash->txLpfCalInfo;
+    os_zero_mem(prlmFlash, sizeof(RLM_CAL_CACHE));
 
-		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-		("\x1b[41m %s PRECAL_TXLPF ------------>\x1b[m\n",__FUNCTION__));
+    if (*(pPreCalBuffer + IDOffset) == PRECAL_TXLPF)
+    {
+        P_TXLPF_CAL_INFO_T pCalData = &prlmFlash->txLpfCalInfo;
 
-		/* Update header size and calibration data size */
-		HeaderSize = (ULONG) &((TXLPF_CAL_INFO_T *)NULL)->au4Data[0];
-		CalDataSize = TXLPF_PER_GROUP_DATA_SIZE;
+        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+        ("\x1b[41m %s PRECAL_TXLPF ------------>\x1b[m\n",__FUNCTION__));
+
+        /* Update header size and calibration data size */
+	HeaderSize = (ULONG)&((TXLPF_CAL_INFO_T *)NULL)->au4Data[0];	
+        CalDataSize = TXLPF_PER_GROUP_DATA_SIZE;
         
-		/* Query length of pre-cal item */
-		Length = *(pPreCalBuffer + LenOffset);
+        /* Query length of pre-cal item */
+        Length = *(pPreCalBuffer + LenOffset);
 
-		/* Update the header */
-		Offset = LenOffset + 1;
-		os_move_mem(pCalData, pPreCalBuffer + Offset, HeaderSize);
+        /* Update the header */
+        Offset = LenOffset + 1;
+        os_move_mem(&pCalData->ucDataToFromFlash, pPreCalBuffer + Offset, HeaderSize);
 
-		/* Get bitmap */
-		BitMap = pCalData->u2BitMap;
+        /* Get bitmap */
+        BitMap = pCalData->u2BitMap;
 
-		/* Update the calibration data */
-		Offset += HeaderSize/sizeof(INT32);
-		for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
-		{
-			if (BitMap & (1 << chGroup))
-			{
-				os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
-				Offset += CalDataSize/sizeof(INT32);
-			}
-		}
+        /* Update the calibration data */
+        Offset += HeaderSize/sizeof(INT32);
+        for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
+        {
+            if (BitMap & (1 << chGroup))
+            {
+                os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
+                Offset += CalDataSize/sizeof(INT32);
+            }
+        }
         
-		/* Update offset of parameter */
-		IDOffset = LenOffset + (Length/sizeof(INT32));
-		LenOffset = IDOffset + 1; //Skip ID field  
+        /* Update offset of parameter */
+        IDOffset = LenOffset + (Length/sizeof(INT32));
+        LenOffset = IDOffset + 1; //Skip ID field  
 
-		RLM_CAL_CACHE_TXLPF_CAL_DONE(prlmFlash);    
+        RLM_CAL_CACHE_TXLPF_CAL_DONE(prlmFlash);    
 
-		hex_dump("PRECAL_TXLPF: ", (char *)pCalData, sizeof(TXLPF_CAL_INFO_T));
-	}
+        hex_dump("PRECAL_TXLPF: ", (char *)pCalData, sizeof(TXLPF_CAL_INFO_T));
+    }
 
-	if(*(pPreCalBuffer + IDOffset) == PRECAL_TXIQ) 
-	{
-		P_TXIQ_CAL_INFO_T pCalData = &prlmFlash->txIqCalInfo;
+    if(*(pPreCalBuffer + IDOffset) == PRECAL_TXIQ) 
+    {
+        P_TXIQ_CAL_INFO_T pCalData = &prlmFlash->txIqCalInfo;
 
-		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,         
-		("\x1b[41m %s PRECAL_TXIQ ------------>\x1b[m\n",__FUNCTION__));
+        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,         
+        ("\x1b[41m %s PRECAL_TXIQ ------------>\x1b[m\n",__FUNCTION__));
 
-		/* Update header size and calibration data size */
-		HeaderSize = (ULONG) &((TXIQ_CAL_INFO_T *)NULL)->au4Data[0];
-		CalDataSize = TXIQ_PER_GROUP_DATA_SIZE;
+        /* Update header size and calibration data size */
+        HeaderSize = (ULONG) &((TXIQ_CAL_INFO_T *)NULL)->au4Data[0];
+        CalDataSize = TXIQ_PER_GROUP_DATA_SIZE;
         
-		/* Query length of pre-cal item */
-		Length = *(pPreCalBuffer + LenOffset);
+        /* Query length of pre-cal item */
+        Length = *(pPreCalBuffer + LenOffset);
 
-		/* Update the header */
-		Offset = LenOffset + 1;
-		os_move_mem(pCalData, pPreCalBuffer + Offset, HeaderSize);
+        /* Update the header */
+        Offset = LenOffset + 1;
+        os_move_mem(&pCalData->ucDataToFromFlash, pPreCalBuffer + Offset, HeaderSize);
 
-		/* Get bitmap */
-		BitMap = pCalData->u2BitMap;
+        /* Get bitmap */
+        BitMap = pCalData->u2BitMap;
 
-		/* Update the calibration data */
-		Offset += HeaderSize/sizeof(INT32);
-		for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
-		{
-			if (BitMap & (1 << chGroup))
-			{
-				os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
-				Offset += CalDataSize/sizeof(INT32);
-			}
-		}  
+        /* Update the calibration data */
+        Offset += HeaderSize/sizeof(INT32);
+        for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
+        {
+            if (BitMap & (1 << chGroup))
+            {
+                os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
+                Offset += CalDataSize/sizeof(INT32);
+            }
+        }  
+        
+        /* Update offset of parameter */
+        IDOffset = LenOffset + (Length/sizeof(INT32));
+        LenOffset = IDOffset + 1; //Skip ID field  
 
-		/* Update offset of parameter */
-		IDOffset = LenOffset + (Length/sizeof(INT32));
-		LenOffset = IDOffset + 1; //Skip ID field  
+        RLM_CAL_CACHE_TXIQ_CAL_DONE(prlmFlash);
 
-		RLM_CAL_CACHE_TXIQ_CAL_DONE(prlmFlash);
-
-		hex_dump("PRECAL_TXIQ: ", (char *)pCalData, sizeof(TXIQ_CAL_INFO_T));
-	}
+        hex_dump("PRECAL_TXIQ: ", (char *)pCalData, sizeof(TXIQ_CAL_INFO_T));
+    }
     
-	if(*(pPreCalBuffer + IDOffset) == PRECAL_TXDC) 
-	{
-		P_TXDC_CAL_INFO_T pCalData = &prlmFlash->txDcCalInfo;
+    if(*(pPreCalBuffer + IDOffset) == PRECAL_TXDC) 
+    {
+        P_TXDC_CAL_INFO_T pCalData = &prlmFlash->txDcCalInfo;
 
-		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,        
-		("\x1b[41m %s PRECAL_TXDC ------------>\x1b[m\n",__FUNCTION__));
+        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,        
+        ("\x1b[41m %s PRECAL_TXDC ------------>\x1b[m\n",__FUNCTION__));
 
-		/* Update header size and calibration data size */
-		HeaderSize = (ULONG) &((TXDC_CAL_INFO_T *)NULL)->au4Data[0];
-		CalDataSize = TXDC_PER_GROUP_DATA_SIZE;
+        /* Update header size and calibration data size */
+        HeaderSize = (ULONG) &((TXDC_CAL_INFO_T *)NULL)->au4Data[0];
+        CalDataSize = TXDC_PER_GROUP_DATA_SIZE;
         
-		/* Query length of pre-cal item */
-		Length = *(pPreCalBuffer + LenOffset);
+        /* Query length of pre-cal item */
+        Length = *(pPreCalBuffer + LenOffset);
 
-		/* Update the header */
-		Offset = LenOffset + 1;
-		os_move_mem(pCalData, pPreCalBuffer + Offset, HeaderSize);
+        /* Update the header */
+        Offset = LenOffset + 1;
+        os_move_mem(&pCalData->ucDataToFromFlash, pPreCalBuffer + Offset, HeaderSize);
 
-		/* Get bitmap */
-		BitMap = pCalData->u2BitMap;
+        /* Get bitmap */
+        BitMap = pCalData->u2BitMap;
 
-		/* Update the calibration data */
-		Offset += HeaderSize/sizeof(INT32);
-		for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
-		{
-			if (BitMap & (1 << chGroup))
-			{
-				os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
-				Offset += CalDataSize/sizeof(INT32);
-			}
-		} 
-
-		/* Update offset of parameter */
-		IDOffset = LenOffset + (Length/sizeof(INT32));
-		LenOffset = IDOffset + 1; //Skip ID field  
-
-		RLM_CAL_CACHE_TXDC_CAL_DONE(prlmFlash);
-
-		hex_dump("PRECAL_TXDC: ", (char *)pCalData, sizeof(TXDC_CAL_INFO_T));
-	}
-    
-	for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
-	{
-		if (*(pPreCalBuffer + IDOffset) == PRECAL_RXFD)
-		{
-			P_RXFD_CAL_CACHE_T pCalData = &(prlmFlash->rxFdCalInfo[chGroup]);
-			UINT32 chGroupID;
-
-			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-			("\x1b[41m %s PRECAL_RXFD group %d------------>\x1b[m\n",__FUNCTION__, chGroup));
-
-			/* Update header size and calibration data size */
-			HeaderSize = (ULONG) &((RXFD_CAL_INFO_T *)NULL)->au4Data[0];
-			CalDataSize = RXFD_PER_GROUP_DATA_SIZE;
-            
-			/* Query length of pre-cal item */
-			Length = *(pPreCalBuffer + LenOffset);
-
-			/* Update the header */
-			Offset = LenOffset + 1;
-			os_move_mem(pCalData, pPreCalBuffer + Offset, HeaderSize);
-
-			/* Get bitmap */
-			BitMap = pCalData->u2BitMap;
-            
-			/* Get chgroup ID */
-			chGroupID = pCalData->u4ChGroupId;
-
-			/* Update the calibration data */
-			Offset += HeaderSize/sizeof(INT32);
-			if (BitMap & (1 << chGroupID))
-			{
-				os_move_mem(&pCalData->au4Data[0], pPreCalBuffer + Offset, CalDataSize);
-				Offset += CalDataSize/sizeof(INT32);
-			}          
-
-			/* Update offset of parameter */
-			IDOffset = LenOffset + (Length/sizeof(INT32));
-			LenOffset = IDOffset + 1; //Skip ID field  
-
-			RLM_CAL_CACHE_RXFD_CAL_DONE(prlmFlash, chGroup);
-
-			hex_dump("PRECAL_RXFD: ", (char *)pCalData, sizeof(RXFD_CAL_CACHE_T));
-		}        
-	}
-
-	if(*(pPreCalBuffer + IDOffset) == PRECAL_RXFI) 
-	{
-		P_RXFI_CAL_INFO_T pCalData = &prlmFlash->rxFiCalInfo;
-
-		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("\x1b[41m %s PRECAL_RXFI ------------>\x1b[m\n",__FUNCTION__));
-
-		/* Update header size and calibration data size */
-		HeaderSize = (ULONG) &((RXFI_CAL_INFO_T *)NULL)->au4Data[0];
-		CalDataSize = RXFI_PER_GROUP_DATA_SIZE;
-        
-		/* Query length of pre-cal item */
-		Length = *(pPreCalBuffer + LenOffset);
-
-		/* Update the header */
-		Offset = LenOffset + 1;
-		os_move_mem(pCalData, pPreCalBuffer + Offset, HeaderSize);
-
-		/* Get bitmap */
-		BitMap = pCalData->u2BitMap;
-
-		/* Update the calibration data */
-		Offset += HeaderSize/sizeof(INT32);
-		for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
-		{
-			if (BitMap & (1 << chGroup))
-			{
-				os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
-				Offset += CalDataSize/sizeof(INT32);
-			}
-		} 
+        /* Update the calibration data */
+        Offset += HeaderSize/sizeof(INT32);
+        for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
+        {
+            if (BitMap & (1 << chGroup))
+            {
+                os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
+                Offset += CalDataSize/sizeof(INT32);
+            }
+        } 
 
         /* Update offset of parameter */
-		IDOffset = LenOffset + (Length/sizeof(INT32));
-		LenOffset = IDOffset + 1; //Skip ID field  
+        IDOffset = LenOffset + (Length/sizeof(INT32));
+        LenOffset = IDOffset + 1; //Skip ID field  
 
-		RLM_CAL_CACHE_RXFI_CAL_DONE(prlmFlash);
+        RLM_CAL_CACHE_TXDC_CAL_DONE(prlmFlash);
 
-		hex_dump("PRECAL_RXFI: ", (char *)pCalData, sizeof(RXFI_CAL_INFO_T));
-	}
-
-	/* Send restored calibration data to FW*/
-	MtCmdSetTxLpfCal(pAd, prlmFlash);
-	MtCmdSetTxIqCal(pAd, prlmFlash);
-	MtCmdSetTxDcCal(pAd, prlmFlash);
-	MtCmdSetRxFiCal(pAd, prlmFlash);
-	for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
-	{
-		MtCmdSetRxFdCal(pAd, prlmFlash, chGroup);
-	} 
-
-	os_free_mem(prlmFlash);
+        hex_dump("PRECAL_TXDC: ", (char *)pCalData, sizeof(TXDC_CAL_INFO_T));
+    }
     
-	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-	("%s----------------->\n",__FUNCTION__));
+    for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
+    {
+        if (*(pPreCalBuffer + IDOffset) == PRECAL_RXFD)
+        {
+            P_RXFD_CAL_CACHE_T pCalData = &(prlmFlash->rxFdCalInfo[chGroup]);
+            UINT32 chGroupID;
 
-	return NDIS_STATUS_SUCCESS;    
+            MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+            ("\x1b[41m %s PRECAL_RXFD group %d------------>\x1b[m\n",__FUNCTION__, chGroup));
+
+            /* Update header size and calibration data size */
+            HeaderSize = (ULONG) &((RXFD_CAL_INFO_T *)NULL)->au4Data[0];
+            CalDataSize = RXFD_PER_GROUP_DATA_SIZE;
+            
+            /* Query length of pre-cal item */
+            Length = *(pPreCalBuffer + LenOffset);
+
+            /* Update the header */
+            Offset = LenOffset + 1;
+            os_move_mem(&pCalData->ucDataToFromFlash, pPreCalBuffer + Offset, HeaderSize);
+
+            /* Get bitmap */
+            BitMap = pCalData->u2BitMap;
+            
+            /* Get chgroup ID */
+            chGroupID = pCalData->u4ChGroupId;
+
+            /* Update the calibration data */
+            Offset += HeaderSize/sizeof(INT32);
+            if (BitMap & (1 << chGroupID))
+            {
+                os_move_mem(&pCalData->au4Data[0], pPreCalBuffer + Offset, CalDataSize);
+                Offset += CalDataSize/sizeof(INT32);
+            }          
+
+            /* Update offset of parameter */
+            IDOffset = LenOffset + (Length/sizeof(INT32));
+            LenOffset = IDOffset + 1; //Skip ID field  
+
+            RLM_CAL_CACHE_RXFD_CAL_DONE(prlmFlash, chGroup);
+
+            hex_dump("PRECAL_RXFD: ", (char *)pCalData, sizeof(RXFD_CAL_CACHE_T));
+        }        
+    }
+
+    if(*(pPreCalBuffer + IDOffset) == PRECAL_RXFI) 
+    {
+        P_RXFI_CAL_INFO_T pCalData = &prlmFlash->rxFiCalInfo;
+
+        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+        ("\x1b[41m %s PRECAL_RXFI ------------>\x1b[m\n",__FUNCTION__));
+
+        /* Update header size and calibration data size */
+        HeaderSize = (ULONG) &((RXFI_CAL_INFO_T *)NULL)->au4Data[0];
+        CalDataSize = RXFI_PER_GROUP_DATA_SIZE;
+        
+        /* Query length of pre-cal item */
+        Length = *(pPreCalBuffer + LenOffset);
+
+        /* Update the header */
+        Offset = LenOffset + 1;
+        os_move_mem(&pCalData->ucDataToFromFlash, pPreCalBuffer + Offset, HeaderSize);
+
+        /* Get bitmap */
+        BitMap = pCalData->u2BitMap;
+
+        /* Update the calibration data */
+        Offset += HeaderSize/sizeof(INT32);
+        for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
+        {
+            if (BitMap & (1 << chGroup))
+            {
+                os_move_mem(&pCalData->au4Data[chGroup * CalDataSize/sizeof(UINT32)], pPreCalBuffer + Offset, CalDataSize);
+                Offset += CalDataSize/sizeof(INT32);
+            }
+        } 
+
+        /* Update offset of parameter */
+        IDOffset = LenOffset + (Length/sizeof(INT32));
+        LenOffset = IDOffset + 1; //Skip ID field  
+
+        RLM_CAL_CACHE_RXFI_CAL_DONE(prlmFlash);
+
+        hex_dump("PRECAL_RXFI: ", (char *)pCalData, sizeof(RXFI_CAL_INFO_T));
+    }
+
+
+    /* Send restored calibration data to FW*/
+    MtCmdSetTxLpfCal(pAd, prlmFlash);
+    MtCmdSetTxIqCal(pAd, prlmFlash);
+    MtCmdSetTxDcCal(pAd, prlmFlash);
+    MtCmdSetRxFiCal(pAd, prlmFlash);
+    for (chGroup = 0; chGroup < CHANNEL_GROUP_NUM; chGroup++)
+    {
+        MtCmdSetRxFdCal(pAd, prlmFlash, chGroup);
+    } 
+
+    os_free_mem(prlmFlash);
+    
+    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+    ("%s----------------->\n",__FUNCTION__));
+
+    return NDIS_STATUS_SUCCESS;    
 }
 #endif /* PRE_CAL_TRX_SET2_SUPPORT */
 
@@ -9705,8 +9455,7 @@ INT32 MtCmdRddCtrl(
     IN struct _RTMP_ADAPTER *pAd,
     IN UCHAR ucRddCtrl,
     IN UCHAR ucRddIdex,
-    IN UCHAR ucRddInSel,
-    IN UCHAR ucRddTpRatio)
+    IN UCHAR ucRddInSel)
 {
     struct cmd_msg *msg;
     INT32 ret = 0;
@@ -9736,9 +9485,7 @@ INT32 MtCmdRddCtrl(
     rRddOnOffCtrl.ucRddCtrl = ucRddCtrl;
     rRddOnOffCtrl.ucRddIdx = ucRddIdex;
 	rRddOnOffCtrl.ucRddInSel = ucRddInSel;
-	rRddOnOffCtrl.ucRddTpRatio = ucRddTpRatio;
     MtAndesAppendCmdMsg(msg, (char *)&rRddOnOffCtrl, sizeof(rRddOnOffCtrl));
-    
 
 	ret = pAd->chipOps.MtCmdTx(pAd, msg);
 
@@ -10251,84 +9998,6 @@ error:
 	return ret;
 }
 
-INT32 MtCmdTxPowerDropCtrl(
-          RTMP_ADAPTER *pAd,
-          UINT8        ucPowerDrop,
-          UCHAR        BandIdx
-          )
-{
-    INT8  cPowerDropLevel = 0;
-
-    struct cmd_msg *msg;
-	CMD_POWER_PERCENTAGE_DROP_CTRL_T PowerDropCtrl;
-	INT32 ret = 0;
-    struct _CMD_ATTRIBUTE attr = {0};
-
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-        ("%s: ucPowerDrop: %d, BandIdx: %d\n", __FUNCTION__, ucPowerDrop, BandIdx));
-
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_POWER_PERCENTAGE_DROP_CTRL_T));
-
-	if (!msg)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-
-	os_zero_mem(&PowerDropCtrl, sizeof(CMD_POWER_PERCENTAGE_DROP_CTRL_T));
-
-    /* config Tx Power Drop value */
-    if ((ucPowerDrop > 90) && (ucPowerDrop < 100))
-    {
-		cPowerDropLevel = 0;
-    }
-	else if ((ucPowerDrop > 60) && (ucPowerDrop <= 90))  /* reduce Pwr for 1 dB. */
-    {   
-		cPowerDropLevel = 1;
-    }
-	else if ((ucPowerDrop > 30) && (ucPowerDrop <= 60))  /* reduce Pwr for 3 dB. */
-    {   
-		cPowerDropLevel = 3;
-    }
-	else if ((ucPowerDrop > 15) && (ucPowerDrop <= 30))  /* reduce Pwr for 6 dB. */
-    {   
-		cPowerDropLevel = 6;
-    }
-	else if ((ucPowerDrop > 9) && (ucPowerDrop <= 15))   /* reduce Pwr for 9 dB. */
-    {   
-		cPowerDropLevel = 9;
-    }
-	else if ((ucPowerDrop > 0) && (ucPowerDrop <= 9))   /* reduce Pwr for 12 dB. */
-    {   
-		cPowerDropLevel = 12;
-    }
-
-	PowerDropCtrl.ucPowerCtrlFormatId = PERCENTAGE_DROP_CTRL;
-	PowerDropCtrl.cPowerDropLevel     = cPowerDropLevel;
-    PowerDropCtrl.ucBandIdx           = BandIdx;
-
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_TX_POWER_FEATURE_CTRL);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, MT_IGNORE_PAYLOAD_LEN_CHECK);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
-
-    MtAndesInitCmdMsg(msg, attr);
-	MtAndesAppendCmdMsg(msg, (char *)&PowerDropCtrl,
-            sizeof(CMD_POWER_PERCENTAGE_DROP_CTRL_T));
-
-	ret = pAd->chipOps.MtCmdTx(pAd, msg);
-
-error:
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-        ("%s:(ret = %d)\n", __FUNCTION__, ret));
-
-	return ret;
-}
-
 INT32 MtCmdTxBfBackoffCtrl(
           RTMP_ADAPTER *pAd,
           BOOLEAN      fgTxBFBackoffEn,
@@ -10379,33 +10048,30 @@ error:
     return ret;
 }
 
-INT32 MtCmdThermoCompCtrl(
+INT32 MtCmdTxPwrUppBoundCtrl(
           RTMP_ADAPTER *pAd,
-          BOOLEAN      fgThermoCompEn,
-          UCHAR        BandIdx
-          )
+          UCHAR        PwrUppBoundCtrl)
 {
-    struct cmd_msg *msg;
-    CMD_POWER_THERMAL_COMP_CTRL_T ThermoCompCtrl;
-    INT32 ret = 0;
+	struct cmd_msg *msg;
+	CMD_POWER_UPPER_BOUND_CTRL_T PowerUpperBoundCtrl;
+	INT32 ret = 0;
     struct _CMD_ATTRIBUTE attr = {0};
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-        ("%s: fgThermoCompEn: %d, BandIdx: %d\n", __FUNCTION__, fgThermoCompEn, BandIdx));
+	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+        ("%s: PwrUppBoundCtrl = %d\n", __FUNCTION__, PwrUppBoundCtrl));
 
-    msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_POWER_THERMAL_COMP_CTRL_T));
+	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_POWER_UPPER_BOUND_CTRL_T));
 
-    if (!msg)
-    {
-        ret = NDIS_STATUS_RESOURCES;
-        goto error;
-    }
+	if (!msg)
+	{
+		ret = NDIS_STATUS_RESOURCES;
+		goto error;
+	}
 
-    os_zero_mem(&ThermoCompCtrl, sizeof(CMD_POWER_THERMAL_COMP_CTRL_T));
+	os_zero_mem(&PowerUpperBoundCtrl, sizeof(CMD_POWER_UPPER_BOUND_CTRL_T));
 
-    ThermoCompCtrl.ucPowerCtrlFormatId = THERMAL_COMPENSATION_CTRL;
-    ThermoCompCtrl.fgThermalCompEn     = fgThermoCompEn;
-    ThermoCompCtrl.ucBandIdx           = BandIdx;
+	PowerUpperBoundCtrl.ucPowerCtrlFormatId = POWER_UPPER_BOUND_CTRL;
+	PowerUpperBoundCtrl.ucUpperBoundCtrl  = PwrUppBoundCtrl;
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -10417,22 +10083,25 @@ INT32 MtCmdThermoCompCtrl(
     SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
 
     MtAndesInitCmdMsg(msg, attr);
-    MtAndesAppendCmdMsg(msg, (char *)&ThermoCompCtrl,
-            sizeof(CMD_POWER_THERMAL_COMP_CTRL_T));
+	MtAndesAppendCmdMsg(msg, (char *)&PowerUpperBoundCtrl,
+            sizeof(CMD_POWER_UPPER_BOUND_CTRL_T));
 
-    ret = pAd->chipOps.MtCmdTx(pAd, msg);
+	ret = pAd->chipOps.MtCmdTx(pAd, msg);
 
 error:
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
         ("%s:(ret = %d)\n", __FUNCTION__, ret));
 
-    return ret;
+	return ret;
 }
 
 INT32 MtCmdTxPwrRfTxAntCtrl(
           RTMP_ADAPTER *pAd,
-          UINT8        ucTxAntIdx
-                       )
+          UCHAR        TxAntCtrlEn,
+          UCHAR        WIFI_En_0,
+          UCHAR        WIFI_En_1,
+          UCHAR        WIFI_En_2,
+          UCHAR        WIFI_En_3)
 {
 	struct cmd_msg *msg;
 	CMD_POWER_RF_TXANT_CTRL_T PowerRfTxAntCtrl;
@@ -10440,7 +10109,10 @@ INT32 MtCmdTxPwrRfTxAntCtrl(
     struct _CMD_ATTRIBUTE attr = {0};
 
 	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-        ("%s: ucTxAntIdx = 0x%x \n", __FUNCTION__, ucTxAntIdx));
+        ("%s: TxAntCtrlEn = %d \n", __FUNCTION__, TxAntCtrlEn));
+
+	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+        ("%s: WIFI_En[0:1:2:3] = %d:%d:%d:%d \n", __FUNCTION__, WIFI_En_0, WIFI_En_1, WIFI_En_2, WIFI_En_3));
 
 	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_POWER_RF_TXANT_CTRL_T));
 
@@ -10453,7 +10125,11 @@ INT32 MtCmdTxPwrRfTxAntCtrl(
 	os_zero_mem(&PowerRfTxAntCtrl, sizeof(CMD_POWER_RF_TXANT_CTRL_T));
 
 	PowerRfTxAntCtrl.ucPowerCtrlFormatId = RF_TXANT_CTRL;
-    PowerRfTxAntCtrl.ucTxAntIdx          = ucTxAntIdx;
+    PowerRfTxAntCtrl.ucTxAntCtrlEn       = TxAntCtrlEn;
+	PowerRfTxAntCtrl.ucWIFI_EN_0         = WIFI_En_0;
+    PowerRfTxAntCtrl.ucWIFI_EN_1         = WIFI_En_1;
+    PowerRfTxAntCtrl.ucWIFI_EN_2         = WIFI_En_2;
+    PowerRfTxAntCtrl.ucWIFI_EN_3         = WIFI_En_3;
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -10479,9 +10155,7 @@ error:
 
 INT32 MtCmdTxPwrShowInfo(
           RTMP_ADAPTER *pAd,
-          UCHAR        TxPowerInfoEn,
-          UINT8        BandIdx
-          )
+          UCHAR        TxPowerInfoEn)
 {
 	struct cmd_msg *msg;
 	CMD_TX_POWER_SHOW_INFO_T TxPowerShowInfoCtrl;
@@ -10489,7 +10163,7 @@ INT32 MtCmdTxPwrShowInfo(
     struct _CMD_ATTRIBUTE attr = {0};
 
 	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-        ("%s: TxPowerInfoEn: %d, BandIdx: %d \n", __FUNCTION__, TxPowerInfoEn, BandIdx));
+        ("%s: TxPowerInfoEn = %d \n", __FUNCTION__, TxPowerInfoEn));
 
 	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_TX_POWER_SHOW_INFO_T));
 
@@ -10502,8 +10176,7 @@ INT32 MtCmdTxPwrShowInfo(
 	os_zero_mem(&TxPowerShowInfoCtrl, sizeof(CMD_TX_POWER_SHOW_INFO_T));
 
 	TxPowerShowInfoCtrl.ucPowerCtrlFormatId = TX_POWER_SHOW_INFO;
-    TxPowerShowInfoCtrl.fgTxPowerInfoEn     = TxPowerInfoEn;
-    TxPowerShowInfoCtrl.ucBandIdx           = BandIdx;
+    TxPowerShowInfoCtrl.ucTxPowerInfoEn     = TxPowerInfoEn;
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -10930,82 +10603,21 @@ error:
 	return ret;
 }
 
-#ifdef TX_POWER_CONTROL_SUPPORT
-INT32 MtCmdTxPwrUpCtrl(
-	RTMP_ADAPTER *pAd,
-	INT8          ucBandIdx,
-	CHAR          cPwrUpCat,
-	CHAR          cPwrUpValue[POWER_UP_CATEGORY_RATE_NUM]
-	)
-{
-	struct cmd_msg *msg;
-	CMD_POWER_BOOST_TABLE_CTRL_T TxPwrUpTblCtrl;
-	INT32 ret = 0;
-    struct _CMD_ATTRIBUTE attr = {0};
-
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-        ("%s: ucBandIdx: %d, cPwrUpCat: %d\n", __FUNCTION__, ucBandIdx, cPwrUpCat));
-
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-        ("%s: cPwrUpValue: (%d)-(%d)-(%d)-(%d)-(%d)-(%d)-(%d)\n", __FUNCTION__, cPwrUpValue[0], cPwrUpValue[1], cPwrUpValue[2], cPwrUpValue[3], cPwrUpValue[4], cPwrUpValue[5], cPwrUpValue[6]));
-
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_POWER_BOOST_TABLE_CTRL_T));
-
-	if (!msg)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-
-	/* init buffer structure */
-	os_zero_mem(&TxPwrUpTblCtrl, sizeof(CMD_POWER_BOOST_TABLE_CTRL_T));
-
-	TxPwrUpTblCtrl.ucPowerCtrlFormatId = TXPOWER_UP_TABLE_CTRL;
-    TxPwrUpTblCtrl.ucBandIdx           = ucBandIdx;
-	TxPwrUpTblCtrl.cPwrUpCat           = cPwrUpCat;
-
-	/* update Power Up Table value to buffer structure */
-	os_move_mem(TxPwrUpTblCtrl.cPwrUpValue, cPwrUpValue, sizeof(CHAR) * POWER_UP_CATEGORY_RATE_NUM);
-
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_TX_POWER_FEATURE_CTRL);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, MT_IGNORE_PAYLOAD_LEN_CHECK);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
-
-    MtAndesInitCmdMsg(msg, attr);
-	MtAndesAppendCmdMsg(msg, (char *)&TxPwrUpTblCtrl,
-            sizeof(CMD_POWER_BOOST_TABLE_CTRL_T));
-
-	ret = pAd->chipOps.MtCmdTx(pAd, msg);
-
-error:
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-        ("%s:(ret = %d)\n", __FUNCTION__, ret));
-
-	return ret;
-}
-#endif /* TX_POWER_CONTROL_SUPPORT */
-
-#ifdef LINK_TEST_SUPPORT
-INT32 MtCmdLinkTestTxCsdCtrl(
+#ifdef NR_PD_DETECTION
+INT32 MtCmdLinkTestTxCtrl(
           RTMP_ADAPTER *pAd,
-          BOOLEAN      fgTxCsdConfigEn,
-          UINT8        ucDbdcBandIdx,
+          BOOLEAN      fgTxConfigEn,
           UINT8        ucBandIdx)
 {
 	struct cmd_msg *msg;
-	CMD_CMW_TX_CSD_CTRL_T CMWTxCtrl;
+	CMD_CMW_TX_CTRL_T CMWTxCtrl;
 	INT32 ret = 0;
     struct _CMD_ATTRIBUTE attr = {0};
 
 	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-        ("%s: fgTxCsdConfigEn = %d\n", __FUNCTION__, fgTxCsdConfigEn));
+        ("%s: fgTxConfigEn = %d\n", __FUNCTION__, fgTxConfigEn));
 
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_CMW_TX_CSD_CTRL_T));
+	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_CMW_TX_CTRL_T));
 
 	if (!msg)
 	{
@@ -11013,11 +10625,10 @@ INT32 MtCmdLinkTestTxCsdCtrl(
 		goto error;
 	}
 
-	os_zero_mem(&CMWTxCtrl, sizeof(CMD_CMW_TX_CSD_CTRL_T));
+	os_zero_mem(&CMWTxCtrl, sizeof(CMD_CMW_TX_CTRL_T));
 
-	CMWTxCtrl.ucCMWCtrlFormatId    = CMW_TX_CSD;
-	CMWTxCtrl.fgTxCsdConfigEn      = fgTxCsdConfigEn;
-	CMWTxCtrl.ucDbdcBandIdx        = ucDbdcBandIdx;
+	CMWTxCtrl.ucCMWCtrlFormatId    = CMW_TX;
+	CMWTxCtrl.fgTxConfigEn         = fgTxConfigEn;
     CMWTxCtrl.ucBandIdx            = ucBandIdx;
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
@@ -11031,7 +10642,7 @@ INT32 MtCmdLinkTestTxCsdCtrl(
 
     MtAndesInitCmdMsg(msg, attr);
 	MtAndesAppendCmdMsg(msg, (char *)&CMWTxCtrl,
-            sizeof(CMD_CMW_TX_CSD_CTRL_T));
+            sizeof(CMD_CMW_TX_CTRL_T));
 
 	ret = pAd->chipOps.MtCmdTx(pAd, msg);
     return ret;
@@ -11132,62 +10743,6 @@ INT32 MtCmdLinkTestTxPwrCtrl(
     MtAndesInitCmdMsg(msg, attr);
 	MtAndesAppendCmdMsg(msg, (char *)&CMWTxPwrCtrl,
             sizeof(CMD_CMW_TXPWR_CTRL_T));
-
-	ret = pAd->chipOps.MtCmdTx(pAd, msg);
-    return ret;
-
-error:
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-        ("%s:(ret = %d)\n", __FUNCTION__, ret));
-
-	return ret;
-}
-
-INT32 MtCmdLinkTestTxPwrUpTblCtrl(
-          RTMP_ADAPTER *pAd,
-          UINT8        ucTxPwrUpCat,
-          PUINT8       pucTxPwrUpValue)
-{
-	UINT8 ucRateIdx;
-	struct cmd_msg *msg;
-	CMD_CMW_TXPWR_UP_TABLE_CTRL_T CMWTxPwrUpTblCtrl;
-	INT32 ret = 0;
-    struct _CMD_ATTRIBUTE attr = {0};
-
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: ucTxPwrUpCat: %d\n", __FUNCTION__, ucTxPwrUpCat));
-
-	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: ucTxPwrUpRate: ", __FUNCTION__));
-	for (ucRateIdx = 0; ucRateIdx < CMW_POWER_UP_RATE_NUM; ucRateIdx++)
-		MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, (" %d", *(pucTxPwrUpValue + ucRateIdx)));
-
-	msg = MtAndesAllocCmdMsg(pAd, sizeof(CMD_CMW_TXPWR_UP_TABLE_CTRL_T));
-
-	if (!msg)
-	{
-		ret = NDIS_STATUS_RESOURCES;
-		goto error;
-	}
-
-	os_zero_mem(&CMWTxPwrUpTblCtrl, sizeof(CMD_CMW_TXPWR_UP_TABLE_CTRL_T));
-
-	CMWTxPwrUpTblCtrl.ucCMWCtrlFormatId  = CMW_TXPWR_UP_TABLE;
-	CMWTxPwrUpTblCtrl.ucTxPwrUpCat		 = ucTxPwrUpCat;
-
-	/* update command content with Tx Power up Table */
-	os_move_mem(&(CMWTxPwrUpTblCtrl.ucTxPwrUpValue), pucTxPwrUpValue, CMW_POWER_UP_RATE_NUM);
-
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_CMW_FEATURE_CTRL);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, MT_IGNORE_PAYLOAD_LEN_CHECK);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
-
-    MtAndesInitCmdMsg(msg, attr);
-	MtAndesAppendCmdMsg(msg, (char *)&CMWTxPwrUpTblCtrl,
-            sizeof(CMD_CMW_TXPWR_UP_TABLE_CTRL_T));
 
 	ret = pAd->chipOps.MtCmdTx(pAd, msg);
     return ret;
@@ -11416,7 +10971,7 @@ error:
 	return ret;
 }
 
-#endif /* LINK_TEST_SUPPORT */
+#endif /* NR_PD_DETECTION */
 
 #ifdef GREENAP_SUPPORT
 INT32 MtCmdExtGreenAPOnOffCtrl(
@@ -11550,7 +11105,7 @@ INT32 MtCmdATEModeCtrl(
 	os_zero_mem(&ATEModeCtrl, sizeof(CMD_ATE_MODE_CTRL_T));
 
 	ATEModeCtrl.ucPowerCtrlFormatId = ATEMODE_CTRL;
-	ATEModeCtrl.fgATEModeEn         = ATEMode;
+	ATEModeCtrl.ucATEModeCtrl  = ATEMode;
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);

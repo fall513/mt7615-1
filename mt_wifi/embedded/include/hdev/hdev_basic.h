@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -16,13 +17,16 @@
  ***************************************************************************
 
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __HDEV_BASIC_H
 #define __HDEV_BASIC_H
 
 #ifdef RTMP_MAC_PCI
 //struct _PCI_HIF_T;
 #endif /*RTMP_MAC_PCI*/
+#ifdef RTMP_MAC_SDIO
+struct _SDIO_HIF_T;
+#endif /*RTMP_MAC_SDIO*/
 
 #include "common/link_list.h"
 

@@ -313,23 +313,17 @@ void print_help_msg(RTMP_ADAPTER *pAd){
 int intern_debug_probe_cmd_call(RTMP_ADAPTER *pAd, uint32_t cmd_id, char *_arg0_str, char *_arg1_str){
 
 	int i;
+	int err_code = 0;
 
 	arg0_str = _arg0_str;
 	arg1_str = _arg1_str;
-	
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,14))
+
 	if (arg0_str)
-		kstrtoul(arg0_str, 16, (unsigned long *)&arg0);
+		err_code = kstrtoul(arg0_str, 16, (unsigned long *)&arg0);
 
 	if (arg1_str)
-		kstrtoul(arg1_str, 16, (unsigned long *)&arg1);
-#else
-	if (arg0_str)
-		strict_strtoul(arg0_str, 16, (unsigned long *)&arg0);
+		err_code = kstrtoul(arg1_str, 16, (unsigned long *)&arg1);
 
-	if (arg1_str)
-		strict_strtoul(arg1_str, 16, (unsigned long *)&arg1);
-#endif
 
 	for (i = 0; i < di_cmd_num; i++){
 		if(cmd_id == di_cmds[i].id){
@@ -338,7 +332,7 @@ int intern_debug_probe_cmd_call(RTMP_ADAPTER *pAd, uint32_t cmd_id, char *_arg0_
 		}
 	}
 
-	return 0;
+	return err_code;
 }
 
 void fdb_enable(RTMP_ADAPTER *pAd)
@@ -578,6 +572,10 @@ void n9_dump(RTMP_ADAPTER *pAd){
 		printk("%s(%s) = 0x%x\n", symbol_map_p->name, symbol_map_p->addr, ret0);
 	}
 	printk("============== SER dump end=============\n");
+#ifdef SDK_TIMER_WDG 
+	if (pAd->heart_beat_stop) /* let chip to bring up after sw reboot*/
+		intern_debug_probe_cmd_call(pAd, DIC_FDB_CONTINUE, NULL, NULL);
+#endif
 }
 
 #define CR4_CMD_CR		0x82000208
@@ -667,6 +665,76 @@ void cr4_dump(RTMP_ADAPTER *pAd){
 		CR4_CMD(pAd, 0x213);
 		CR4_CMD(pAd, 0x215);
 
+		/*  CR4*/
+		printk("CR4 Intr Status CR\n");
+		CR4_PRINT_CR(pAd, 0x82040070);
+		CR4_PRINT_CR(pAd, 0x820400E0);
+		
+        /* PDMA0 related - Shihwei */
+		printk("PDMA0 related\n");
+		
+		/*TX Ring0*/
+		CR4_PRINT_CR(pAd, 0x50000208);
+		CR4_PRINT_CR(pAd, 0x50000300);
+		CR4_PRINT_CR(pAd, 0x50000304);
+		CR4_PRINT_CR(pAd, 0x50000308);
+		CR4_PRINT_CR(pAd, 0x5000030c);
+		
+		/*TX Ring1*/
+		CR4_PRINT_CR(pAd, 0x50000310);
+		CR4_PRINT_CR(pAd, 0x50000314);
+		CR4_PRINT_CR(pAd, 0x50000318);
+		CR4_PRINT_CR(pAd, 0x5000031c);
+		
+		/*TX Ring2*/
+		CR4_PRINT_CR(pAd, 0x50000320);
+		CR4_PRINT_CR(pAd, 0x50000324);
+		CR4_PRINT_CR(pAd, 0x50000328);
+		CR4_PRINT_CR(pAd, 0x5000032c);
+		
+		/*TX Ring3*/
+		CR4_PRINT_CR(pAd, 0x50000330);
+		CR4_PRINT_CR(pAd, 0x50000334);
+		CR4_PRINT_CR(pAd, 0x50000338);
+		CR4_PRINT_CR(pAd, 0x5000033c);
+		
+		/*RX Ring0*/
+		CR4_PRINT_CR(pAd, 0x50000400);
+		CR4_PRINT_CR(pAd, 0x50000404);
+		CR4_PRINT_CR(pAd, 0x50000408);
+		CR4_PRINT_CR(pAd, 0x5000040c);
+		/*RX Ring1*/
+		CR4_PRINT_CR(pAd, 0x50000410);
+		CR4_PRINT_CR(pAd, 0x50000414);
+		CR4_PRINT_CR(pAd, 0x50000418);
+		CR4_PRINT_CR(pAd, 0x5000041c);
+		
+		/* PDMA1 related */
+		printk("PDMA1 related\n");
+		/*TX Ring0*/
+		CR4_PRINT_CR(pAd, 0x820b0204);
+		CR4_PRINT_CR(pAd, 0x820b0004);
+		CR4_PRINT_CR(pAd, 0x820b0008);
+		CR4_PRINT_CR(pAd, 0x820b000c);
+		
+		/*TX Ring0*/
+		CR4_PRINT_CR(pAd, 0x820b0010);
+		CR4_PRINT_CR(pAd, 0x820b0014);
+		CR4_PRINT_CR(pAd, 0x820b0018);
+		CR4_PRINT_CR(pAd, 0x820b001c);
+		
+		/*RX Ring0*/
+		CR4_PRINT_CR(pAd, 0x820b0100);
+		CR4_PRINT_CR(pAd, 0x820b0104);
+		CR4_PRINT_CR(pAd, 0x820b0108);
+		CR4_PRINT_CR(pAd, 0x820b010c);
+
+		/*RX Ring1*/
+		CR4_PRINT_CR(pAd, 0x820b0110);
+		CR4_PRINT_CR(pAd, 0x820b0114);
+		CR4_PRINT_CR(pAd, 0x820b0118);
+		CR4_PRINT_CR(pAd, 0x820b011c);
+
 		/* PDMA1 related */
 		printk("PDMA1 related\n");
 		CR4_PRINT_CR(pAd, 0x820b0204);
@@ -689,25 +757,515 @@ void cr4_dump(RTMP_ADAPTER *pAd){
 
 		/* PDMA2 related */
 		printk("PDMA2 related\n");
+		/*TX Ring0*/
 		CR4_PRINT_CR(pAd, 0x820c0204);
+		CR4_PRINT_CR(pAd, 0x820c0000);
 		CR4_PRINT_CR(pAd, 0x820c0004);
 		CR4_PRINT_CR(pAd, 0x820c0008);
 		CR4_PRINT_CR(pAd, 0x820c000c);
 
+		/*TX Ring1*/
+		CR4_PRINT_CR(pAd, 0x820c0010);
 		CR4_PRINT_CR(pAd, 0x820c0014);
 		CR4_PRINT_CR(pAd, 0x820c0018);
 		CR4_PRINT_CR(pAd, 0x820c001c);
 
+		/*RX Ring0*/
+		CR4_PRINT_CR(pAd, 0x820c0100);
 		CR4_PRINT_CR(pAd, 0x820c0104);
 		CR4_PRINT_CR(pAd, 0x820c0108);
 		CR4_PRINT_CR(pAd, 0x820c010c);
 
+		/*RX Ring1*/
+		CR4_PRINT_CR(pAd, 0x820c0110);
 		CR4_PRINT_CR(pAd, 0x820c0114);
 		CR4_PRINT_CR(pAd, 0x820c0118);
 		CR4_PRINT_CR(pAd, 0x820c011c);
+		
+		printk("PDMA1/2 RX pause Threshold\n");
+		CR4_PRINT_CR(pAd, 0x82000510);
+		CR4_PRINT_CR(pAd, 0x82000514);
+		CR4_PRINT_CR(pAd, 0x82000518);
+		CR4_PRINT_CR(pAd, 0x8200051c);
+
 	printk("============== cr4 dump end=============\n");
 
 }
+
+#if defined(MT7615)
+static UINT_32	pdma0_cr[9]={
+	0x50000208,/* PDMA Global Cfg */
+	0x50000244,/* PDMA Internal Signal */
+	0x50000300,/* PDMA TX Ring 4*/
+	0x50000400,/* RX Ring 2 */
+	0x50000500,/* E3 New Feature */
+	0x50000510,/* E3 New Feature */
+	0x50000520,/* E3 New Feature */
+	0x50000530,/* E3 New Feature */
+	0x50000534,/* E3 New Feature */
+};
+static UINT_32	pdma1_cr[4]={
+	0x820b0204,/* PDMA Global Cfg */
+	0x82000408,/* PDMA Internal Signal */
+	0x820b0000,/* PDMA TX Ring 2 */
+	0x820b0100,/* RX Ring 2 */
+};
+static UINT_32	pdma2_cr[4]={
+	0x820c0204,/* PDMA Global Cfg */
+	0x82000408,/* PDMA Internal Signal */
+	0x820c0000,/* PDMA TX Ring 2 */
+	0x820c0100,/* RX Ring 2 */
+};
+UINT_32 PdmaGetRxRingNum(UINT32 u4MaxCnt, UINT32 u4CpuIdx, UINT32 u4DmaIdx);
+UINT_32 PdmaGetTxRingNum(UINT32 u4MaxCnt, UINT32 u4CpuIdx, UINT32 u4DmaIdx);
+BOOLEAN PdmaIsRxRingFull(UINT32 u4MaxCnt, UINT32 u4CpuIdx, UINT32 u4DmaIdx)
+{
+	volatile UINT_32 u4RingCnt;
+
+	BOOLEAN fgIsFull = FALSE;
+
+	u4RingCnt = PdmaGetRxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx);
+	u4MaxCnt = u4MaxCnt - 1;
+
+	if (u4RingCnt >= u4MaxCnt)
+		fgIsFull = TRUE;
+
+	return fgIsFull;
+}
+
+UINT_32 PdmaGetRxRingNum(UINT32 u4MaxCnt, UINT32 u4CpuIdx, UINT32 u4DmaIdx)
+{
+	volatile UINT_32 u4RingCnt;
+
+	if (u4DmaIdx <= u4CpuIdx) {
+		u4RingCnt = u4DmaIdx + u4MaxCnt - u4CpuIdx - 1;
+	} else {
+		u4RingCnt = u4DmaIdx - u4CpuIdx - 1;
+	}
+
+	return u4RingCnt;
+}
+
+BOOLEAN PdmaIsTxRingFull(UINT32 u4MaxCnt, UINT32 u4CpuIdx, UINT32 u4DmaIdx)
+{
+	volatile UINT_32 u4RingCnt;
+
+	BOOLEAN fgIsFull = FALSE;
+
+	u4RingCnt = PdmaGetTxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx);
+	u4MaxCnt = u4MaxCnt - 1;
+
+	if (u4RingCnt >= u4MaxCnt)
+		fgIsFull = TRUE;
+
+	return fgIsFull;
+}
+
+UINT_32 PdmaGetTxRingNum(UINT32 u4MaxCnt, UINT32 u4CpuIdx, UINT32 u4DmaIdx)
+{
+	volatile UINT32 u4RingCnt;
+
+	if (u4CpuIdx >= u4DmaIdx) {
+		u4RingCnt = u4CpuIdx - u4DmaIdx;
+	} else {
+		u4RingCnt = u4CpuIdx + u4MaxCnt - u4DmaIdx;
+	}
+
+	return u4RingCnt;
+}
+void PdmaInfoDump(RTMP_ADAPTER *pAd);
+void PdmaCRDump(RTMP_ADAPTER *pAd)
+{
+	//UINT32 origonal_remap_cr_value;
+	UINT32 u4MaxCnt = 0,u4CpuIdx = 0,u4DmaIdx=0;
+	/* dump PDMA CR here, zhiwei comment for debug */
+	{
+		/*PDMA0*/
+		UINT_32 temp_addr;
+		UINT_32 temp_val;
+		UINT_32 i,j,k;
+		printk("Dump PDMA0\n");
+		for (i = 0;i < 9;i++) {
+			switch (i) 
+			{
+				case 1://0x50000244
+					for (j=0;j<=0x1f;j++) {
+						temp_addr = pdma0_cr[i];
+						HostAccessFwCr(pAd, temp_addr, CR_OP_WRITE, 0x00800000+(j<<24));
+						temp_val = HostAccessFwCr(pAd, temp_addr+0x4, CR_OP_READ, 0);
+						temp_val = HostAccessFwCr(pAd, temp_addr+0x4, CR_OP_READ, 0);
+						printk("0x%x[0x%08x]=0x%x\n", temp_addr,(0x00800000+(j<<24)),temp_val);
+					}
+					break;
+				case 2:
+					for (k=0; k<=3; k++) {
+						temp_addr = pdma0_cr[i]+(k<<4);
+						for (j=0; j<=3; j++) {
+							temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+							switch (j)
+							{
+								case 1:
+									u4MaxCnt = temp_val;
+									break;
+								case 2:
+									u4CpuIdx = temp_val;
+									break;
+								case 3:
+									u4DmaIdx = temp_val;
+									break;
+							}
+							printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+						}
+						printk("Tx Ring[%d] Num = %d,Is full=%d\n", k,
+							   (int)PdmaGetTxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+							   (int)PdmaIsTxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+					}
+					break;
+				case 3:
+					for (k=0; k<=1; k++) {
+						temp_addr = pdma0_cr[i]+(k<<4);
+						for (j=0; j<=3; j++) {
+							temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+							switch (j)
+							{
+								case 1:
+									u4MaxCnt = temp_val;
+									break;
+								case 2:
+									u4CpuIdx = temp_val;
+									break;
+								case 3:
+									u4DmaIdx = temp_val;
+									break;
+							}
+							printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+						}
+						printk("Rx Ring[%d] Num = %d, Is full=%d\n", k,
+							   (int)PdmaGetRxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+							   (int)PdmaIsRxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+					}
+					break;
+				default:
+					temp_addr = pdma0_cr[i];
+					temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+					printk("0x%x=0x%x\n", temp_addr,temp_val);
+					break;
+			}
+		}
+		/*PMDA1*/
+		printk("Dump PDMA1\n");
+		//remap2 
+		for (i = 0;i < 4;i++) {
+			switch (i) 
+			{
+				case 1://0x82000408
+					for (j=0;j<=0x1f;j++) {
+						temp_addr = pdma1_cr[i];
+						HostAccessFwCr(pAd, temp_addr, CR_OP_WRITE,  0x0+(j<<8)+(j<<0));
+						HostAccessFwCr(pAd, 0x82000400, CR_OP_WRITE, 0x00000201);
+						temp_val = HostAccessFwCr(pAd, 0x82000404, CR_OP_READ, 0);
+						printk("0x%x[0x%08x]=0x%x\n", temp_addr,(0x0+(j<<8)+(j<<0)),temp_val);
+						HostAccessFwCr(pAd, 0x82000400, CR_OP_WRITE, 0x00000403);
+						temp_val = HostAccessFwCr(pAd, 0x82000404, CR_OP_READ, 0);
+						printk("0x%x[0x%08x]=0x%x\n", temp_addr,(0x0+(j<<8)+(j<<0)),temp_val);
+					}
+					break;
+				case 2://0x820b0000
+					for (k=0; k<=1; k++) {
+						temp_addr = pdma1_cr[i]+(k<<4);
+						for (j=0; j<=3; j++) {
+							temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+							switch (j)
+							{
+								case 1:
+									u4MaxCnt = temp_val;
+									break;
+								case 2:
+									u4CpuIdx = temp_val;
+									break;
+								case 3:
+									u4DmaIdx = temp_val;
+									break;
+							}
+							printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+						}
+						printk("Tx Ring[%d] Num = %d,Is full=%d\n", k,
+							   (int)PdmaGetTxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+							   (int)PdmaIsTxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+					}
+					break;
+				case 3://0x820b0100
+					for (k=0; k<=1; k++) {
+						temp_addr = pdma1_cr[i]+(k<<4);
+						for (j=0; j<=3; j++) {
+							temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+							switch (j)
+							{
+								case 1:
+									u4MaxCnt = temp_val;
+									break;
+								case 2:
+									u4CpuIdx = temp_val;
+									break;
+								case 3:
+									u4DmaIdx = temp_val;
+									break;
+							}
+							printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+						}
+						printk("Rx Ring[%d] Num = %d,Is full=%d\n", k,
+							   (int)PdmaGetRxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+							   (int)PdmaIsRxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+					}
+					break;
+				default:
+					temp_addr = pdma1_cr[i];
+					temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+					printk("0x%x=0x%x\n", temp_addr,temp_val);
+					break;
+			}
+		}
+		/*PMDA2*/
+		printk("Dump PDMA2\n");
+		for (i = 0;i < 4;i++) {
+			switch (i) 
+			{
+				case 1://0x82000408
+					for (j=0;j<=0x1f;j++) {
+						temp_addr = pdma2_cr[i];
+						HostAccessFwCr(pAd, temp_addr, CR_OP_WRITE,  0x0+(j<<8)+(j<<0));
+						HostAccessFwCr(pAd, 0x82000400, CR_OP_WRITE,  0x00000605);
+						temp_val = HostAccessFwCr(pAd, 0x82000404, CR_OP_READ, 0);
+						printk("0x%x[0x%08x]=0x%x\n", temp_addr,(0x0+(j<<8)+(j<<0)),temp_val);
+						HostAccessFwCr(pAd, 0x82000400, CR_OP_WRITE,  0x00000807);
+						temp_val = HostAccessFwCr(pAd, 0x82000404, CR_OP_READ, 0);
+						printk("0x%x[0x%08x]=0x%x\n", temp_addr,(0x0+(j<<8)+(j<<0)),temp_val);
+					}
+					break;
+				case 2://0x820c0000
+					for (k=0; k<=1; k++) {
+						temp_addr = pdma2_cr[i]+(k<<4);
+						for (j=0; j<=3; j++) {
+							temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+							switch (j)
+							{
+								case 1:
+									u4MaxCnt = temp_val;
+									break;
+								case 2:
+									u4CpuIdx = temp_val;
+									break;
+								case 3:
+									u4DmaIdx = temp_val;
+									break;
+							}
+							printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+						}
+						printk("Tx Ring[%d] Num = %d,Is full=%d\n", k,
+							   (int)PdmaGetTxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+							   (int)PdmaIsTxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+					}
+					break;
+				case 3://0x820c0100
+					for (k=0; k<=1; k++) {
+						temp_addr = pdma2_cr[i]+(k<<4);
+						for (j=0; j<=3; j++) {
+							temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+							switch (j)
+							{
+								case 1:
+									u4MaxCnt = temp_val;
+									break;
+								case 2:
+									u4CpuIdx = temp_val;
+									break;
+								case 3:
+									u4DmaIdx = temp_val;
+									break;
+							}
+							printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+						}
+						printk("Rx Ring[%d] Num = %d,Is full=%d\n", k,
+							   (int)PdmaGetRxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+							   (int)PdmaIsRxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+					}
+					break;
+				default:
+					temp_addr = pdma2_cr[i];
+					temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+					printk("0x%x=0x%x\n", temp_addr,temp_val);
+					break;
+			}
+		}
+	}
+	PdmaInfoDump(pAd);
+}
+void PdmaInfoDump(RTMP_ADAPTER *pAd)
+{
+	UINT32 u4MaxCnt = 0,u4CpuIdx = 0,u4DmaIdx=0;
+	UINT_32 temp_addr;
+	UINT_32 temp_val;
+	UINT_32 j,k;
+
+	/* dump PDMA CR here, zhiwei comment for debug */
+	{
+		printk("Dump PDMA0 \n");
+		temp_addr = pdma0_cr[0];
+		temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+		printk("[PDMA Global Cfg]0x%x=0x%x\n", temp_addr,temp_val);
+		for (k=0; k<=3; k++) {
+			temp_addr = pdma0_cr[2]+(k<<4);
+			for (j=0; j<=3; j++) {
+				temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+				switch (j)
+				{
+					case 1:
+						u4MaxCnt = temp_val;
+						break;
+					case 2:
+						u4CpuIdx = temp_val;
+						break;
+					case 3:
+						u4DmaIdx = temp_val;
+						break;
+				}
+				//printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+			}
+			printk("[Tx Ring%d][M:%4d,C:%4d,D:%4d] Num = %d,Is full=%d\n", k,u4MaxCnt,u4CpuIdx,u4DmaIdx,
+				   (int)PdmaGetTxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+				   (int)PdmaIsTxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+		}
+		for (k=0; k<=1; k++) {
+			temp_addr = pdma0_cr[3]+(k<<4);
+			for (j=0; j<=3; j++) {
+				temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+				switch (j)
+				{
+					case 1:
+						u4MaxCnt = temp_val;
+						break;
+					case 2:
+						u4CpuIdx = temp_val;
+						break;
+					case 3:
+						u4DmaIdx = temp_val;
+						break;
+				}
+				//printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+			}
+			printk("[Rx Ring%d][M:%4d,C:%4d,D:%4d] Num = %d,Is full=%d\n", k,u4MaxCnt,u4CpuIdx,u4DmaIdx,
+				   (int)PdmaGetRxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+				   (int)PdmaIsRxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+		}
+	}
+	{
+		printk("Dump PDMA1 \n");
+		temp_addr = pdma1_cr[0];
+		temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+		printk("[PDMA Global Cfg]0x%x=0x%x\n", temp_addr,temp_val);
+		for (k=0; k<=1; k++) {
+			temp_addr = pdma1_cr[2]+(k<<4);
+			for (j=0; j<=3; j++) {
+				temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+				switch (j)
+				{
+					case 1:
+						u4MaxCnt = temp_val;
+						break;
+					case 2:
+						u4CpuIdx = temp_val;
+						break;
+					case 3:
+						u4DmaIdx = temp_val;
+						break;
+				}
+				//printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+			}
+			printk("[Tx Ring%d][M:%4d,C:%4d,D:%4d] Num = %d,Is full=%d\n", k,u4MaxCnt,u4CpuIdx,u4DmaIdx,
+				   (int)PdmaGetTxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+				   (int)PdmaIsTxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+		}
+		for (k=0; k<=1; k++) {
+			temp_addr = pdma1_cr[3]+(k<<4);
+			for (j=0; j<=3; j++) {
+				temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+				switch (j)
+				{
+					case 1:
+						u4MaxCnt = temp_val;
+						break;
+					case 2:
+						u4CpuIdx = temp_val;
+						break;
+					case 3:
+						u4DmaIdx = temp_val;
+						break;
+				}
+				//printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+			}
+			printk("[Rx Ring%d][M:%4d,C:%4d,D:%4d] Num = %d,Is full=%d\n", k,u4MaxCnt,u4CpuIdx,u4DmaIdx,
+				   (int)PdmaGetRxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+				   (int)PdmaIsRxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+		}
+	}
+	{
+		printk("Dump PDMA2 \n");
+		temp_addr = pdma2_cr[0];
+		temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+		printk("[PDMA Global Cfg]0x%x=0x%x\n", temp_addr,temp_val);
+		for (k=0; k<=1; k++) {
+			temp_addr = pdma2_cr[2]+(k<<4);
+			for (j=0; j<=3; j++) {
+				temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+				switch (j)
+				{
+					case 1:
+						u4MaxCnt = temp_val;
+						break;
+					case 2:
+						u4CpuIdx = temp_val;
+						break;
+					case 3:
+						u4DmaIdx = temp_val;
+						break;
+				}
+				//printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+			}
+			printk("[Tx Ring%d][M:%4d,C:%4d,D:%4d] Num = %d,Is full=%d\n", k,u4MaxCnt,u4CpuIdx,u4DmaIdx,
+				   (int)PdmaGetTxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+				   (int)PdmaIsTxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+		}
+		for (k=0; k<=1; k++) {
+			temp_addr = pdma2_cr[3]+(k<<4);
+			for (j=0; j<=3; j++) {
+				temp_val = HostAccessFwCr(pAd, temp_addr+(j<<2), CR_OP_READ, 0);
+				switch (j)
+				{
+					case 1:
+						u4MaxCnt = temp_val;
+						break;
+					case 2:
+						u4CpuIdx = temp_val;
+						break;
+					case 3:
+						u4DmaIdx = temp_val;
+						break;
+				}
+				//printk("0x%x=0x%x\n", temp_addr+(j<<2),temp_val);
+			}
+			printk("[Rx Ring%d][M:%4d,C:%4d,D:%4d] Num = %d,Is full=%d\n", k,u4MaxCnt,u4CpuIdx,u4DmaIdx,
+				   (int)PdmaGetRxRingNum(u4MaxCnt,u4CpuIdx,u4DmaIdx),
+				   (int)PdmaIsRxRingFull(u4MaxCnt,u4CpuIdx,u4DmaIdx));
+		}
+	}
+	temp_addr = 0x82040070;
+	temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+	printk("[IRQ Mask]0x%x=0x%x\n", temp_addr,temp_val);
+	temp_addr = 0x820400e0;
+	temp_val = HostAccessFwCr(pAd, temp_addr, CR_OP_READ, 0);
+	printk("[IRQ_ASTA]0x%x=0x%x\n", temp_addr,temp_val);
+}
+#endif
 
 INT show_fdb_n9_log(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
@@ -719,6 +1277,7 @@ INT show_fdb_n9_log(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 INT show_fdb_cr4_log(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
 	cr4_dump(pAd);
+	PdmaCRDump(pAd);
 	return TRUE;
 }
 

@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,7 +25,7 @@
     ---------  ----------    ----------------------------------------------
     Fonchi Wu  12-02-2008    created for 11r soft-AP
  */
-
+#endif /* MTK_LICENSE */
 
 #ifndef __DOT11R_FT_H
 #define __DOT11R_FT_H
@@ -220,7 +221,7 @@ typedef struct _FT_OVER_DS_ACTION_REQ_CONFIRM {
 	/* must be 1 or 3 */
 	UCHAR	Action;
 
-	/* the STA¡¦s MAC address */
+	/* the STAÂ¡Â¦s MAC address */
 	UCHAR	STA_Addr[ETH_ALEN];
 
 	/* the BSSID value of the target AP */
@@ -241,7 +242,7 @@ typedef struct _FT_OVER_DS_ACTION_RSP_ACK {
 	/* must be 2 or 4 */
 	UCHAR	Action;
 
-	/* the STA¡¦s MAC address */
+	/* the STAÂ¡Â¦s MAC address */
 	UCHAR	STA_Addr[ETH_ALEN];
 
 	/* the BSSID value of the target AP */

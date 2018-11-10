@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +26,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __MT_DMAC_H__
 #define __MT_DMAC_H__
 
@@ -1610,7 +1611,6 @@ typedef struct GNU_PACKED _RX_VECTOR1_6TH_CYCLE {
 
 #ifdef RT_BIG_ENDIAN
 typedef struct GNU_PACKED _RX_VECTOR2_1ST_CYCLE {
-	UINT32 Reserved:4;
 	UINT32 FCSErr:1;
 	UINT32 RxCERmsd:3;
 	UINT32 VHT_A2:2;
@@ -1634,7 +1634,6 @@ typedef struct GNU_PACKED _RX_VECTOR2_1ST_CYCLE {
 	UINT32 VHT_A2:2;
 	UINT32 RxCERmsd:3;
 	UINT32 FCSErr:1;
-	UINT32 Reserved:4;
 } RX_VECTOR2_1ST_CYCLE;
 #endif
 
@@ -2059,10 +2058,8 @@ enum {
 	TXS_FORMAT1,
 };
 
-enum {
-	HIF_RX_IDX0,
-	HIF_RX_IDX1,
-};
+
+
 
 // TODO: shiang-7603, this is a dummy data structure and need to revise to adapative for MT7603 series
 #define QID_HCCA                4
@@ -2088,7 +2085,7 @@ enum {
 #define EXP_ACK_TIME	0x1380
 
 /* [0:7]=RX_MAX_PTIME (unit=20us), [8:14]=RX_MAX_PINT, [15]=RX_DLY_INT_EN */
-#define RX_DLY_INT_CFG  (0x811C)
+#define RX_DLY_INT_CFG  (0xC014)
 
 
 #ifdef RT_BIG_ENDIAN
@@ -2159,6 +2156,9 @@ INT dump_dmac_pse_info(struct _RTMP_ADAPTER *pAd);
 INT dump_dmac_pse_data(struct _RTMP_ADAPTER *pAd, UINT32 StartFID, UINT32 FrameNums);
 VOID Update_Mib_Bucket_One_Sec(struct _RTMP_ADAPTER *pAd);
 VOID Update_Mib_Bucket_500Ms(struct _RTMP_ADAPTER *pAd);
+#ifdef CUSTOMER_RSG_FEATURE
+VOID Read_Mib_TxRx_Counters(struct _RTMP_ADAPTER *pAd);
+#endif
 
 INT mt_wtbl_init_ByFw(struct _RTMP_ADAPTER *pAd);
 INT mt_wtbl_init_ByDriver(struct _RTMP_ADAPTER *pAd);

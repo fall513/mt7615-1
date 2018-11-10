@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -11,7 +12,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 /****************************************************************************
 
 	Abstract:
@@ -419,6 +420,10 @@ VOID CFG80211DRV_DisableApInterface(PRTMP_ADAPTER pAd)
         AsicDisableSync(pAd, HW_BSSID_0);
     }
 
+#ifdef RTMP_MAC_SDIO
+    /* For RT2870, we need to clear the beacon sync buffer. */
+    MTSDIOBssBeaconExit(pAd);
+#endif /* RTMP_MAC_SDIO */
 	OPSTATUS_CLEAR_FLAG(pAd, fOP_AP_STATUS_MEDIA_STATE_CONNECTED);
 	RTMP_IndicateMediaState(pAd, NdisMediaStateDisconnected);
 }
@@ -727,6 +732,11 @@ BOOLEAN CFG80211DRV_OpsBeaconAdd(VOID *pAdOrg, VOID *pData)
 		wdev->Hostapd=Hostapd_CFG;
 #endif
 	CFG80211DBG(DBG_LVL_OFF, ("80211> %s ==>\n", __FUNCTION__));
+#if defined(RTMP_MAC_USB) || defined(RTMP_MAC_SDIO)
+#ifdef CONFIG_AP_SUPPORT
+	RTMPCancelTimer(&pAd->CommonCfg.BeaconUpdateTimer, &Cancelled);
+#endif /*CONFIG_AP_SUPPORT*/
+#endif /*RTMP_MAC_USB*/
 
 #ifdef UAPSD_SUPPORT
         wdev->UapsdInfo.bAPSDCapable = TRUE;
@@ -975,8 +985,16 @@ BOOLEAN CFG80211DRV_OpsBeaconAdd(VOID *pAdOrg, VOID *pData)
 	                       pBeacon->beacon_tail, pBeacon->beacon_tail_len, TRUE, pBeacon->apidx);
 #endif  /*DISABLE_HOSTAPD_BEACON*/
 
+#ifdef RTMP_MAC_SDIO
+	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s @@ ---> %d\n", __FUNCTION__, __LINE__));
+	MTSDIOBssBeaconInit(pAd);
+	MTSDIOBssBeaconStart(pAd);
+#endif
 
 
+#if defined(RTMP_MAC_USB) || defined(RTMP_MAC_SDIO)
+        RTMPInitTimer(pAd, &pAd->CommonCfg.BeaconUpdateTimer, GET_TIMER_FUNCTION(BeaconUpdateExec), pAd, TRUE);
+#endif /* RTMP_MAC_USB || RTMP_MAC_SDIO */
 #ifdef RT_CFG80211_P2P_MULTI_CHAN_SUPPORT
 	if (INFRA_ON(pAd))
 	{

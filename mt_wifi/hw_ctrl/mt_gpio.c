@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -13,7 +14,7 @@
 	Module Name:
 	mt_gpio.c
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 static VOID GPIOMuxSelect(RTMP_ADAPTER *pAd, UINT32 GPIO)
@@ -143,14 +144,6 @@ static VOID GPIOMuxSelect(RTMP_ADAPTER *pAd, UINT32 GPIO)
 			Value &= ~GPIO12_SEL_MASK;
 			Value |= GPIO12_SEL(GPIO12_SEL_VALUE);
 			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-#ifdef MT7615
-			RemapBase = GET_REMAP_2_BASE(PAD_CONTROL_12) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PAD_CONTROL_12);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value |= BIT(GPIO12_PAD_CONTROL);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-#endif
 			break;
 		case GPIO13:
 			RemapBase = GET_REMAP_2_BASE(PINMUX_SEL2) << 19;
@@ -188,86 +181,6 @@ static VOID GPIOMuxSelect(RTMP_ADAPTER *pAd, UINT32 GPIO)
 			Value |= GPIO16_SEL(GPIO16_SEL_VALUE);
 			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
 			break;
-#ifdef MT7615
-		case GPIO18:
-			RemapBase = GET_REMAP_2_BASE(PINMUX_SEL3) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PINMUX_SEL3);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value &= ~GPIO18_SEL_MASK;
-			Value |= GPIO18_SEL(GPIO18_SEL_VALUE);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			break;
-		case GPIO19:
-			RemapBase = GET_REMAP_2_BASE(PINMUX_SEL3) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PINMUX_SEL3);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value &= ~GPIO19_SEL_MASK;
-			Value |= GPIO19_SEL(GPIO19_SEL_VALUE);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			break;
-		case GPIO32:
-			RemapBase = GET_REMAP_2_BASE(PINMUX_SEL5) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PINMUX_SEL5);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value &= ~GPIO32_SEL_MASK;
-			Value |= GPIO32_SEL(GPIO32_SEL_VALUE);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			RemapBase = GET_REMAP_2_BASE(PAD_CONTROL_12) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PAD_CONTROL_12);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value |= BIT(GPIO32_PAD_CONTROL);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			break;
-		case GPIO33:
-			RemapBase = GET_REMAP_2_BASE(PINMUX_SEL5) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PINMUX_SEL5);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value &= ~GPIO33_SEL_MASK;
-			Value |= GPIO33_SEL(GPIO33_SEL_VALUE);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			RemapBase = GET_REMAP_2_BASE(PAD_CONTROL_12) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PAD_CONTROL_12);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value |= BIT(GPIO33_PAD_CONTROL);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			break;
-		case GPIO34:
-			RemapBase = GET_REMAP_2_BASE(PINMUX_SEL5) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PINMUX_SEL5);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value &= ~GPIO34_SEL_MASK;
-			Value |= GPIO34_SEL(GPIO34_SEL_VALUE);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			RemapBase = GET_REMAP_2_BASE(PAD_CONTROL_12) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PAD_CONTROL_12);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value |= BIT(GPIO34_PAD_CONTROL);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			break;
-		case GPIO35:
-			RemapBase = GET_REMAP_2_BASE(PINMUX_SEL5) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PINMUX_SEL5);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value &= ~GPIO35_SEL_MASK;
-			Value |= GPIO35_SEL(GPIO35_SEL_VALUE);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			RemapBase = GET_REMAP_2_BASE(PAD_CONTROL_12) << 19;
-			RemapOffset = GET_REMAP_2_OFFSET(PAD_CONTROL_12);
-			RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-			RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
-			Value |= BIT(GPIO35_PAD_CONTROL);
-			RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, Value);
-			break;
-#endif
 		default:
 			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("GPIO (%d) not support\n", GPIO));
 			break;
@@ -281,24 +194,15 @@ INT32 GPIODirectionInput(RTMP_ADAPTER *pAd, UINT32 GPIO)
 {
 	UINT32 RemapBase, RemapOffset;
 	UINT32 RestoreValue;
-	UINT32 u4RegAddr;
+
 	RTMP_IO_READ32(pAd, MCU_PCIE_REMAP_2, &RestoreValue);
+	
 	GPIOMuxSelect(pAd, GPIO);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		u4RegAddr = GPIO_OE2_RESET;
-	else
-#endif
-		u4RegAddr = GPIO_OE1_RESET;
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
+	
+	RemapBase = GET_REMAP_2_BASE(GPIO_OE1_RESET) << 19;
+	RemapOffset = GET_REMAP_2_OFFSET(GPIO_OE1_RESET);
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << (GPIO - GPIO32)));
-	else
-#endif
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
+	RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
 
 	return 0;
@@ -309,57 +213,36 @@ INT32 GPIODirectionOuput(RTMP_ADAPTER *pAd, UINT32 GPIO, UINT8 Value)
 {
 	UINT32 RemapBase, RemapOffset;
 	UINT32 RestoreValue;
-	UINT32 u4RegAddr;
+
 	RTMP_IO_READ32(pAd, MCU_PCIE_REMAP_2, &RestoreValue);
 	
 	GPIOMuxSelect(pAd, GPIO);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		u4RegAddr = GPIO_OE2_SET;
-	else
-#endif
-		u4RegAddr = GPIO_OE1_SET;
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
+	
+	RemapBase = GET_REMAP_2_BASE(GPIO_OE1_SET) << 19;
+	RemapOffset = GET_REMAP_2_OFFSET(GPIO_OE1_SET);
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << (GPIO - GPIO32)));
-	else
-#endif
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
+	RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
 
 	if (Value == OUTPUT_HIGH)
 	{
-#ifdef MT7615		
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_DOUT2_SET;
-		else
-#endif
-			u4RegAddr = GPIO_DOUT1_SET;
+		RemapBase = GET_REMAP_2_BASE(GPIO_DOUT1_SET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_DOUT1_SET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
+		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
 	}
 	else
 	{
-#ifdef MT7615
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_DOUT2_RESET;
-		else
-#endif
-			u4RegAddr = GPIO_DOUT1_RESET;
-	}
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
-	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << (GPIO - GPIO32)));
-	else
-#endif
+		RemapBase = GET_REMAP_2_BASE(GPIO_DOUT1_RESET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_DOUT1_RESET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
 		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
+	}
+
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
 
 	return 0;
 }
+
 
 UINT32 GPIOGetValue(RTMP_ADAPTER *pAd, UINT32 GPIO)
 {
@@ -367,35 +250,19 @@ UINT32 GPIOGetValue(RTMP_ADAPTER *pAd, UINT32 GPIO)
 	UINT32 RemapBase, RemapOffset;
 	UINT32 RestoreValue;
 	UINT32 Value;
-	UINT32 u4RegAddr;
+	
 	RTMP_IO_READ32(pAd, MCU_PCIE_REMAP_2, &RestoreValue);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		u4RegAddr = GPIO_DIN2;
-	else
-#endif
-		u4RegAddr = GPIO_DIN1;
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
+
+	RemapBase = GET_REMAP_2_BASE(GPIO_DIN1) << 19;
+	RemapOffset = GET_REMAP_2_OFFSET(GPIO_DIN1);
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
 	RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-	{
-		if (((Value & (1 << (GPIO - GPIO32))) >> (GPIO - GPIO32)))
-			return INPUT_HIGH;
-		else
-			return INPUT_LOW;
-	}
+
+	if (((Value & (1 << GPIO)) >> GPIO))
+		return INPUT_HIGH;
 	else
-#endif
-	{
-		if (((Value & (1 << GPIO)) >> GPIO))
-			return INPUT_HIGH;
-		else
-			return INPUT_LOW;
-	}
+		return INPUT_LOW;
 }
 
 
@@ -403,36 +270,24 @@ VOID GPIOSetValue(RTMP_ADAPTER *pAd, UINT32 GPIO, UINT8 Value)
 {
 	UINT32 RemapBase, RemapOffset;
 	UINT32 RestoreValue;
-	UINT32 u4RegAddr;
+
 	RTMP_IO_READ32(pAd, MCU_PCIE_REMAP_2, &RestoreValue);
 	
 	if (Value == OUTPUT_HIGH)
 	{
-#ifdef MT7615
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_DOUT2_SET;
-		else
-#endif
-			u4RegAddr = GPIO_DOUT1_SET;
+		RemapBase = GET_REMAP_2_BASE(GPIO_DOUT1_SET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_DOUT1_SET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
+		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
 	}
 	else
 	{
-#ifdef MT7615
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_DOUT2_RESET;
-		else
-#endif
-			u4RegAddr = GPIO_DOUT1_RESET;
-	}
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
-	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << (GPIO - GPIO32)));
-	else
-#endif
+		RemapBase = GET_REMAP_2_BASE(GPIO_DOUT1_RESET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_DOUT1_RESET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
 		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
+	}
+
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
 }
 
@@ -442,35 +297,19 @@ UINT32 GPIOGetMode(RTMP_ADAPTER *pAd, UINT32 GPIO)
 	UINT32 RemapBase, RemapOffset;
 	UINT32 RestoreValue;
 	UINT32 Value;
-	UINT32 u4RegAddr;
+
 	RTMP_IO_READ32(pAd, MCU_PCIE_REMAP_2, &RestoreValue);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		u4RegAddr = GPIO_OE2_SET;
-	else
-#endif
-		u4RegAddr = GPIO_OE1_SET;
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
+	
+	RemapBase = GET_REMAP_2_BASE(GPIO_OE1) << 19;
+	RemapOffset = GET_REMAP_2_OFFSET(GPIO_OE1);
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
 	RTMP_IO_READ32(pAd, 0x80000 + RemapOffset, &Value);
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-	{
-		if (((Value & (1 << (GPIO - GPIO32))) >> (GPIO - GPIO32)))
-			return GPIO_OUTPUT;
-		else
-			return GPIO_INPUT;
-	}
+	
+	if (((Value & (1 << GPIO)) >> GPIO))
+		return GPIO_OUTPUT;
 	else
-#endif
-	{
-		if (((Value & (1 << GPIO)) >> GPIO))
-			return GPIO_OUTPUT;
-		else
-			return GPIO_INPUT;
-	}
+		return GPIO_INPUT;
 }
 
 
@@ -478,36 +317,24 @@ INT32 GPIOPullUp(RTMP_ADAPTER *pAd, UINT32 GPIO, UINT8 Value)
 {
 	UINT32 RemapBase, RemapOffset;
 	UINT32 RestoreValue;
-	UINT32 u4RegAddr;
+
 	RTMP_IO_READ32(pAd, MCU_PCIE_REMAP_2, &RestoreValue);
 	
 	if (Value == PULL_UP)
 	{
-#ifdef MT7615
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_PU2_SET;
-		else
-#endif
-			u4RegAddr = GPIO_PU1_SET;
+		RemapBase = GET_REMAP_2_BASE(GPIO_PU1_SET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_PU1_SET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
+		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
 	}
 	else
 	{
-#ifdef MT7615
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_PU2_RESET;
-		else
-#endif
-			u4RegAddr = GPIO_PU1_RESET;
-	}
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
-	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << (GPIO - GPIO32)));
-	else
-#endif
+		RemapBase = GET_REMAP_2_BASE(GPIO_PU1_RESET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_PU1_RESET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
 		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
+	}
+
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
 
 	return 0;
@@ -518,37 +345,24 @@ INT32 GPIOPullDown(RTMP_ADAPTER *pAd, UINT32 GPIO, UINT8 Value)
 {
 	UINT32 RemapBase, RemapOffset;
 	UINT32 RestoreValue;
-	UINT32 u4RegAddr;
+
 	RTMP_IO_READ32(pAd, MCU_PCIE_REMAP_2, &RestoreValue);
 	
 	if (Value == PULL_DOWN)
 	{
-#ifdef MT7615
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_PD2_SET;
-		else
-#endif
-			u4RegAddr = GPIO_PD1_SET;
+		RemapBase = GET_REMAP_2_BASE(GPIO_PD1_SET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_PD1_SET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
+		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
 	}
 	else
 	{
-#ifdef MT7615
-		if(GPIO >= GPIO32)
-			u4RegAddr = GPIO_PD2_RESET;
-		else
-#endif
-			u4RegAddr = GPIO_PD1_RESET;
-
-	}
-	RemapBase = GET_REMAP_2_BASE(u4RegAddr) << 19;
-	RemapOffset = GET_REMAP_2_OFFSET(u4RegAddr);
-	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
-#ifdef MT7615
-	if(GPIO >= GPIO32)
-		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << (GPIO - GPIO32)));
-	else
-#endif
+		RemapBase = GET_REMAP_2_BASE(GPIO_PD1_RESET) << 19;
+		RemapOffset = GET_REMAP_2_OFFSET(GPIO_PD1_RESET);
+		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RemapBase);
 		RTMP_IO_WRITE32(pAd, 0x80000 + RemapOffset, (1 << GPIO));
+	}
+
 	RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
 
 	return 0;

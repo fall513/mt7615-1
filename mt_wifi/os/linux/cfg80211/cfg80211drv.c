@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -11,7 +12,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 /****************************************************************************
 
 	Abstract:
@@ -266,7 +267,7 @@ case CMD_RTPRIV_IOCTL_80211_POWER_MGMT_SET:
                         break;
 
                 case CMD_RTPRIV_IOCTL_80211_RTS_THRESHOLD_ADD:
-                        CFG80211DRV_RtsThresholdAdd(pAd, Data);
+                        CFG80211DRV_RtsThresholdAdd(pAd, wdev, Data);
                         break;
 
                 case CMD_RTPRIV_IOCTL_80211_FRAG_THRESHOLD_ADD:
@@ -849,23 +850,24 @@ BOOLEAN CFG80211DRV_StaGet(
 						pEntry->OneSecTxFailCount;*/
 	/* fill rx bytes count */					
 	pIbssInfo->rx_bytes = pEntry->RxBytes;
-
+	
 	/* fill tx_bytes count */
 	pIbssInfo->tx_bytes = pEntry->TxBytes;
-
+	
 	/* fill rx_packets count */
 	pIbssInfo->rx_packets = pEntry->RxPackets.u.LowPart;
-
+	
 	/* fill tx_packets count */
 	pIbssInfo->tx_packets = pEntry->TxPackets.u.LowPart;
-		
+	
 	/* fill inactive time */
 	pIbssInfo->InactiveTime = pEntry->NoDataIdleCount * 1000; /* unit: ms */
 	pIbssInfo->InactiveTime *= MLME_TASK_EXEC_MULTIPLE;
 	pIbssInfo->InactiveTime /= 20;
-	
+
 	if(from_saved_data)
 		NdisZeroMemory(&pAd->last_assoc_sta, sizeof(struct _MAC_TABLE_ENTRY));
+
 }
 #endif /* CONFIG_AP_SUPPORT */
 
@@ -1222,7 +1224,7 @@ VOID CFG80211_RegRuleApply(
 					if (pAd->CommonCfg.DfsType != MAX_RD_REGION)
 						DfsType = pAd->CommonCfg.DfsType;
 					else
-						DfsType = ChRegion[IdReg].op_class_region;
+						DfsType = ChRegion[IdReg].DfsType;
 
 					CFG80211DBG(DBG_LVL_TRACE,
 								("crda> find region %c%c, DFS Type %d\n",

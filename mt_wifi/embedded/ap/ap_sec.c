@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,6 +25,7 @@
     Who         When            What
     --------    ----------      ----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 BUILD_TIMER_FUNCTION(GroupRekeyExec);
 
@@ -340,10 +342,6 @@ VOID GroupRekeyExec (
                         && (pEntry->SecConfig.Handshake.WpaState == AS_PTKINITDONE) 
                         && (pEntry->func_tb_idx == apidx))
             {
-#ifdef MWDS
-				if(IS_MWDS_OPMODE_AP(pEntry))
-					continue;
-#endif /* MWDS */
                 entry_count++;
                 RTMPSetTimer(&pEntry->SecConfig.StartFor2WayTimer, ENQUEUE_EAPOL_2WAY_START_TIMER);
                 MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("Rekey interval excess, Update Group Key for  %02X:%02X:%02X:%02X:%02X:%02X , DefaultKeyId= %x \n",\

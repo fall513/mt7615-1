@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -11,7 +12,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 
 
 #ifdef RTMP_MAC_PCI
@@ -428,7 +429,12 @@ NDIS_STATUS RTMPInitTxRxRingMemory(RTMP_ADAPTER *pAd)
 			/* link the pre-allocated TxBuf to TXD */
 			pTxD = (TXD_STRUC *)dma_cb->AllocVa;
 			pTxD->SDPtr0 = BufBasePaLow;
+#if (CFG_CPU_LOADING_DMADONE == 1)
             pTxD->DMADONE = 0;
+#else
+			/* advance to next ring descriptor address */
+            pTxD->DMADONE = 1;
+#endif
 #ifdef RT_BIG_ENDIAN
 			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
 #endif
@@ -659,7 +665,12 @@ NDIS_STATUS RTMPInitTxRxRingMemory(RTMP_ADAPTER *pAd)
 			/* link the pre-allocated TxBuf to TXD */
 			pTxD = (TXD_STRUC *)dma_cb->AllocVa;
 			pTxD->SDPtr0 = BufBasePaLow;
+#if (CFG_CPU_LOADING_DMADONE == 1)
             pTxD->DMADONE = 0;
+#else
+			/* advance to next ring descriptor address */
+            pTxD->DMADONE = 1;
+#endif
 #ifdef RT_BIG_ENDIAN
 			RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
 #endif
@@ -1200,7 +1211,12 @@ NDIS_STATUS	RTMPAllocTxRxRingMemory(RTMP_ADAPTER *pAd)
 				/* link the pre-allocated TxBuf to TXD */
 				pTxD = (TXD_STRUC *)dma_cb->AllocVa;
 				pTxD->SDPtr0 = BufBasePaLow;
+#if (CFG_CPU_LOADING_DMADONE == 1)
                 pTxD->DMADONE = 0;
+#else
+				/* advance to next ring descriptor address */
+                pTxD->DMADONE = 1;
+#endif
 #ifdef RT_BIG_ENDIAN
 				RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
 #endif
@@ -1504,7 +1520,12 @@ NDIS_STATUS	RTMPAllocTxRxRingMemory(RTMP_ADAPTER *pAd)
 				/* link the pre-allocated TxBuf to TXD */
 				pTxD = (TXD_STRUC *)dma_cb->AllocVa;
 				pTxD->SDPtr0 = BufBasePaLow;
+#if (CFG_CPU_LOADING_DMADONE == 1)
                 pTxD->DMADONE = 0;
+#else
+				/* advance to next ring descriptor address */
+				pTxD->DMADONE = 1;
+#endif
 #ifdef RT_BIG_ENDIAN
 				RTMPDescriptorEndianChange((PUCHAR)pTxD, TYPE_TXD);
 #endif
@@ -2950,7 +2971,7 @@ BOOLEAN RT28xxPciAsicRadioOff(
 	if (pAd->chipCap.hif_type == HIF_MT) {
 		MTWF_LOG(DBG_CAT_HIF, CATHIF_PCI, DBG_LVL_OFF, ("%s(): Not support for HIF_MT yet!\n",
 					__FUNCTION__));
-		return FALSE;
+		return TRUE;
 	}
 
 #if defined(RTMP_MAC) || defined(RLT_MAC)
@@ -3183,7 +3204,7 @@ INT rtmp_irq_init(RTMP_ADAPTER *pAd)
 #if defined(MT7615) || defined(MT7622)
 		if (IS_MT7615(pAd) || IS_MT7622(pAd))
 		{
-			reg_mask = (MT_CoherentInt | MT_MacInt | MT_INT_RX_DLY | MT_INT_T2_DONE | MT_INT_T3_DONE);
+			reg_mask = (MT_CoherentInt |MT_DelayInt | MT_MacInt | MT_RxINT | MT_TxDataInt);
 #if defined(ERR_RECOVERY) || defined(CONFIG_FWOWN_SUPPORT)
 	            reg_mask |= MT_McuCommand;
 #endif /* ERR_RECOVERY || CONFIG_FWOWN_SUPPORT */	
@@ -3397,7 +3418,7 @@ static VOID n9_wdt_reset(RTMP_ADAPTER *pAd)
     HW_IO_READ32(pAd, MCU_PCIE_REMAP_1, &remap_cr_record_base_address);
 
     if ((WDT_SWRST_CR_PA  - remap_cr_record_base_address) > REMAP_1_OFFSET_MASK)
-{
+    {
         /* restore the origonal remap cr1 value */
         HW_IO_WRITE32(pAd, MCU_PCIE_REMAP_1, origonal_remap_cr_value);
         
@@ -3459,46 +3480,46 @@ INT32 DriverOwn(RTMP_ADAPTER *pAd)
 #ifdef MT7615
 		do {
 			retrycnt++;
-		if (pAd->bDrvOwn == TRUE)
-		{
-			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Return since already in Driver Own...\n",__FUNCTION__));
-				return Ret;
-		}
-		
-		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Try to Clear FW Own...\n",__FUNCTION__));
-		/* Write CR to get driver own */
-		HIF_IO_WRITE32(pAd, MT_CFG_LPCR_HOST, MT_HOST_CLR_OWN);
-
-		/* Poll driver own status */
-		counter = 0;
-		while (counter < FW_OWN_POLLING_COUNTER)	
-		{
-			RtmpusecDelay(1000);
 			if (pAd->bDrvOwn == TRUE)
-				break;						
-			counter++;		
-		};
+			{
+				MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Return since already in Driver Own...\n",__FUNCTION__));
+				return Ret;
+			}
+			
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Try to Clear FW Own...\n",__FUNCTION__));
+			/* Write CR to get driver own */
+			HIF_IO_WRITE32(pAd, MT_CFG_LPCR_HOST, MT_HOST_CLR_OWN);
 
-		if (counter == FW_OWN_POLLING_COUNTER)
-		{
-			HIF_IO_READ32(pAd, MT_CFG_LPCR_HOST, &Value);
+			/* Poll driver own status */
+			counter = 0;
+			while (counter < FW_OWN_POLLING_COUNTER)	
+			{
+				RtmpusecDelay(1000);
+				if (pAd->bDrvOwn == TRUE)
+					break;						
+				counter++;		
+			};
 
-			if (!(Value & MT_HOST_SET_OWN))
-				pAd->bDrvOwn = TRUE;
-		}
+			if (counter == FW_OWN_POLLING_COUNTER)
+			{
+				HIF_IO_READ32(pAd, MT_CFG_LPCR_HOST, &Value);
 
-		if (pAd->bDrvOwn)
-		{
-			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Success to clear FW Own\n", __FUNCTION__));			
-		}
-		else
-		{
-			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Fail to clear FW Own (%d)\n", __FUNCTION__, counter));
+				if (!(Value & MT_HOST_SET_OWN))
+					pAd->bDrvOwn = TRUE;
+			}
+
+			if (pAd->bDrvOwn)
+			{
+				MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Success to clear FW Own\n", __FUNCTION__));			
+			}
+			else
+			{
+				MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s()::Fail to clear FW Own (%d)\n", __FUNCTION__, counter));
 				if (retrycnt >= MAX_RETRY_CNT)
 					Ret = NDIS_STATUS_FAILURE;
 				else
 					n9_wdt_reset(pAd);
-		}
+			}
 		} while (pAd->bDrvOwn == FALSE && retrycnt < MAX_RETRY_CNT);
 #endif /* MT7615 */
 	}

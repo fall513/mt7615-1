@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -23,6 +24,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #define RTMP_MODULE_OS
 
 /*#include "rt_config.h" */
@@ -42,12 +44,7 @@ struct iw_priv_args ap_privtab[] = {
   "show"},
 { RTPRIV_IOCTL_GSITESURVEY,
   IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024 ,
-  "get_site_survey"},
-#ifdef WH_EZ_SETUP
-{ RTPRIV_IOCTL_GEZ_SCAN_TABLE,
-  IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024 ,
-  "get_ez_table"},
-#endif /* WH_EZ_SETUP */
+  "get_site_survey"}, 
 #ifdef INF_AR9
   { RTPRIV_IOCTL_GET_AR9_SHOW,
   IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024 ,
@@ -203,7 +200,8 @@ INT rt28xx_ap_ioctl(struct net_device *net_dev, struct ifreq *rq, int cmd)
 						break;
 					}
 				}
-				MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("IOCTL::SIOCGIWESSID (Len=%d, ssid=%s...)\n", erq->length, (char *)erq->pointer));
+				/* The below code tries to access user space buffer directly,
+				 * hence remove it . */
 			}
 			break;
 		case SIOCGIWNWID: /* get network id */
@@ -317,8 +315,8 @@ INT rt28xx_ap_ioctl(struct net_device *net_dev, struct ifreq *rq, int cmd)
 #ifdef HOSTAPD_SUPPORT
 		case SIOCSIWGENIE:
 			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("ioctl SIOCSIWGENIE apidx=%d\n",apidx));
-			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("ioctl SIOCSIWGENIE length=%d, pointer=%x\n", wrqin->u.data.length, wrqin->u.data.pointer));
-
+			/* The below code tries to access user space buffer directly,
+			 * hence remove it . */
 			RTMP_AP_IoctlHandle(pAd, wrqin, CMD_RTPRIV_IOCTL_AP_SIOCSIWGENIE, 0, NULL, 0);
 			break;
 #endif /* HOSTAPD_SUPPORT */
@@ -374,12 +372,6 @@ INT rt28xx_ap_ioctl(struct net_device *net_dev, struct ifreq *rq, int cmd)
 			break;
 #endif /* AP_SCAN_SUPPORT */
 
-#ifdef WH_EZ_SETUP
-		case RTPRIV_IOCTL_GEZ_SCAN_TABLE:
-			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_GET_EZ_SCAN_TABLE, 0, NULL, 0);
-			break;
-#endif /* WH_EZ_SETUP */
-
 		case RTPRIV_IOCTL_STATISTICS:
 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_STATISTICS, 0, NULL, 0);
 			break;
@@ -402,7 +394,7 @@ INT rt28xx_ap_ioctl(struct net_device *net_dev, struct ifreq *rq, int cmd)
 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_E2P, 0, NULL, 0);
 			break;
 
-#if defined(DBG) ||(defined(BB_SOC)&&defined(CONFIG_ATE))
+#ifdef DBG
 		case RTPRIV_IOCTL_BBP:
 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_BBP, 0, NULL, 0);
 			break;
@@ -416,7 +408,7 @@ INT rt28xx_ap_ioctl(struct net_device *net_dev, struct ifreq *rq, int cmd)
 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_RF, 0, NULL, 0);
 			break;
 #endif /* RTMP_RF_RW_SUPPORT */
-#endif /*defined(DBG) ||(defined(BB_SOC)&&defined(CONFIG_ATE))*/
+#endif /* DBG */
 
 		default:
 /*			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("IOCTL::unknown IOCTL's cmd = 0x%08x\n", cmd)); */

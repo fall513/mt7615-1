@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -13,7 +14,7 @@
 	Module Name:
 	cmm_txbf_mt.c
 */
-
+#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)
@@ -587,9 +588,6 @@ INT32 mt_AsicBfStaRecUpdate(
 
 	pEntry->rStaRecBf.u2SmartAnt             = 0;
     //pEntry->rStaRecBf.ucSEIdx                = 24;
-#ifdef TXBF_DYNAMIC_DISABLE
-	pEntry->rStaRecBf.ucAutoSoundingCtrl     = pAd->CommonCfg.ucAutoSoundingCtrl;
-#endif /* TXBF_DYNAMIC_DISABLE */
 
 
     MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("====================== BF StaRec Info =====================\n"));
@@ -612,9 +610,6 @@ INT32 mt_AsicBfStaRecUpdate(
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("ucMemCol2      =%d\n", pEntry->rStaRecBf.ucMemCol2));
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("ucMemRow3      =%d\n", pEntry->rStaRecBf.ucMemRow3));
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("ucMemCol3      =%d\n", pEntry->rStaRecBf.ucMemCol3));
-#ifdef TXBF_DYNAMIC_DISABLE	
-	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("ucAutoSoundingCtrl=%d\n", pEntry->rStaRecBf.ucAutoSoundingCtrl));
-#endif /* TXBF_DYNAMIC_DISABLE */
 
     if (fgETxBfCap == 0)
     {
@@ -1103,7 +1098,7 @@ VOID TxBfProfilePnPrint(
 	case P_DBW20M:
 	    prPfmuPn20M = (P_PFMU_PN_DBW20M) pBuf;
 #ifdef RT_BIG_ENDIAN
-		RTMPEndianChange((UCHAR *)prPfmuPn20M, sizeof(PFMU_PN_DBW20M));
+		RTMPEndianChange((UCHAR *)prPfmuPn20M, sizeof(P_PFMU_PN_DBW20M));
 #endif
 	    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, (
 		   "============================= TxBf profile PN Info 20M ========================================\n"
@@ -1125,7 +1120,7 @@ VOID TxBfProfilePnPrint(
 	case P_DBW40M:
 	    prPfmuPn40M = (P_PFMU_PN_DBW40M) pBuf;
 #ifdef RT_BIG_ENDIAN
-		RTMPEndianChange((UCHAR *)prPfmuPn40M, sizeof(PFMU_PN_DBW40M));
+		RTMPEndianChange((UCHAR *)prPfmuPn40M, sizeof(P_PFMU_PN_DBW40M));
 #endif
 	    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, (
 		   "============================= TxBf profile PN Info 40M ========================================\n"
@@ -1147,7 +1142,7 @@ VOID TxBfProfilePnPrint(
 	case P_DBW80M:
 	    prPfmuPn80M = (P_PFMU_PN_DBW80M) pBuf;
 #ifdef RT_BIG_ENDIAN
-		RTMPEndianChange((UCHAR *)prPfmuPn80M, sizeof(PFMU_PN_DBW80M));
+		RTMPEndianChange((UCHAR *)prPfmuPn80M, sizeof(P_PFMU_PN_DBW80M));
 #endif
 	    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, (
 		   "============================= TxBf profile PN Info 80M ========================================\n"
@@ -1169,7 +1164,7 @@ VOID TxBfProfilePnPrint(
 	case P_DBW160M:
 	    prPfmuPn160M = (P_PFMU_PN_DBW80_80M) pBuf;
 #ifdef RT_BIG_ENDIAN
-		RTMPEndianChange((UCHAR *)prPfmuPn160M, sizeof(PFMU_PN_DBW80_80M));
+		RTMPEndianChange((UCHAR *)prPfmuPn160M, sizeof(P_PFMU_PN_DBW80_80M));
 #endif
 	    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, (
 		   "============================= TxBf profile PN Info 80M ========================================\n"
@@ -1426,9 +1421,6 @@ VOID StaRecBfUpdate(
 	pCmdStaRecBf->rTxBfPfmuInfo.ucMemCol3     = pEntry->rStaRecBf.ucMemCol3;
 	pCmdStaRecBf->rTxBfPfmuInfo.u2SmartAnt    = cpu2le16(pEntry->rStaRecBf.u2SmartAnt);
     pCmdStaRecBf->rTxBfPfmuInfo.ucSEIdx       = pEntry->rStaRecBf.ucSEIdx;
-#ifdef TXBF_DYNAMIC_DISABLE	
-    pCmdStaRecBf->rTxBfPfmuInfo.ucAutoSoundingCtrl = pEntry->rStaRecBf.ucAutoSoundingCtrl;
-#endif /* TXBF_DYNAMIC_DISABLE */
     pCmdStaRecBf->rTxBfPfmuInfo.uciBfTimeOut  = pEntry->rStaRecBf.uciBfTimeOut;
     pCmdStaRecBf->rTxBfPfmuInfo.uciBfDBW      = pEntry->rStaRecBf.uciBfDBW;
     pCmdStaRecBf->rTxBfPfmuInfo.uciBfNcol     = pEntry->rStaRecBf.uciBfNcol;
@@ -1473,9 +1465,6 @@ VOID StaRecBfRead(
 	       "rStaRecBf.ucMemCol3     = %d\n"
 	       "rStaRecBf.u2SmartAnt    = 0x%x\n"
            "rStaRecBf.ucSEIdx       = %d\n"
-#ifdef TXBF_DYNAMIC_DISABLE           
-           "rStaRecBf.ucAutoSoundingCtrl = %d\n"
-#endif /* TXBF_DYNAMIC_DISABLE */           
            "rStaRecBf.uciBfTimeOut  = 0x%x\n"
            "rStaRecBf.uciBfDBW      = %d\n"
            "rStaRecBf.uciBfNcol     = %d\n"
@@ -1504,9 +1493,6 @@ VOID StaRecBfRead(
            pAd->rStaRecBf.ucMemCol3,
            pAd->rStaRecBf.u2SmartAnt,
            pAd->rStaRecBf.ucSEIdx,
-#ifdef TXBF_DYNAMIC_DISABLE           
-           pAd->rStaRecBf.ucAutoSoundingCtrl,
-#endif /* TXBF_DYNAMIC_DISABLE */
            pAd->rStaRecBf.uciBfTimeOut,
            pAd->rStaRecBf.uciBfDBW,
            pAd->rStaRecBf.uciBfNcol,
@@ -1545,164 +1531,5 @@ VOID TxBfProfileMemAllocMap(
             "==============================================\n"));
     }
 }
-
-
-#ifdef TXBF_BY_CHANNEL
-/*
-	==========================================================================
-	Description:
-		Called at the end of AsicSwitchChannel.
-		If current channel is in BandNoBf, BF should be disabled.
-		If current channel is not in BandNoBf, BF should be enabled( if ETxBfEnCond is set in profile).
-
-		BF function is disabled/enabled by:
-		    1. update ETxBfEnCond and ITxBfEn
-		    2. reconstruct CommonCfg.HtCapability.TxBFCap or CommonCfg.vht_cap_ie.vht_cap
-		    3. enable/ disable BF in FW by AsicTxBfHwEnStatusUpdate		  
-
-	==========================================================================
- */
-VOID SwitchBfByChannel(RTMP_ADAPTER *pAd, UCHAR Channel)
-{
-	BOOLEAN fgDisableBf;
-
-	/* return if there is no band in which BF should be disabled or it is 2G */
-	if (pAd->CommonCfg.BandNoBf == 0 || Channel < 36)
-	{
-		return;
-	}
-
-	/* check if current channel is specified in BandNoBf */
-	fgDisableBf = ((Channel >= 36 && Channel <= 48) && (pAd->CommonCfg.BandNoBf & BIT0)) ||
-				  ((Channel >= 52 && Channel <= 64) && (pAd->CommonCfg.BandNoBf & BIT1)) ||
-				  ((Channel >= 100 && Channel <= 112) && (pAd->CommonCfg.BandNoBf & BIT2)) ||
-				  ((Channel >= 116 && Channel <= 128) && (pAd->CommonCfg.BandNoBf & BIT3)) ||
-   				  ((Channel >= 132 && Channel <= 144) && (pAd->CommonCfg.BandNoBf & BIT4)) ||
-   				  ((Channel >= 149 && Channel <= 161) && (pAd->CommonCfg.BandNoBf & BIT5)) ||
-				  ((Channel >= 165 && Channel <= 177) && (pAd->CommonCfg.BandNoBf & BIT6)); 
-	
-	MTWF_LOG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s] fgDisableBf=%d\n", __FUNCTION__, fgDisableBf));
-
-	/* if current channel in BandNoBf and BF is on --> should disable BF*/
-	if (fgDisableBf && (pAd->CommonCfg.ETxBfEnCond || pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn)) //supports BF but needs to disable
-	{
-		MTWF_LOG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s] Disable BF\n", __FUNCTION__));
-		/* backup ETxBfEnCond and ITxBfEn */
-		pAd->CommonCfg.ETxBfEnCondBackup = pAd->CommonCfg.ETxBfEnCond; 
-		pAd->CommonCfg.ITxBfEnBackup = pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn;
-
-		/* Disable BF */
-		pAd->CommonCfg.ETxBfEnCond = SUBF_OFF; 
-		pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn = 0;
-
-		/* Re-construct HT or VHT BF Cap */
-		mt_WrapSetETxBFCapByChannel(pAd, &pAd->CommonCfg.HtCapability.TxBFCap, Channel);
-#ifdef VHT_TXBF_SUPPORT
-		mt_WrapSetVHTETxBFCapByChannel(pAd, &pAd->CommonCfg.vht_cap_ie.vht_cap, Channel);
-#endif /* VHT_TXBF_SUPPORT */
-
-		/* disable BF switch in FW*/
-		AsicTxBfHwEnStatusUpdate(pAd, pAd->CommonCfg.ETxBfEnCond, pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn);
-	}
-	/* if current channel not in BandNoBf and BF was disabled --> should enable BF*/
-	else if (!fgDisableBf && ((!pAd->CommonCfg.ETxBfEnCond && pAd->CommonCfg.ETxBfEnCondBackup) || 
-		    (!pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn && pAd->CommonCfg.ITxBfEnBackup)))
-	{
-		MTWF_LOG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s] Enable BF\n", __FUNCTION__));
-		/* restore ETxBfEnCond and ITxBfEn */
-		pAd->CommonCfg.ETxBfEnCond = pAd->CommonCfg.ETxBfEnCondBackup;
-		pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn = pAd->CommonCfg.ITxBfEnBackup;
-		
-		pAd->CommonCfg.ETxBfEnCondBackup = SUBF_OFF;
-		pAd->CommonCfg.ITxBfEnBackup = 0;		
-
-		/* Re-construct HT or VHT BF Cap */
-		mt_WrapSetETxBFCapByChannel(pAd, &pAd->CommonCfg.HtCapability.TxBFCap, Channel);
-#ifdef VHT_TXBF_SUPPORT
-		mt_WrapSetVHTETxBFCapByChannel(pAd, &pAd->CommonCfg.vht_cap_ie.vht_cap, Channel);
-#endif /* VHT_TXBF_SUPPORT */
-
-		/* enable BF switch in FW*/
-		AsicTxBfHwEnStatusUpdate(pAd, pAd->CommonCfg.ETxBfEnCond, pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn);			
-	}
-	
-	MTWF_LOG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s] ETxBfEnCond=%ld, ETxBfEnCondBackup=%ld, ITxBfEn=%d, ITxBfEnBackup=%d\n", __FUNCTION__, pAd->CommonCfg.ETxBfEnCond, pAd->CommonCfg.ETxBfEnCondBackup, pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn, pAd->CommonCfg.ITxBfEnBackup));
-}
-#endif /* TXBF_BY_CHANNEL */
-
-#ifdef TXBF_DYNAMIC_DISABLE
-/*
-	==========================================================================
-	Description:
-		(1) Dynamically disable BF for current assoc STAs by setting pEntry->rStaRecBf.ucAutoSoundingCtrl[DYNAMIC_BF_DISABLE]
-		(2) Set pAd->CommonCfg.ucAutoSoundingCtrl[DYNAMIC_BF_DISABLE] so that STA in the future is also with BF disabled
-		(3) Also updates WTBL BF flags
-
-	==========================================================================
- */
-INT DynamicTxBfDisable(
-	IN PRTMP_ADAPTER pAd,
-	IN BOOLEAN		 fgDisable)
-{
-	BOOLEAN fgStatus = FALSE, fgETxBf, fgITxBf;
-	INT i;
-	
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s]\n", __FUNCTION__));
-	
-	if (fgDisable)
-	{
-		fgETxBf = FALSE;
-		fgITxBf = FALSE;
-		/* Update ucAutoSoundingCtrol with DYNAMIC_BF_DISABLE
-		  * to bypass WTBL BF flag setting and sounding packet Tx
-		 */
-		pAd->CommonCfg.ucAutoSoundingCtrl |= DYNAMIC_TXBF_DISABLE;
-		/* Disable BFee by setting HW */
-		AsicTxBfeeHwCtrl(pAd, FALSE);
-	}
-	else
-	{
-		fgETxBf = pAd->CommonCfg.ETxBfEnCond;
-		fgITxBf = pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn;
-		pAd->CommonCfg.ucAutoSoundingCtrl = 0;
-		/* Enable BFee by setting HW */
-		AsicTxBfeeHwCtrl(pAd, TRUE);
-	}
-
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s] fgETxBf=%d, fgITxBf=%d, ucAutoSoundingCtrl=%d\n", __FUNCTION__, fgETxBf, fgITxBf, pAd->CommonCfg.ucAutoSoundingCtrl));
-
-	for (i=0; VALID_UCAST_ENTRY_WCID(pAd, i); i++) /* For every STA */
-	{
-		PMAC_TABLE_ENTRY pEntry = &pAd->MacTab.Content[i];
-		
-		if ((IS_ENTRY_CLIENT(pEntry) || IS_ENTRY_APCLI(pEntry) || IS_ENTRY_REPEATER(pEntry)) && (pEntry->Sst == SST_ASSOC))
-		{
-			STA_REC_CFG_T StaCfg;
-			
-			MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("[%s] Disable BF for wlanid i=%d \n", __FUNCTION__, i));
-
-			os_zero_mem(&StaCfg,sizeof(STA_REC_CFG_T));
-			pEntry->rStaRecBf.ucAutoSoundingCtrl = pAd->CommonCfg.ucAutoSoundingCtrl;
-			
-	        StaCfg.MuarIdx = 0;
-			StaCfg.ConnectionState = TRUE;
-			StaCfg.ConnectionType = 0;
-			StaCfg.u4EnableFeature = (1 << STA_REC_BF);
-			StaCfg.ucBssIndex = pEntry->wdev->bss_info_argument.ucBssIndex;
-			StaCfg.ucWlanIdx = i;
-			StaCfg.pEntry = pEntry;
-			/* update ucAutoSoundingCtrol and WTBL BF flag */
-			if (CmdExtStaRecUpdate(pAd,StaCfg) == STATUS_TRUE)
-			{
-			    fgStatus = TRUE;
-			}
-
-			//CmdTxBfTxApplyCtrl(pAd, i, fgETxBf, fgITxBf, FALSE, FALSE); /* Set WTBL IBF EBF */
-		}
-	}
-	
-    return fgStatus;
-}
-#endif /* TXBF_DYNAMIC_DISABLE */
 #endif /* MT_MAC */
 #endif /* TXBF_SUPPORT */

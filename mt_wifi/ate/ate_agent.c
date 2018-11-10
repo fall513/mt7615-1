@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,8 +14,10 @@
 	Module Name:
 	ate_agent.c
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
+#include "rtmp.h"
+
 
 #define MCAST_WCID_TO_REMOVE 0	//Pat: TODO
 
@@ -43,10 +46,9 @@ UCHAR   g_BFBackOffMode = 4; // BF Backoff Mode: 2/3/4: apply 2T/3T/4T value in 
 
 #if defined(TXBF_SUPPORT) && defined(MT_MAC)
 UCHAR TemplateFrame[32] = {0x88, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
-                           0xFF, 0xFF, 0x00, 0xAA, 0xBB, 0x12, 0x34, 0x56,
+                           0xFF, 0xFF, 0x00, 0xAA, 0xBB, 0x12, 0x34, 0x56, 
                            0x00, 0x11, 0x22, 0xAA, 0xBB, 0xCC, 0x00, 0x00,
                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
 #else
 static UCHAR TemplateFrame[32] = {0x08, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
 					 		      0xFF, 0xFF, 0x00, 0xAA, 0xBB, 0x12, 0x34, 0x56,
@@ -801,87 +803,6 @@ INT32 SetATETxPower3(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 		return FALSE;
 }
 
-#ifdef ABSOLUTE_POWER_TEST
-INT32 SetATEForceTxPower(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
-{
-	UINT8 ParamIdx;
-	CHAR  *value = 0;
-	UINT8 ucBandIdx = 0;
-	INT_8 cTxPower = 0;
-	UINT8 ucPhyMode = 0;
-	UINT8 ucTxRate = 0;
-	UINT8 ucBW = 0;
-	INT32 Ret;
-	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
-	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-
-	/* obtain DBDC Band Index */
-	ucBandIdx = MT_ATEGetBandIdxByIf(pAd);
-
-	/* Sanity check for DBDC Band Index */
-	if (ucBandIdx < 0) {
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Invalid Band Index !! \n", __FUNCTION__));
-		goto err0;
-	}
-
-	/* Sanity check for input parameter */
-	if (!Arg) {
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: No Parameters !! \n", __FUNCTION__));
-		goto err1;
-	}
-
-	/* Sanity check for input parameter format */
-	if(strlen(Arg) != 11) {   
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Wrong Parameter Format !!\n", __FUNCTION__));
-		goto err1;
-	}
-	
-	/* Parsing input parameter */ 
-	for (ParamIdx = 0, value = rstrtok(Arg,":"); value; value = rstrtok(NULL,":"), ParamIdx++) {
-		switch (ParamIdx) {
-			case 0:
-				ucPhyMode = simple_strtol(value, 0, 10); /* 2-bit format */
-				break;
-			case 1:
-				ucTxRate = simple_strtol(value, 0, 10);  /* 2-bit format */
-				break;
-			case 2:
-				ucBW = simple_strtol(value, 0, 10);      /* 2-bit format */
-				break;
-			case 3:
-				cTxPower = simple_strtol(value, 0, 10);  /* 2-bit format */
-				break;
-			default:
-				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Set Too Much Parameters !!\n", __FUNCTION__));
-				goto err1;
-		}
-	}
-	
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: Band(%d), TxMode(%d), MCS(%d), BW(%d), TxPower(%d)\n",
-															__FUNCTION__, ucBandIdx, ucPhyMode, ucTxRate, ucBW, cTxPower));
-
-	/* Command Handler for Force Power Control */
-	Ret = ATEOp->SetTxForceTxPower(pAd, ucBandIdx, cTxPower, ucPhyMode, ucTxRate, ucBW);
-
-	if (!Ret)
-		return TRUE;
-	err0:
-		return FALSE;
-	err1:
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "Please input parameter via format \"Phymode:TxRate:BW:TxPower\"\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "Phymode:\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "    (2-digit) 0: CCK, 1: OFDM, 2: HT-MIXED, 3: HT-GREEN, 4: VHT\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "TxRate:\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "    (2-digit) CCK: 00~03, OFDM: 00~07, HT-MIXED: 00~07, HT-GREEN: 00~07, VHT: 00~09\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "BW:\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "    (2-digit) 0: BW20, 1: BW40, 2: BW80, 3:BW160\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "TxPower:\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KGRN "    (2-digit) absolute Tx power (unit: 0.5dB)\n" KNRM));
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (KRED "Ex: iwpriv ra0 set ATEFORCETXPOWER=02:00:00:16\n" KNRM));
-		return FALSE;
-		
-}
-#endif /* ABSOLUTE_POWER_TEST */
 
 INT32 SetATETxPowerEvaluation(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
@@ -911,7 +832,7 @@ INT32 SetATETxAntenna(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
     UINT32 mode = 0;
 #endif
 
-    /* Sanity check for input parameter */
+    /* Sanity check for input parameter*/
     if (Arg == NULL) {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: No parameters!! \n", __FUNCTION__));
         goto err0;
@@ -971,7 +892,7 @@ INT32 SetATERxAntenna(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 	CHAR Ant;
 	UINT8 band_idx = 0;
 
-    /* Sanity check for input parameter */
+    /* Sanity check for input parameter*/
     if (Arg == NULL) {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: No parameters!! \n", __FUNCTION__));
         goto err0;
@@ -1446,26 +1367,27 @@ INT32 SetATELoadE2pFromBuf(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 
 INT32 SetATEReadE2p(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 {
-	INT32 ret;
 	UINT16 *Buffer = NULL;
+	UINT32 Ret = 0;
+	UINT16 *p;
 	int i;
 
-	ret = os_alloc_mem(pAd, (PUCHAR *)&Buffer, EEPROM_SIZE);
-	if(ret == NDIS_STATUS_FAILURE)
-		return ret;
+	Ret = os_alloc_mem(pAd,(PUCHAR *)&Buffer, EEPROM_SIZE);
+	if (Ret == NDIS_STATUS_FAILURE)
+		return Ret;
 
 	EEReadAll(pAd, (UINT16 *)Buffer);
 
+	p = Buffer;
+
 	for (i = 0; i < (EEPROM_SIZE >> 1); i++)
 	{
-		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%4.4x ", *Buffer));
+		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%4.4x ", *p));
 		if (((i+1) % 16) == 0)
 			MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n"));
-		Buffer++;
+		p++;
 	}
-
 	os_free_mem(Buffer);
-
 	return TRUE;
 }
 
@@ -1485,8 +1407,8 @@ INT32 SetATEAutoAlc(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 
 INT32 SetATEIpg(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 {
-	INT32 ret = 0;
-	UINT32 value;
+	INT32 Ret = 0;
+	UINT32 Value;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	UINT8 band_idx = 0;
@@ -1497,15 +1419,15 @@ INT32 SetATEIpg(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: IPG = %s\n", __FUNCTION__, Arg));
 
-	value = simple_strtol(Arg, 0, 10);
+	Value = simple_strtol(Arg, 0, 10);
 
 #ifdef MT7615
-	ATECtrl->ipg_param.ipg = value;
+	ATECtrl->IPG = Value;
 #endif
 
-    ret = ATEOp->SetIPG(pAd, band_idx);
+	Ret = ATEOp->SetSlotTime(pAd, Value, Value, band_idx);
 
-	if (!ret)
+	if (!Ret)
 		return TRUE;
 err0:
 		return FALSE;
@@ -1789,10 +1711,10 @@ INT32 SetATEShow(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
     	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("TxLength = %u\n", ATECtrl->TxLength));
     	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("TxCount = %u\n", ATECtrl->TxCount));
     	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("RFFreqOffset = %u\n", ATECtrl->RFFreqOffset));
-    	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Payload Pattern = 0x%02x\n", ATECtrl->Payload));
-    	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("IPG = %dus\n", ATECtrl->ipg_param.ipg));
+    	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("IPG = %u\n", ATECtrl->IPG));
+    	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Payload = 0x%02x\n", ATECtrl->Payload));
         MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Duty Cycle = %d%%\n", ATECtrl->duty_cycle));
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Pkt Tx Time = %dus\n", ATECtrl->pkt_tx_time));
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Pkt Tx Time = %d\n", ATECtrl->pkt_tx_time));
     }
 #ifdef DBDC_MODE
     else
@@ -1823,9 +1745,9 @@ INT32 SetATEShow(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
             MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("TxLength = %u\n", Info->TxLength));
             MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("TxCount = %u\n", Info->TxCount));
             MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("RFFreqOffset = %u\n", Info->RFFreqOffset));
-            MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("IPG = %dus\n", Info->ipg_param.ipg));
+            MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("IPG = %u\n", Info->IPG));
         	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Duty Cycle = %d%%\n", Info->duty_cycle));
-        	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Pkt Tx Time = %dus\n", Info->pkt_tx_time));
+        	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Pkt Tx Time = %d\n", Info->pkt_tx_time));
         }
     }
 #endif /* DBDC_MODE */
@@ -1921,17 +1843,17 @@ INT32 SetATEShow(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 #endif /* DBDC_MODE */
 
 #ifdef ATE_TXTHREAD
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Current_Init_Thread = %d \n", ATECtrl->current_init_thread));
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Dequeue Count = %d \n", ATECtrl->deq_cnt));
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Current_Init_Thread= %d \n", ATECtrl->current_init_thread));
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Dequeue Count= %d \n", ATECtrl->deq_cnt));
 #endif /* ATE_TXTHREAD */
 
 #ifdef TXBF_SUPPORT
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("fgEBfEverEnabled = %d \n", ATECtrl->fgEBfEverEnabled));
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("TXBF INFO Length = %d \n", ATECtrl->txbf_info_len));
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("fgEBfEverEnabled= %d \n", ATECtrl->fgEBfEverEnabled));
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("TXBF INFO Length= %d \n", ATECtrl->txbf_info_len));
 #endif /* TXBF_SUPPORT */
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("MU Enable = %d \n", ATECtrl->mu_enable));
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("MU Users = %d \n", ATECtrl->mu_usrs));
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("wcid_ref = %d \n", ATECtrl->wcid_ref));    
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("MU Enable= %d \n", ATECtrl->mu_enable));
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("MU Users= %d \n", ATECtrl->mu_usrs));
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("wcid_ref= %d \n", ATECtrl->wcid_ref));    
     }
 
     return TRUE;
@@ -1950,7 +1872,7 @@ INT32 set_ate_duty_cycle(
     UINT32 duty_cycle = 0;
     UINT8 band_idx = 0;
 
-    /* Sanity check for input parameter */
+    /* Sanity check for input parameter*/
     if (Arg == NULL) {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s(): No parameters!! \n", __FUNCTION__));
         goto err0;
@@ -1986,7 +1908,7 @@ INT32 set_ate_pkt_tx_time(
     UINT32 pkt_tx_time = 0;
     UINT8 band_idx = 0;
 
-    /* Sanity check for input parameter */
+    /* Sanity check for input parameter*/
     if (Arg == NULL) {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s(): No parameters!! \n", __FUNCTION__));
         goto err0;
@@ -3436,7 +3358,7 @@ INT32 SetATETxBfChanProfileUpdate(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
     INT32       i;
     UCHAR       *value;
     RTMP_STRING cmdStr[80];
-	CHAR	    value_T[12];
+	CHAR	    value_T[12], valueSwap;
 	UCHAR       strLen;
 	BOOLEAN     fgFinalData;
     UINT16      u2Buf[11],   u2PfmuId,   u2Subcarr;
@@ -3463,7 +3385,9 @@ INT32 SetATETxBfChanProfileUpdate(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 		    strcpy(value_T, "0");
 		    strcat(value_T, value);
 		    AtoH(value_T, (PCHAR)(&u2Buf[i]), 2);
-		    u2Buf[i] = be2cpu16(u2Buf[i]);
+		    valueSwap = (CHAR)u2Buf[i];
+		    u2Buf[i] >>= 8;
+		    u2Buf[i] |= (USHORT)(valueSwap << 8);
 		    i++;
 		}
 	}
@@ -3555,7 +3479,7 @@ INT32 SetATETxBfProfileRead(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
     INT32       i;
     UCHAR       ucPfmuId,    *value;
     RTMP_STRING cmdStr[32];
-    CHAR	    value_T[12];
+    CHAR	    value_T[12], valueSwap;
 	UCHAR       strLen;
     UINT16      u2Buf[2],    u2SubCarrier;
 
@@ -3577,7 +3501,9 @@ INT32 SetATETxBfProfileRead(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 		    strcpy(value_T, "0");
 		    strcat(value_T, value);
 		    AtoH(value_T, (PCHAR)(&u2Buf[i]), 2);
-		    u2Buf[i] = be2cpu16(u2Buf[i]);
+		    valueSwap = (CHAR)u2Buf[i];
+		    u2Buf[i] >>= 8;
+		    u2Buf[i] |= (USHORT)(valueSwap << 8);
 		    i++;
 		}
 	}
@@ -3634,7 +3560,7 @@ INT32 SetATETXBFProc(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
 	}
 #endif
 
-    if (!Ret)
+	if (!Ret)
 		return TRUE;
 	else
 		return FALSE;
@@ -3785,19 +3711,7 @@ INT32 SetATEIBfProfileUpdate(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
     }    
     else
     {
-        UCHAR TxStream;
-
-        if (pAd->CommonCfg.dbdc_mode)
-        {
-            if (BandIdx == DBDC_BAND0)
-                TxStream = pAd->dbdc_2G_tx_stream;
-            else
-                TxStream = pAd->dbdc_5G_tx_stream;
-        } else {
-            TxStream = pAd->Antenna.field.TxPath;
-        }
-
-        Nr  = TxStream - 1;
+        Nr  = pAd->Antenna.field.TxPath - 1;
     }
    
     Nc = ucBuf[2];
@@ -3954,19 +3868,7 @@ INT32 SetATEEBfProfileConfig(RTMP_ADAPTER *pAd, RTMP_STRING *Arg)
     }
     else
     {
-        UCHAR TxStream;
-
-        if (pAd->CommonCfg.dbdc_mode)
-        {
-            if (BandIdx == DBDC_BAND0)
-                TxStream = pAd->dbdc_2G_tx_stream;
-            else
-                TxStream = pAd->dbdc_5G_tx_stream;
-        } else {
-            TxStream = pAd->Antenna.field.TxPath;
-        }
-
-        Nr  = TxStream - 1;
+        Nr  = pAd->Antenna.field.TxPath - 1;
     }
     Nc      = ucBuf[2];
 
@@ -4226,52 +4128,52 @@ INT32 SetATEConTxETxBfInitProc(
 	PRTMP_ADAPTER pAd,
 	RTMP_STRING *Arg)
 {
-    UINT8       loop_index;
-    INT         status = TRUE;
-    CHAR        *value = 0;
-    UINT8       TxMode = 0;
-    UINT8       MCS = 0;
-    UINT8       BW = 0;
-    UINT8       VhtNss = 0;
-    UINT8       TRxStream = 0;
-    UINT8       Power = 0;
-    UINT8       Channel = 0;
-    UINT8       Channel2 = 0;
-    UINT8       Channl_band = 0;
-    UINT16      TxPktLength = 0;
-    UINT8       Nr = 0;
-    UINT8       LM = 0;
-    CHAR        BandIdx = 0;
-    UCHAR       OwnMacIdx = 0;
-    CHAR        wdev_idx = 0;
-    UCHAR       WlanIdx = 1;
-    UCHAR       BssIdx = 0;
-    UCHAR       PfmuId = WlanIdx - 1;
-    ULONG       stTimeChk0, stTimeChk1;
-    RTMP_STRING cmdStr[80];
-    ATE_CTRL    *ATECtrl = &(pAd->ATECtrl);
-    UCHAR       *template;
+	UINT8		loop_index;
+	INT 		status = TRUE;
+	CHAR		*value = 0;
+	UINT8		TxMode = 0;
+	UINT8		MCS = 0;
+	UINT8		BW = 0;
+	UINT8		VhtNss = 0;
+	UINT8		TRxStream = 0;
+	UINT8		Power = 0;
+	UINT8		Channel = 0;
+	UINT8		Channel2 = 0;
+	UINT8		Channl_band = 0;
+	UINT16		TxPktLength = 0;
+	UINT8		Nr = 0;
+	UINT8		LM = 0;
+	UCHAR		BandIdx = 0;
+	UCHAR		OwnMacIdx = 0;
+	UCHAR		wdev_idx = 0;
+	UCHAR		WlanIdx = 1;
+	UCHAR		BssIdx = 0;
+	UCHAR		PfmuId = WlanIdx - 1;
+	ULONG		stTimeChk0, stTimeChk1;
+	RTMP_STRING cmdStr[80];
+	ATE_CTRL	*ATECtrl = &(pAd->ATECtrl);
+	UCHAR		*template;
 #ifdef DBDC_MODE
-    BAND_INFO   *Info = &(ATECtrl->band_ext[0]);
+	BAND_INFO	*Info = &(ATECtrl->band_ext[0]);
 #endif /* DBDC_MODE */
-    struct wifi_dev    *pWdev = NULL;
+	struct wifi_dev    *pWdev = NULL;
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* Configure Input Parameter */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* Configure Input Parameter */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* sanity check for input parameter*/
+	/* sanity check for input parameter*/
 	if (!Arg) {   
-        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: No parameters!! \n", __FUNCTION__));
+		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: No parameters!! \n", __FUNCTION__));
 		return FALSE;
-    }
+	}
 
 	if(strlen(Arg) != 33) {   
-        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Wrong parameter format!! \n", __FUNCTION__));
-        return FALSE;
-    }
-    
-    /* Parsing input parameter */ 
+		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Wrong parameter format!! \n", __FUNCTION__));
+		return FALSE;
+	}
+	
+	/* Parsing input parameter */ 
 	for (loop_index = 0, value = rstrtok(Arg,":"); value; value = rstrtok(NULL,":"), loop_index++) {
 		switch (loop_index) {
 			case 0:
@@ -4287,20 +4189,20 @@ INT32 SetATEConTxETxBfInitProc(
 				VhtNss = simple_strtol(value, 0, 10); // 2-bit format
 				break;
 			case 4:
-                TRxStream = simple_strtol(value, 0, 10); // 2-bit format
-                break;
-            case 5:    
+				TRxStream = simple_strtol(value, 0, 10); // 2-bit format
+				break;
+			case 5:    
 				Power = simple_strtol(value, 0, 10); // 2-bit format
 				break;
 			case 6:
 				Channel = simple_strtol(value, 0, 10); // 3-bit format
 				break;
-            case 7:
+			case 7:
 				Channel2 = simple_strtol(value, 0, 10); // 3-bit format
-				break;  
-            case 8:
+				break;	
+			case 8:
 				Channl_band = simple_strtol(value, 0, 10); // 1-bit format
-				break;    
+				break;	  
 			case 9:
 				TxPktLength = simple_strtol(value, 0, 10); // 5-bit format
 				break;
@@ -4317,41 +4219,36 @@ INT32 SetATEConTxETxBfInitProc(
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: TxPower(%d), Channel(%d), Channel2(%d), Channl_band(%d), TxPktLength(%d)\n",
 															__FUNCTION__, Power, Channel, Channel2, Channl_band, TxPktLength));
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 	/* Load Preliminary Configuration */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* obtain Band index */
+	/* obtain Band index */
 #ifdef CONFIG_AP_SUPPORT
-    BandIdx = MT_ATEGetBandIdxByIf(pAd);
-    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: BandIdx = %d \n", __FUNCTION__, BandIdx));       
+	BandIdx = MT_ATEGetBandIdxByIf(pAd);
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: BandIdx = %d \n", __FUNCTION__, BandIdx));		
 #endif /* CONFIG_AP_SUPPORT */
 
-    /* obtain wireless device index */
-    ATECtrl->wdev_idx = MT_ATEGetWDevIdxByBand(pAd, BandIdx);
-    wdev_idx = TESTMODE_GET_PARAM(ATECtrl, BandIdx, wdev_idx);
+	/* obtain wireless device index */
+	ATECtrl->wdev_idx = MT_ATEGetWDevIdxByBand(pAd, BandIdx);
+	wdev_idx = TESTMODE_GET_PARAM(ATECtrl, BandIdx, wdev_idx);
+	pWdev = pAd->wdev_list[wdev_idx];
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: wdev_idx = %d \n", __FUNCTION__, wdev_idx));
 
-	/* sanity check for Wireless Device index */
-	if (wdev_idx < 0)
-		goto err0;
-	
-    pWdev = pAd->wdev_list[wdev_idx];
-    MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: wdev_idx = %d \n", __FUNCTION__, wdev_idx));
-
-    /* obtain TemplateFrame */
-    if (BAND0 == BandIdx) {
+	/* obtain TemplateFrame */
+	if (BAND0 == BandIdx) {
 		NdisMoveMemory(ATECtrl->TemplateFrame, TemplateFrame, 32);
-    }
+	}
 #ifdef DBDC_MODE
-    else if (BAND1 == BandIdx) {
-        NdisMoveMemory(Info->TemplateFrame, TemplateFrame, 32);
-    }
+	else if (BAND1 == BandIdx) {
+		NdisMoveMemory(Info->TemplateFrame, TemplateFrame, 32);
+	}
 #endif /*DBDC_MODE*/
-    /* sanity check for Band index */
-    if (BandIdx < BAND0)
-        goto err0;      
+	/* sanity check for Band index */
+	if (BandIdx < BAND0)
+		goto err0;		
 
-    /* sanity check for Device list */
+	/* sanity check for Device list */
 	if(!pWdev)
 		goto err0;
 
@@ -4361,132 +4258,132 @@ INT32 SetATEConTxETxBfInitProc(
 	/* obtain BSSID index */
 	BssIdx = pWdev->BssIdx;
 
-    MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: OwnMacIdx: %d, BssIdx: %d \n", __FUNCTION__, OwnMacIdx, BssIdx));
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: OwnMacIdx: %d, BssIdx: %d \n", __FUNCTION__, OwnMacIdx, BssIdx));
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 	/* DUT TxBf Initialization */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    NdisGetSystemUpTime(&stTimeChk0);
+	NdisGetSystemUpTime(&stTimeChk0);
 
-    /* Start ATE Mode */
-    SetATE(pAd, "ATESTART");
+	/* Start ATE Mode */
+	SetATE(pAd, "ATESTART");
 
 	/* Enable ETxBF Capability */
 	CmdTxBfHwEnableStatusUpdate(pAd, TRUE, FALSE);
 
-    if (BAND0 == BandIdx)
-    {
-        /* set ATEDA=00:11:11:11:11:11 */
-        ATECtrl->Addr1[0] = Addr1[0];
-        ATECtrl->Addr1[1] = Addr1[1];
-        ATECtrl->Addr1[2] = Addr1[2];
-        ATECtrl->Addr1[3] = Addr1[3];
-        ATECtrl->Addr1[4] = Addr1[4];
-        ATECtrl->Addr1[5] = Addr1[5];
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                         ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5]);
-        SetATEDa(pAd, cmdStr);
+	if (BAND0 == BandIdx)
+	{
+		/* set ATEDA=00:11:11:11:11:11 */
+		ATECtrl->Addr1[0] = Addr1[0];
+		ATECtrl->Addr1[1] = Addr1[1];
+		ATECtrl->Addr1[2] = Addr1[2];
+		ATECtrl->Addr1[3] = Addr1[3];
+		ATECtrl->Addr1[4] = Addr1[4];
+		ATECtrl->Addr1[5] = Addr1[5];
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+										 ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5]);
+		SetATEDa(pAd, cmdStr);
 
-        /* set ATESA=00:22:22:22:22:22 */
-        ATECtrl->Addr2[0] = Addr2[0];
-        ATECtrl->Addr2[1] = Addr2[1];
-        ATECtrl->Addr2[2] = Addr2[2];
-        ATECtrl->Addr2[3] = Addr2[3];
-        ATECtrl->Addr2[4] = Addr2[4];
-        ATECtrl->Addr2[5] = Addr2[5];
+		/* set ATESA=00:22:22:22:22:22 */
+		ATECtrl->Addr2[0] = Addr2[0];
+		ATECtrl->Addr2[1] = Addr2[1];
+		ATECtrl->Addr2[2] = Addr2[2];
+		ATECtrl->Addr2[3] = Addr2[3];
+		ATECtrl->Addr2[4] = Addr2[4];
+		ATECtrl->Addr2[5] = Addr2[5];
 
-        /* set ATEBSSID=00:22:22:22:22:22 */
-        ATECtrl->Addr3[0] = Addr3[0];
-        ATECtrl->Addr3[1] = Addr3[1];
-        ATECtrl->Addr3[2] = Addr3[2];
-        ATECtrl->Addr3[3] = Addr3[3];
-        ATECtrl->Addr3[4] = Addr3[4];
-        ATECtrl->Addr3[5] = Addr3[5];
+		/* set ATEBSSID=00:22:22:22:22:22 */
+		ATECtrl->Addr3[0] = Addr3[0];
+		ATECtrl->Addr3[1] = Addr3[1];
+		ATECtrl->Addr3[2] = Addr3[2];
+		ATECtrl->Addr3[3] = Addr3[3];
+		ATECtrl->Addr3[4] = Addr3[4];
+		ATECtrl->Addr3[5] = Addr3[5];
 
 #ifdef CONFIG_AP_SUPPORT
-        AsicDevInfoUpdate(
-            pAd, 
-            OwnMacIdx, 
-            ATECtrl->Addr2, 
-            BandIdx, 
-            TRUE, 
-            DEVINFO_ACTIVE_FEATURE);
+		AsicDevInfoUpdate(
+			pAd, 
+			OwnMacIdx, 
+			ATECtrl->Addr2, 
+			BandIdx, 
+			TRUE, 
+			DEVINFO_ACTIVE_FEATURE);
 #endif /* CONFIG_AP_SUPPORT */
 
-        /* BSS Info Update */
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                             OwnMacIdx, BssIdx, ATECtrl->Addr3[0], ATECtrl->Addr3[1], ATECtrl->Addr3[2], ATECtrl->Addr3[3], ATECtrl->Addr3[4], ATECtrl->Addr3[5]);
-        Set_BssInfoUpdate(pAd, cmdStr);
+		/* BSS Info Update */
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+											 OwnMacIdx, BssIdx, ATECtrl->Addr3[0], ATECtrl->Addr3[1], ATECtrl->Addr3[2], ATECtrl->Addr3[3], ATECtrl->Addr3[4], ATECtrl->Addr3[5]);
+		Set_BssInfoUpdate(pAd, cmdStr);
 
 
-    }
+	}
 #ifdef DBDC_MODE    
-    else if (BAND1 == BandIdx)
-    {
-        /* set ATEDA=00:11:11:11:11:11 */
-        Info->Addr1[0] = Addr1[0];
-        Info->Addr1[1] = Addr1[1];
-        Info->Addr1[2] = Addr1[2];
-        Info->Addr1[3] = Addr1[3];
-        Info->Addr1[4] = Addr1[4];
-        Info->Addr1[5] = Addr1[5];
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                         Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5]);
-        SetATEDa(pAd, cmdStr);
+	else if (BAND1 == BandIdx)
+	{
+		/* set ATEDA=00:11:11:11:11:11 */
+		Info->Addr1[0] = Addr1[0];
+		Info->Addr1[1] = Addr1[1];
+		Info->Addr1[2] = Addr1[2];
+		Info->Addr1[3] = Addr1[3];
+		Info->Addr1[4] = Addr1[4];
+		Info->Addr1[5] = Addr1[5];
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+										 Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5]);
+		SetATEDa(pAd, cmdStr);
 
-        /* set ATESA=00:22:22:22:22:22 */
-        Info->Addr2[0] = Addr2[0];
-        Info->Addr2[1] = Addr2[1];
-        Info->Addr2[2] = Addr2[2];
-        Info->Addr2[3] = Addr2[3];
-        Info->Addr2[4] = Addr2[4];
-        Info->Addr2[5] = Addr2[5];
+		/* set ATESA=00:22:22:22:22:22 */
+		Info->Addr2[0] = Addr2[0];
+		Info->Addr2[1] = Addr2[1];
+		Info->Addr2[2] = Addr2[2];
+		Info->Addr2[3] = Addr2[3];
+		Info->Addr2[4] = Addr2[4];
+		Info->Addr2[5] = Addr2[5];
 
-        /* set ATEBSSID=00:22:22:22:22:22 */
-        Info->Addr3[0] = Addr3[0];
-        Info->Addr3[1] = Addr3[1];
-        Info->Addr3[2] = Addr3[2];
-        Info->Addr3[3] = Addr3[3];
-        Info->Addr3[4] = Addr3[4];
-        Info->Addr3[5] = Addr3[5];
+		/* set ATEBSSID=00:22:22:22:22:22 */
+		Info->Addr3[0] = Addr3[0];
+		Info->Addr3[1] = Addr3[1];
+		Info->Addr3[2] = Addr3[2];
+		Info->Addr3[3] = Addr3[3];
+		Info->Addr3[4] = Addr3[4];
+		Info->Addr3[5] = Addr3[5];
 
 #ifdef CONFIG_AP_SUPPORT
-        AsicDevInfoUpdate(
-            pAd, 
-            OwnMacIdx, 
-            Info->Addr2,
-            BandIdx, 
-            TRUE, 
-            DEVINFO_ACTIVE_FEATURE);
+		AsicDevInfoUpdate(
+			pAd, 
+			OwnMacIdx, 
+			Info->Addr2,
+			BandIdx, 
+			TRUE, 
+			DEVINFO_ACTIVE_FEATURE);
 #endif /* CONFIG_AP_SUPPORT */
 
-        /* BSS Info Update */
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                             OwnMacIdx, BssIdx, Info->Addr3[0], Info->Addr3[1], Info->Addr3[2], Info->Addr3[3], Info->Addr3[4], Info->Addr3[5]);
-        Set_BssInfoUpdate(pAd, cmdStr);
-        
+		/* BSS Info Update */
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+											 OwnMacIdx, BssIdx, Info->Addr3[0], Info->Addr3[1], Info->Addr3[2], Info->Addr3[3], Info->Addr3[4], Info->Addr3[5]);
+		Set_BssInfoUpdate(pAd, cmdStr);
+		
 
-    }
+	}
 #endif /* DBDC_MODE */
 
-    /* Set ATE Tx Frame content */
-    template = TESTMODE_GET_PARAM(ATECtrl, BandIdx, TemplateFrame); // structure type of TemplateFrame structure is HEADER_802_11
-    NdisMoveMemory(template +  4, Addr1, MAC_ADDR_LEN);
-    NdisMoveMemory(template + 10, Addr2, MAC_ADDR_LEN);
-    NdisMoveMemory(template + 16, Addr3, MAC_ADDR_LEN);
+	/* Set ATE Tx Frame content */
+	template = TESTMODE_GET_PARAM(ATECtrl, BandIdx, TemplateFrame); // structure type of TemplateFrame structure is HEADER_802_11
+	NdisMoveMemory(template +  4, Addr1, MAC_ADDR_LEN);
+	NdisMoveMemory(template + 10, Addr2, MAC_ADDR_LEN);
+	NdisMoveMemory(template + 16, Addr3, MAC_ADDR_LEN);
 
-    /* Set Tx mode */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", TxMode);
-    SetATETxMode(pAd, cmdStr);  // 0: CCK  1: OFDM  2: HT Mixe dmode 3: HT Green Mode   4: VHT mode
+	/* Set Tx mode */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", TxMode);
+	SetATETxMode(pAd, cmdStr);	// 0: CCK  1: OFDM	2: HT Mixe dmode 3: HT Green Mode	4: VHT mode
 
-    /* Set Tx MCS */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", MCS);
-    SetATETxMcs(pAd, cmdStr);
+	/* Set Tx MCS */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", MCS);
+	SetATETxMcs(pAd, cmdStr);
 
-    /* Set Tx BW */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", BW);
-    SetATETxBw(pAd, cmdStr);  // 0: 20MHz  1: 40MHz  2: 80MHz  3: 160MHz(160C)  4: 5M  5: 10M  6: 160MHz (160NC)
+	/* Set Tx BW */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", BW);
+	SetATETxBw(pAd, cmdStr);  // 0: 20MHz  1: 40MHz  2: 80MHz  3: 160MHz(160C)	4: 5M  5: 10M  6: 160MHz (160NC)
 
 	/* Set Tx VhtNss */
 	if (TxMode == 4)
@@ -4494,238 +4391,238 @@ INT32 SetATEConTxETxBfInitProc(
 		snprintf(cmdStr, sizeof(cmdStr), "%d", VhtNss);
 		SetATEVhtNss(pAd, cmdStr);
 	}
-    
-    /* set ATETXGI=0 */
-    SetATETxGi(pAd, "0");
+	
+	/* set ATETXGI=0 */
+	SetATETxGi(pAd, "0");
 
-    /* Set Tx Ant (bitwise representration, ex: 0x3 means wifi[0] and wifi[1] ON) */
-    if (BAND0 == BandIdx)
-    {
-        if (TRxStream == 4)
-            SetATETxAntenna(pAd, "15");  // 15 (0xF:  wifi[0], wifi[1], wifi[2], wifi[3] on)
-        else if (TRxStream == 3)
-            SetATETxAntenna(pAd, "7");   //  7 (0x7:  wifi[0], wifi[1], wifi[2] on)
-        else if (TRxStream == 2)
-            SetATETxAntenna(pAd, "3");   //  3 (0x3:  wifi[0], wifi[1] on)
-    }
-    else if (BAND1 == BandIdx)
-    {
-        SetATETxAntenna(pAd, "3");       //  3 (0x3:  wifi[2], wifi[3] on for DBDC mode)
-        TRxStream = 2; // force TxStream to be 2T for DBDC mode 
-    }
+	/* Set Tx Ant (bitwise representration, ex: 0x3 means wifi[0] and wifi[1] ON) */
+	if (BAND0 == BandIdx)
+	{
+		if (TRxStream == 4)
+			SetATETxAntenna(pAd, "15");  // 15 (0xF:  wifi[0], wifi[1], wifi[2], wifi[3] on)
+		else if (TRxStream == 3)
+			SetATETxAntenna(pAd, "7");	 //  7 (0x7:  wifi[0], wifi[1], wifi[2] on)
+		else if (TRxStream == 2)
+			SetATETxAntenna(pAd, "3");	 //  3 (0x3:  wifi[0], wifi[1] on)
+	}
+	else if (BAND1 == BandIdx)
+	{
+		SetATETxAntenna(pAd, "3");		 //  3 (0x3:  wifi[2], wifi[3] on for DBDC mode)
+		TRxStream = 2; // force TxStream to be 2T for DBDC mode 
+	}
 
-    /* Set Rx Ant (bitwise representration, ex: 0x3 means wifi[0] and wifi[1] ON) */
-    if (BAND0 == BandIdx)
-    {
-        if (TRxStream == 4)
-            SetATERxAntenna(pAd, "15");  // 15 (0xF all on)
-        else if (TRxStream == 3)
-            SetATERxAntenna(pAd, "7");   //  7 (0x7:  wifi[0], wifi[1], wifi[2] on)
-        else if (TRxStream == 2)
-            SetATERxAntenna(pAd, "3");   //  3 (0x3:  wifi[0], wifi[1] on)
-    }
-    else if (BAND1 == BandIdx)
-        SetATERxAntenna(pAd, "3");       //  3 (0x3:  wifi[2], wifi[3] on for DBDC mode
+	/* Set Rx Ant (bitwise representration, ex: 0x3 means wifi[0] and wifi[1] ON) */
+	if (BAND0 == BandIdx)
+	{
+		if (TRxStream == 4)
+			SetATERxAntenna(pAd, "15");  // 15 (0xF all on)
+		else if (TRxStream == 3)
+			SetATERxAntenna(pAd, "7");	 //  7 (0x7:  wifi[0], wifi[1], wifi[2] on)
+		else if (TRxStream == 2)
+			SetATERxAntenna(pAd, "3");	 //  3 (0x3:  wifi[0], wifi[1] on)
+	}
+	else if (BAND1 == BandIdx)
+		SetATERxAntenna(pAd, "3");		 //  3 (0x3:  wifi[2], wifi[3] on for DBDC mode
 
 	/* Set ATE Channel */
-    TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel, Channel);
-    TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel_2nd, Channel2);
+	TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel, Channel);
+	TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel_2nd, Channel2);
 	
-    /* Set ATE Tx Power = 36 (unit is 0.5 dBm) */
+	/* Set ATE Tx Power = 36 (unit is 0.5 dBm) */
 	snprintf(cmdStr, sizeof(cmdStr), "%d", Power);
 	SetATETxPower0(pAd, cmdStr);
 
-    NdisGetSystemUpTime(&stTimeChk1);
+	NdisGetSystemUpTime(&stTimeChk1);
 
-    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, (
-            "%s : DUT Init Time consumption : %lu sec\n",__FUNCTION__, (stTimeChk1 - stTimeChk0)*1000/OS_HZ));
+	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, (
+			"%s : DUT Init Time consumption : %lu sec\n",__FUNCTION__, (stTimeChk1 - stTimeChk0)*1000/OS_HZ));
 
 	/* Device info Update */
-    if (BAND0 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                             OwnMacIdx, ATECtrl->Addr2[0], ATECtrl->Addr2[1], ATECtrl->Addr2[2], ATECtrl->Addr2[3], ATECtrl->Addr2[4], ATECtrl->Addr2[5], BandIdx);
-    }
+	if (BAND0 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+											 OwnMacIdx, ATECtrl->Addr2[0], ATECtrl->Addr2[1], ATECtrl->Addr2[2], ATECtrl->Addr2[3], ATECtrl->Addr2[4], ATECtrl->Addr2[5], BandIdx);
+	}
 #ifdef DBDC_MODE
-    else if (BAND1 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                             OwnMacIdx, Info->Addr2[0], Info->Addr2[1], Info->Addr2[2], Info->Addr2[3], Info->Addr2[4], Info->Addr2[5], BandIdx);
-    }
+	else if (BAND1 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+											 OwnMacIdx, Info->Addr2[0], Info->Addr2[1], Info->Addr2[2], Info->Addr2[3], Info->Addr2[4], Info->Addr2[5], BandIdx);
+	}
 #endif /* DBDC_MODE */
-    Set_DevInfoUpdate(pAd, cmdStr);
+	Set_DevInfoUpdate(pAd, cmdStr);
 
 	/* STOP AUTO Sounding */
 	Set_Stop_Sounding_Proc(pAd, "1");
 
-    /* Enable MAC Rx */
-    SetATE(pAd, "RXFRAME");
-        
+	/* Enable MAC Rx */
+	SetATE(pAd, "RXFRAME");
+		
 	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 	/* EBF Profile Cnfiguration */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* set TxBfProfileTag_PFMU ID */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", PfmuId);
-    Set_TxBfProfileTag_PfmuIdx(pAd, cmdStr);
-    
-    /* set TxBfProfileTag_Bf Type */
-    Set_TxBfProfileTag_BfType(pAd, "1"); // 0: iBF  1: eBF
-    
-    /* set TxBfProfileTag_DBW */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", BW); // 0: 20MHz  1: 40MHz  2: 80MHz  3: 160MHz(160NC)
-    Set_TxBfProfileTag_DBW(pAd, cmdStr);
+	/* set TxBfProfileTag_PFMU ID */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", PfmuId);
+	Set_TxBfProfileTag_PfmuIdx(pAd, cmdStr);
+	
+	/* set TxBfProfileTag_Bf Type */
+	Set_TxBfProfileTag_BfType(pAd, "1"); // 0: iBF	1: eBF
+	
+	/* set TxBfProfileTag_DBW */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", BW); // 0: 20MHz  1: 40MHz  2: 80MHz  3: 160MHz(160NC)
+	Set_TxBfProfileTag_DBW(pAd, cmdStr);
 
 	/* set TxBfProfileTag_SUMU */
-    Set_TxBfProfileTag_SuMu(pAd, "0"); // 0: SU  1: MU
-    
-    /* PFMU memory allocation */
-    snprintf(cmdStr, 24, "00:00:00:01:00:02:00:03");
-    Set_TxBfProfileTag_Mem(pAd, cmdStr);
-    
-    /* set TxBfProfileTag_Matrix */
+	Set_TxBfProfileTag_SuMu(pAd, "0"); // 0: SU  1: MU
+	
+	/* PFMU memory allocation */
+	snprintf(cmdStr, 24, "00:00:00:01:00:02:00:03");
+	Set_TxBfProfileTag_Mem(pAd, cmdStr);
+	
+	/* set TxBfProfileTag_Matrix */
 	if (TxMode == 4 && ((BW == 3)||(BW ==6)))
-    {   
-        if (TRxStream == 4)
-            Nr = 1;
-        else
-            MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s : Invalid Configuration for BW160!! For BW160, TxStream number must be 4!! \n",__FUNCTION__));
-    }    
+	{	
+		if (TRxStream == 4)
+			Nr = 1;
+		else
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s : Invalid Configuration for BW160!! For BW160, TxStream number must be 4!! \n",__FUNCTION__));
+	}	 
 	else	
-    {
-        if (TRxStream == 4)
-            Nr = 3;
-        else if (TRxStream == 3)
-            Nr = 2;
-        else if (TRxStream == 2)
-            Nr = 1;
-    }
+	{
+		if (TRxStream == 4)
+			Nr = 3;
+		else if (TRxStream == 3)
+			Nr = 2;
+		else if (TRxStream == 2)
+			Nr = 1;
+	}
 
-    if (TxMode == 4)
-        LM = 2;
-    else if (TxMode == 2)
-        LM = 1;
-    
-    snprintf(cmdStr, 18, "%.2x:00:00:%.2x:00:00", Nr, LM); // Nr:Nc:Ng:LM:CB:HTCE
-    Set_TxBfProfileTag_Matrix(pAd, cmdStr); 
-    
-    /* set TxBfProfileTag_SNR */
-    snprintf(cmdStr, 12, "00:00:00:00");
-    Set_TxBfProfileTag_SNR(pAd, "00:00:00:00");
-    
-    /* set TxBfProfileTag_Smart Antenna */
-    Set_TxBfProfileTag_SmartAnt(pAd, "0");
-    
-    /* set TxBfProfileTag_SE index */
-    Set_TxBfProfileTag_SeIdx(pAd, "0");
-    
-    /* set TxBfProfileTag_Rmsd */
-    Set_TxBfProfileTag_RmsdThrd(pAd, "0");
-    
-    /* set TxBfProfileTag_MCS Threshold */
-    snprintf(cmdStr, 18, "00:00:00:00:00:00");
-    Set_TxBfProfileTag_McsThrd(pAd, cmdStr);
-    
-    /* set TxBfProfileTag_Invalid Tag */
-    Set_TxBfProfileTag_InValid(pAd, "1");
+	if (TxMode == 4)
+		LM = 2;
+	else if (TxMode == 2)
+		LM = 1;
+	
+	snprintf(cmdStr, 18, "%.2x:00:00:%.2x:00:00", Nr, LM); // Nr:Nc:Ng:LM:CB:HTCE
+	Set_TxBfProfileTag_Matrix(pAd, cmdStr); 
+	
+	/* set TxBfProfileTag_SNR */
+	snprintf(cmdStr, 12, "00:00:00:00");
+	Set_TxBfProfileTag_SNR(pAd, "00:00:00:00");
+	
+	/* set TxBfProfileTag_Smart Antenna */
+	Set_TxBfProfileTag_SmartAnt(pAd, "0");
+	
+	/* set TxBfProfileTag_SE index */
+	Set_TxBfProfileTag_SeIdx(pAd, "0");
+	
+	/* set TxBfProfileTag_Rmsd */
+	Set_TxBfProfileTag_RmsdThrd(pAd, "0");
+	
+	/* set TxBfProfileTag_MCS Threshold */
+	snprintf(cmdStr, 18, "00:00:00:00:00:00");
+	Set_TxBfProfileTag_McsThrd(pAd, cmdStr);
+	
+	/* set TxBfProfileTag_Invalid Tag */
+	Set_TxBfProfileTag_InValid(pAd, "1");
 
-    /* Update PFMU Tag */
-    snprintf(cmdStr, sizeof(cmdStr), "00");
-    Set_TxBfProfileTagWrite(pAd, cmdStr);
+	/* Update PFMU Tag */
+	snprintf(cmdStr, sizeof(cmdStr), "00");
+	Set_TxBfProfileTagWrite(pAd, cmdStr);
 
-    /* Station Record Common Info Update */
-    if (BAND0 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:00:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                            WlanIdx, BssIdx, ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5]);
-    }
+	/* Station Record Common Info Update */
+	if (BAND0 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:00:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+											WlanIdx, BssIdx, ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5]);
+	}
 #ifdef DBDC_MODE
-    else if (BAND1 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:00:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                            WlanIdx, BssIdx, Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5]);
-    }
+	else if (BAND1 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:00:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+											WlanIdx, BssIdx, Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5]);
+	}
 #endif /* DBDC_MODE */
-    Set_StaRecCmmUpdate(pAd, cmdStr);
+	Set_StaRecCmmUpdate(pAd, cmdStr);
 
-    /* Station Record BF Info Update */
-    if(TxMode == 4)
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:09:00:09:04:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
-    else if(TxMode == 2)
-    {
-        if (TRxStream == 4)
-            snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:00:18:00:02:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
-        else if (TRxStream == 3)
-            snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:00:10:00:02:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
-        else if (TRxStream == 2)
-            snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:00:08:00:02:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
-    }
-    
-    Set_StaRecBfUpdate(pAd, cmdStr);
+	/* Station Record BF Info Update */
+	if(TxMode == 4)
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:09:00:09:04:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
+	else if(TxMode == 2)
+	{
+		if (TRxStream == 4)
+			snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:00:18:00:02:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
+		else if (TRxStream == 3)
+			snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:00:10:00:02:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
+		else if (TRxStream == 2)
+			snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:00:01:00:08:00:02:00:%.2x:%.2x:00:00:00:00:00:01:00:02:00:03:00", WlanIdx, BssIdx, PfmuId, Nr, BW);
+	}
+	
+	Set_StaRecBfUpdate(pAd, cmdStr);
 
-    /* Read Station Record BF Info */
-    Set_StaRecBfRead(pAd, "1");
-
-    /* Configure WTBL and Manual Association */
-    /* iwpriv ra0 set ManualAssoc=mac:22:22:22:22:22:22-type:sta-wtbl:1-ownmac:0-mode:aanac-bw:20-nss:2-pfmuId:0 */
-    if (BAND0 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:sta-wtbl:%.2x-ownmac:%.2x-mode:aanac-bw:20-nss:2-pfmuId:0\n", 
-                                     ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5], WlanIdx, OwnMacIdx);
-    }
-#ifdef DBDC_MODE
-    else if (BAND1 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:sta-wtbl:%.2x-ownmac:%.2x-mode:aanac-bw:20-nss:2-pfmuId:0\n",
-                                             Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5], WlanIdx, OwnMacIdx);
-    }
-#endif /* DBDC_MODE */
-    SetATEAssocProc(pAd, cmdStr);
-
-    /* Read Station Record BF Info */
+	/* Read Station Record BF Info */
 	Set_StaRecBfRead(pAd, "1");
 
-    /* Read PFMU Tag Info */
+	/* Configure WTBL and Manual Association */
+	/* iwpriv ra0 set ManualAssoc=mac:22:22:22:22:22:22-type:sta-wtbl:1-ownmac:0-mode:aanac-bw:20-nss:2-pfmuId:0 */
+	if (BAND0 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:sta-wtbl:%.2x-ownmac:%.2x-mode:aanac-bw:20-nss:2-pfmuId:0\n", 
+									 ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5], WlanIdx, OwnMacIdx);
+	}
+#ifdef DBDC_MODE
+	else if (BAND1 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:sta-wtbl:%.2x-ownmac:%.2x-mode:aanac-bw:20-nss:2-pfmuId:0\n",
+											 Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5], WlanIdx, OwnMacIdx);
+	}
+#endif /* DBDC_MODE */
+	SetATEAssocProc(pAd, cmdStr);
+
+	/* Read Station Record BF Info */
+	Set_StaRecBfRead(pAd, "1");
+
+	/* Read PFMU Tag Info */
 	Set_TxBfProfileTagRead(pAd, "00:01");
 
-    /* Update the information requested by ATE Tx packet generation */
-    ATECtrl->pfmu_info[PfmuId].wcid    = WlanIdx;
-    ATECtrl->pfmu_info[PfmuId].bss_idx = BssIdx;
+	/* Update the information requested by ATE Tx packet generation */
+	ATECtrl->pfmu_info[PfmuId].wcid    = WlanIdx;
+	ATECtrl->pfmu_info[PfmuId].bss_idx = BssIdx;
 
-    NdisMoveMemory(ATECtrl->pfmu_info[PfmuId].addr, ATECtrl->Addr1, MAC_ADDR_LEN);   
+	NdisMoveMemory(ATECtrl->pfmu_info[PfmuId].addr, ATECtrl->Addr1, MAC_ADDR_LEN);	 
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* EBF TxBf Apply */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* EBF TxBf Apply */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* WTBL Update TxBf Apply */
+	/* WTBL Update TxBf Apply */
 	Set_TxBfTxApply(pAd, "01:01:00:00:00");
 
-    /* Read Station Bf Record */
+	/* Read Station Bf Record */
 	Set_StaRecBfRead(pAd, "1");
-    
+	
 	/* Trigger one shot Sounding packet */
 	Set_Trigger_Sounding_Proc(pAd, "00:01:00:01:00:00:00");
 
 	/*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* Continuous packet Tx Initializaton */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* Continuous packet Tx Initializaton */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* Set ATE EBF Enable */
-    SetATEEBfTx(pAd, "1");  // need to before switch channel for TxStream config since TxStream only can update correct when etxbf is enable for 3T and 2T
-    
+	/* Set ATE EBF Enable */
+	SetATEEBfTx(pAd, "1");	// need to before switch channel for TxStream config since TxStream only can update correct when etxbf is enable for 3T and 2T
+	
 	/* Set ATE Channel */
 	snprintf(cmdStr, sizeof(cmdStr), "%d:%d:0:%d", Channel, Channl_band ,Channel2);
 	SetATEChannel(pAd, cmdStr);
 	RtmpOsMsDelay(1000);
    
-	/* Set ATE Tx packet Length (unit is byte)  */
+	/* Set ATE Tx packet Length (unit is byte)	*/
 	snprintf(cmdStr, sizeof(cmdStr), "%d", TxPktLength);
 	SetATETxLength(pAd, cmdStr);
 
-    /* Set ATE Tx packet number = 0 (Continuous packet Tx)  */
-    SetATETxCount(pAd, "0");
-    
+	/* Set ATE Tx packet number = 0 (Continuous packet Tx)	*/
+	SetATETxCount(pAd, "0");
+	
 	/* Set ATE Tx packet Length = 4 (unit is slot time)  */
 	SetATEIpg(pAd, "4");
 	
@@ -4734,66 +4631,64 @@ INT32 SetATEConTxETxBfInitProc(
 	
 	/* Set ATE Tx Dequeue size = 4 (allocate 4 packet after receiving 1 free count) (NOT Use Now!!!)*/
 
-    /* ATE Start Continuos Packet Tx */
+	/* ATE Start Continuos Packet Tx */
 	//SetATE(pAd, "TXFRAMESKB");
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* Periodical Sounding Trigger */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* Periodical Sounding Trigger */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
 	/* Trigger Periodical Sounding packet */
 	Set_Trigger_Sounding_Proc(pAd, "02:01:FF:01:00:00:00");
 
 	return status;
-    err0:
-        return FALSE;
+	err0:
+		return FALSE;
 }
-
 
 INT32 SetATEConTxETxBfGdProc(	
 	PRTMP_ADAPTER pAd,
 	RTMP_STRING *Arg)
 {
-
-    UINT8       loop_index;
-    INT         status = TRUE;
-    CHAR        *value = 0;
-    UINT8       band_idx = MT_ATEGetBandIdxByIf(pAd);
-    UINT32      TxMode = 0;
-    UINT32      MCS = 0;
-    UINT32      BW = 0;
-    UINT32      Channel = 0;
-    UINT8       Channel2 = 0;
-    UINT8       Channl_band = 0;
-    UINT32      CRvalue = 0;
-    CHAR        BandIdx = 0;
-    UCHAR       OwnMacIdx = 0;
-    CHAR        wdev_idx = 0;
-    UCHAR       BssIdx = 0;
-    ULONG       stTimeChk0, stTimeChk1;
-    RTMP_STRING cmdStr[80];
-    ATE_CTRL    *ATECtrl = &(pAd->ATECtrl);
+	UINT8		loop_index;
+	INT 		status = TRUE;
+	CHAR		*value = 0;
+	UINT8		band_idx = MT_ATEGetBandIdxByIf(pAd);
+	UINT32		TxMode = 0;
+	UINT32		MCS = 0;
+	UINT32		BW = 0;
+	UINT32		Channel = 0;
+	UINT8		Channel2 = 0;
+	UINT8		Channl_band = 0;
+	UINT32		CRvalue = 0;
+	UCHAR		BandIdx = 0;
+	UCHAR		OwnMacIdx = 0;
+	UCHAR		wdev_idx = 0;
+	UCHAR		BssIdx = 0;
+	ULONG		stTimeChk0, stTimeChk1;
+	RTMP_STRING cmdStr[80];
+	ATE_CTRL	*ATECtrl = &(pAd->ATECtrl);
 #ifdef DBDC_MODE
-    BAND_INFO   *Info = &(ATECtrl->band_ext[0]);
+	BAND_INFO	*Info = &(ATECtrl->band_ext[0]);
 #endif /* DBDC_MODE */    
-    struct wifi_dev    *pWdev = NULL;
+	struct wifi_dev    *pWdev = NULL;
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* Configure Input Parameter */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* Configure Input Parameter */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* sanity check for input parameter*/
-    if (!Arg) {
-        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: No parameters!! \n", __FUNCTION__));
-        return FALSE;
-    }
+	/* sanity check for input parameter*/
+	if (!Arg) {
+		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: No parameters!! \n", __FUNCTION__));
+		return FALSE;
+	}
 
-    if(strlen(Arg) != 18) {   
-        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Wrong parameter format!! \n", __FUNCTION__));
-        return FALSE;
-    }
+	if(strlen(Arg) != 18) {   
+		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Wrong parameter format!! \n", __FUNCTION__));
+		return FALSE;
+	}
 
-    /* Parsing input parameter */
+	/* Parsing input parameter */
 	for (loop_index = 0, value = rstrtok(Arg,":"); value; value = rstrtok(NULL,":"), loop_index++) {
 		switch (loop_index) {
 			case 0:
@@ -4808,10 +4703,10 @@ INT32 SetATEConTxETxBfGdProc(
 			case 3:
 				Channel = simple_strtol(value, 0, 10); // 3-bit format
 				break;
-            case 4:
+			case 4:
 				Channel2 = simple_strtol(value, 0, 10); // 3-bit format
 				break;
-            case 5:
+			case 5:
 				Channl_band = simple_strtol(value, 0, 10); // 1-bit format
 				break;
 			default:
@@ -4824,244 +4719,240 @@ INT32 SetATEConTxETxBfGdProc(
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: TxMode(%d), MCS(%d), BW(%d), Channel(%d), Channel2(%d), Channl_band(%d) \n",
 															__FUNCTION__, TxMode, MCS, BW, Channel, Channel2, Channl_band));
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 	/* Load Preliminary Configuration */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
 #ifdef CONFIG_AP_SUPPORT
-    BandIdx = MT_ATEGetBandIdxByIf(pAd);
-    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: BandIdx = %d \n", __FUNCTION__, BandIdx));       
+	BandIdx = MT_ATEGetBandIdxByIf(pAd);
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: BandIdx = %d \n", __FUNCTION__, BandIdx));		
 #endif /* CONFIG_AP_SUPPORT */
 
-    /* obtain wireless device index */
-    ATECtrl->wdev_idx = MT_ATEGetWDevIdxByBand(pAd, BandIdx);
-    wdev_idx = TESTMODE_GET_PARAM(ATECtrl, BandIdx, wdev_idx);
+	/* obtain wireless device index */
+	ATECtrl->wdev_idx = MT_ATEGetWDevIdxByBand(pAd, BandIdx);
+	wdev_idx = TESTMODE_GET_PARAM(ATECtrl, BandIdx, wdev_idx);
+	pWdev = pAd->wdev_list[wdev_idx];
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: wdev_idx = %d \n", __FUNCTION__, wdev_idx));
 
-	/* sanity check for Wireless Device index */
-	if (wdev_idx < 0)
+	/* sanity check for Band index */
+	if (BandIdx < BAND0)
+		goto err0;		
+
+	/* sanity check for Device list */
+	if(!pWdev)
 		goto err0;
-	
-    pWdev = pAd->wdev_list[wdev_idx];
-    MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: wdev_idx = %d \n", __FUNCTION__, wdev_idx));
-
-    /* sanity check for Band index */
-    if (BandIdx < BAND0)
-        goto err0;      
-
-    /* sanity check for Device list */
-    if(!pWdev)
-        goto err0;
 
 	/* obtain Own MAC index */
-    OwnMacIdx = pWdev->OmacIdx;
+	OwnMacIdx = pWdev->OmacIdx;
 
 	/* obtain BSSID index */
 	BssIdx = pWdev->BssIdx;
 	
-    MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: OwnMacIdx: %d, BssIdx: %d \n", __FUNCTION__, OwnMacIdx, BssIdx));
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: OwnMacIdx: %d, BssIdx: %d \n", __FUNCTION__, OwnMacIdx, BssIdx));
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* GOLDEN TxBf Initialization */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* GOLDEN TxBf Initialization */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    NdisGetSystemUpTime(&stTimeChk0);
+	NdisGetSystemUpTime(&stTimeChk0);
 
 	/* Start ATE Mode */
-    SetATE(pAd, "ATESTART");
+	SetATE(pAd, "ATESTART");
 
-    if (BAND0 == BandIdx)
-    {
-    	/* set ATEDA=00:22:22:22:22:22 */
-    	ATECtrl->Addr1[0] = Addr2[0];
-    	ATECtrl->Addr1[1] = Addr2[1];
-    	ATECtrl->Addr1[2] = Addr2[2];
-    	ATECtrl->Addr1[3] = Addr2[3];
-    	ATECtrl->Addr1[4] = Addr2[4];
-    	ATECtrl->Addr1[5] = Addr2[5];
-    	snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                         ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5]);
-    	SetATEDa(pAd, cmdStr);
-    	
-    	/* set ATESA=00:11:11:11:11:11 */
-    	ATECtrl->Addr2[0] = Addr1[0];
-    	ATECtrl->Addr2[1] = Addr1[1];
-    	ATECtrl->Addr2[2] = Addr1[2];
-    	ATECtrl->Addr2[3] = Addr1[3];
-    	ATECtrl->Addr2[4] = Addr1[4];
-    	ATECtrl->Addr2[5] = Addr1[5];
-        
-    	/* set ATEBSSID=00:22:22:22:22:22 */
-    	ATECtrl->Addr3[0] = Addr3[0];
-    	ATECtrl->Addr3[1] = Addr3[1];
-    	ATECtrl->Addr3[2] = Addr3[2];
-    	ATECtrl->Addr3[3] = Addr3[3];
-    	ATECtrl->Addr3[4] = Addr3[4];
-    	ATECtrl->Addr3[5] = Addr3[5];
-
-#ifdef CONFIG_AP_SUPPORT
-    	AsicDevInfoUpdate(
-    		pAd, 
-    		OwnMacIdx, 
-    		ATECtrl->Addr2, 
-    		BandIdx, 
-    		TRUE, 
-    		DEVINFO_ACTIVE_FEATURE);
-#endif /* CONFIG_AP_SUPPORT */
-
-        /* BSS Info Update */
-    	snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-    	                                 OwnMacIdx, BssIdx, ATECtrl->Addr3[0], ATECtrl->Addr3[1], ATECtrl->Addr3[2], ATECtrl->Addr3[3], ATECtrl->Addr3[4], ATECtrl->Addr3[5]);
-    	Set_BssInfoUpdate(pAd, cmdStr);
-    }
-#ifdef DBDC_MODE
-    else if (BAND1 == BandIdx)
-    {
-        /* set ATEDA=00:22:22:22:22:22 */
-        Info->Addr1[0] = Addr2[0];
-        Info->Addr1[1] = Addr2[1];
-        Info->Addr1[2] = Addr2[2];
-        Info->Addr1[3] = Addr2[3];
-        Info->Addr1[4] = Addr2[4];
-        Info->Addr1[5] = Addr2[5];
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                         Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5]);
-        SetATEDa(pAd, cmdStr);
-        
-        /* set ATESA=00:11:11:11:11:11 */
-        Info->Addr2[0] = Addr1[0];
-        Info->Addr2[1] = Addr1[1];
-        Info->Addr2[2] = Addr1[2];
-        Info->Addr2[3] = Addr1[3];
-        Info->Addr2[4] = Addr1[4];
-        Info->Addr2[5] = Addr1[5];
-        
-        /* set ATEBSSID=00:22:22:22:22:22 */
-        Info->Addr3[0] = Addr3[0];
-        Info->Addr3[1] = Addr3[1];
-        Info->Addr3[2] = Addr3[2];
-        Info->Addr3[3] = Addr3[3];
-        Info->Addr3[4] = Addr3[4];
-        Info->Addr3[5] = Addr3[5];
+	if (BAND0 == BandIdx)
+	{
+		/* set ATEDA=00:22:22:22:22:22 */
+		ATECtrl->Addr1[0] = Addr2[0];
+		ATECtrl->Addr1[1] = Addr2[1];
+		ATECtrl->Addr1[2] = Addr2[2];
+		ATECtrl->Addr1[3] = Addr2[3];
+		ATECtrl->Addr1[4] = Addr2[4];
+		ATECtrl->Addr1[5] = Addr2[5];
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+										 ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5]);
+		SetATEDa(pAd, cmdStr);
+		
+		/* set ATESA=00:11:11:11:11:11 */
+		ATECtrl->Addr2[0] = Addr1[0];
+		ATECtrl->Addr2[1] = Addr1[1];
+		ATECtrl->Addr2[2] = Addr1[2];
+		ATECtrl->Addr2[3] = Addr1[3];
+		ATECtrl->Addr2[4] = Addr1[4];
+		ATECtrl->Addr2[5] = Addr1[5];
+		
+		/* set ATEBSSID=00:22:22:22:22:22 */
+		ATECtrl->Addr3[0] = Addr3[0];
+		ATECtrl->Addr3[1] = Addr3[1];
+		ATECtrl->Addr3[2] = Addr3[2];
+		ATECtrl->Addr3[3] = Addr3[3];
+		ATECtrl->Addr3[4] = Addr3[4];
+		ATECtrl->Addr3[5] = Addr3[5];
 
 #ifdef CONFIG_AP_SUPPORT
-        AsicDevInfoUpdate(
-            pAd, 
-            OwnMacIdx, 
-            Info->Addr2, 
-            BandIdx, 
-            TRUE, 
-            DEVINFO_ACTIVE_FEATURE);
+		AsicDevInfoUpdate(
+			pAd, 
+			OwnMacIdx, 
+			ATECtrl->Addr2, 
+			BandIdx, 
+			TRUE, 
+			DEVINFO_ACTIVE_FEATURE);
 #endif /* CONFIG_AP_SUPPORT */
 
-        /* BSS Info Update */
-        snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
-                                         OwnMacIdx, BssIdx, Info->Addr3[0], Info->Addr3[1], Info->Addr3[2], Info->Addr3[3], Info->Addr3[4], Info->Addr3[5]);
-        Set_BssInfoUpdate(pAd, cmdStr);
-    }
-#endif /* DBDC_MODE */
-
-    /* Set Tx mode */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", TxMode);
-    SetATETxMode(pAd, cmdStr);  // 0: CCK  1: OFDM  2: HT Mixe dmode 3: HT Green Mode   4: VHT mode
-
-    /* Set Tx MCS */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", MCS);
-    SetATETxMcs(pAd, cmdStr);
-
-    /* Set Tx BW */
-    snprintf(cmdStr, sizeof(cmdStr), "%d", BW);
-    SetATETxBw(pAd, cmdStr);  // 0: 20MHz  1: 40MHz  2: 80MHz  3: 160MHz(160C)  4: 5M  5: 10M  6: 160MHz (160NC)
-    
-    /* set ATETXGI=0 */
-    SetATETxGi(pAd, "0");
-
-    /* Set Tx Ant (bitwise representration, ex: 0x5 means wifi[0] and wifi[2] ON) */
-    if (BAND0 == BandIdx)
-    {
-        if ((BW == 3)||(BW == 6))
-    		SetATETxAntenna(pAd, "5"); // for BW160C, BW160NC (0x5:  wifi[0], wifi[2] on)
-    	else
-    		SetATETxAntenna(pAd, "1"); // for BW20, BW40, BW80 (0x1:  wifi[0] on)
-    }
+		/* BSS Info Update */
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+										 OwnMacIdx, BssIdx, ATECtrl->Addr3[0], ATECtrl->Addr3[1], ATECtrl->Addr3[2], ATECtrl->Addr3[3], ATECtrl->Addr3[4], ATECtrl->Addr3[5]);
+		Set_BssInfoUpdate(pAd, cmdStr);
+	}
 #ifdef DBDC_MODE
-    else if (BAND1 == BandIdx)
-    {
-        SetATETxAntenna(pAd, "1"); // for DBDC Band1 (0x1:  wifi[2] on)
-    }
+	else if (BAND1 == BandIdx)
+	{
+		/* set ATEDA=00:22:22:22:22:22 */
+		Info->Addr1[0] = Addr2[0];
+		Info->Addr1[1] = Addr2[1];
+		Info->Addr1[2] = Addr2[2];
+		Info->Addr1[3] = Addr2[3];
+		Info->Addr1[4] = Addr2[4];
+		Info->Addr1[5] = Addr2[5];
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+										 Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5]);
+		SetATEDa(pAd, cmdStr);
+		
+		/* set ATESA=00:11:11:11:11:11 */
+		Info->Addr2[0] = Addr1[0];
+		Info->Addr2[1] = Addr1[1];
+		Info->Addr2[2] = Addr1[2];
+		Info->Addr2[3] = Addr1[3];
+		Info->Addr2[4] = Addr1[4];
+		Info->Addr2[5] = Addr1[5];
+		
+		/* set ATEBSSID=00:22:22:22:22:22 */
+		Info->Addr3[0] = Addr3[0];
+		Info->Addr3[1] = Addr3[1];
+		Info->Addr3[2] = Addr3[2];
+		Info->Addr3[3] = Addr3[3];
+		Info->Addr3[4] = Addr3[4];
+		Info->Addr3[5] = Addr3[5];
+
+#ifdef CONFIG_AP_SUPPORT
+		AsicDevInfoUpdate(
+			pAd, 
+			OwnMacIdx, 
+			Info->Addr2, 
+			BandIdx, 
+			TRUE, 
+			DEVINFO_ACTIVE_FEATURE);
+#endif /* CONFIG_AP_SUPPORT */
+
+		/* BSS Info Update */
+		snprintf(cmdStr, sizeof(cmdStr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", 
+										 OwnMacIdx, BssIdx, Info->Addr3[0], Info->Addr3[1], Info->Addr3[2], Info->Addr3[3], Info->Addr3[4], Info->Addr3[5]);
+		Set_BssInfoUpdate(pAd, cmdStr);
+	}
 #endif /* DBDC_MODE */
-    
-    /* Set Rx Ant (bitwise representration, ex: 0x5 means wifi[0] and wifi[2] ON) */
-    if (BAND0 == BandIdx)
-    {
-        if ((BW == 3)||(BW == 6))
-    		SetATERxAntenna(pAd, "5"); // for BW160C, BW160NC (0x5:  wifi[0], wifi[2] on)
-    	else
-    		SetATERxAntenna(pAd, "1"); // for BW20, BW40, BW80 (0x1:  wifi[0] on)
-    }
+
+	/* Set Tx mode */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", TxMode);
+	SetATETxMode(pAd, cmdStr);	// 0: CCK  1: OFDM	2: HT Mixe dmode 3: HT Green Mode	4: VHT mode
+
+	/* Set Tx MCS */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", MCS);
+	SetATETxMcs(pAd, cmdStr);
+
+	/* Set Tx BW */
+	snprintf(cmdStr, sizeof(cmdStr), "%d", BW);
+	SetATETxBw(pAd, cmdStr);  // 0: 20MHz  1: 40MHz  2: 80MHz  3: 160MHz(160C)	4: 5M  5: 10M  6: 160MHz (160NC)
+	
+	/* set ATETXGI=0 */
+	SetATETxGi(pAd, "0");
+
+	/* Set Tx Ant (bitwise representration, ex: 0x5 means wifi[0] and wifi[2] ON) */
+	if (BAND0 == BandIdx)
+	{
+		if ((BW == 3)||(BW == 6))
+			SetATETxAntenna(pAd, "5"); // for BW160C, BW160NC (0x5:  wifi[0], wifi[2] on)
+		else
+			SetATETxAntenna(pAd, "1"); // for BW20, BW40, BW80 (0x1:  wifi[0] on)
+	}
 #ifdef DBDC_MODE
-    else if (BAND1 == BandIdx)
-    {
-        SetATERxAntenna(pAd, "1"); // for DBDC Band1 (0x1:  wifi[2] on)
-    }
+	else if (BAND1 == BandIdx)
+	{
+		SetATETxAntenna(pAd, "1"); // for DBDC Band1 (0x1:	wifi[2] on)
+	}
 #endif /* DBDC_MODE */
-
-    /* Configure WTBL */
-    //iwpriv ra0 set ManualAssoc = mac:222222222222-type:sta-wtbl:1-ownmac:0-mode:aanac-bw:20-nss:1-pfmuId:0
-    if (BAND0 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:ap-wtbl:1-ownmac:%.2x-mode:aanac-bw:20-nss:1-pfmuId:0\n", 
-                                         ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5], OwnMacIdx);
-    }
+	
+	/* Set Rx Ant (bitwise representration, ex: 0x5 means wifi[0] and wifi[2] ON) */
+	if (BAND0 == BandIdx)
+	{
+		if ((BW == 3)||(BW == 6))
+			SetATERxAntenna(pAd, "5"); // for BW160C, BW160NC (0x5:  wifi[0], wifi[2] on)
+		else
+			SetATERxAntenna(pAd, "1"); // for BW20, BW40, BW80 (0x1:  wifi[0] on)
+	}
 #ifdef DBDC_MODE
-    else if (BAND1 == BandIdx)
-    {
-        snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:ap-wtbl:1-ownmac:%.2x-mode:aanac-bw:20-nss:1-pfmuId:0\n", 
-                                         Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5], OwnMacIdx);
-    }
+	else if (BAND1 == BandIdx)
+	{
+		SetATERxAntenna(pAd, "1"); // for DBDC Band1 (0x1:	wifi[2] on)
+	}
 #endif /* DBDC_MODE */
 
-    SetATEAssocProc(pAd, cmdStr);
+	/* Configure WTBL */
+	//iwpriv ra0 set ManualAssoc = mac:222222222222-type:sta-wtbl:1-ownmac:0-mode:aanac-bw:20-nss:1-pfmuId:0
+	if (BAND0 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:ap-wtbl:1-ownmac:%.2x-mode:aanac-bw:20-nss:1-pfmuId:0\n", 
+										 ATECtrl->Addr1[0], ATECtrl->Addr1[1], ATECtrl->Addr1[2], ATECtrl->Addr1[3], ATECtrl->Addr1[4], ATECtrl->Addr1[5], OwnMacIdx);
+	}
+#ifdef DBDC_MODE
+	else if (BAND1 == BandIdx)
+	{
+		snprintf(cmdStr, sizeof(cmdStr), "mac:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x-type:ap-wtbl:1-ownmac:%.2x-mode:aanac-bw:20-nss:1-pfmuId:0\n", 
+										 Info->Addr1[0], Info->Addr1[1], Info->Addr1[2], Info->Addr1[3], Info->Addr1[4], Info->Addr1[5], OwnMacIdx);
+	}
+#endif /* DBDC_MODE */
 
-    NdisGetSystemUpTime(&stTimeChk1);
+	SetATEAssocProc(pAd, cmdStr);
 
-    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, 
-            ("%s : SetATETxBfGdInitProc Time consumption : %lu sec\n",__FUNCTION__, (stTimeChk1 - stTimeChk0)*1000/OS_HZ));
+	NdisGetSystemUpTime(&stTimeChk1);
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* Turn On BBP CR for Rx */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, 
+			("%s : SetATETxBfGdInitProc Time consumption : %lu sec\n",__FUNCTION__, (stTimeChk1 - stTimeChk0)*1000/OS_HZ));
 
-    /* iwpriv ra0 mac 82070280=00008001 */
-    PHY_IO_WRITE32(pAd, 0x10280, 0x00008001);
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* Turn On BBP CR for Rx */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* check  */
-    PHY_IO_READ32(pAd, 0x10280, &CRvalue);
-    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s : <0x82070280> = 0x%x\n",__FUNCTION__, CRvalue));
+	/* iwpriv ra0 mac 82070280=00008001 */
+	PHY_IO_WRITE32(pAd, 0x10280, 0x00008001);
+
+	/* check  */
+	PHY_IO_READ32(pAd, 0x10280, &CRvalue);
+	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s : <0x82070280> = 0x%x\n",__FUNCTION__, CRvalue));
 
 
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
-    /* Sounding Mechanism TRx configuration */
-    /*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
+	/* Sounding Mechanism TRx configuration */
+	/*----------------------------------------------------------------------------------------------------------------------------------------*/
 
-    /* Set Channel Info to ATE Control structure */
-    TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel, Channel);
-    TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel_2nd, Channel2);
+	/* Set Channel Info to ATE Control structure */
+	TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel, Channel);
+	TESTMODE_SET_PARAM(ATECtrl, BandIdx, Channel_2nd, Channel2);
 
-    /* Set ATE Channel */  
+	/* Set ATE Channel */  
 	snprintf(cmdStr, sizeof(cmdStr), "%d:%d:0:%d", Channel, Channl_band ,Channel2);
-    SetATEChannel(pAd, cmdStr);
-    RtmpOsMsDelay(1000);
+	SetATEChannel(pAd, cmdStr);
+	RtmpOsMsDelay(1000);
 
-    /* ATE Start Continuos Packet Rx */
-    SetATE(pAd, "RXFRAME");
+	/* ATE Start Continuos Packet Rx */
+	SetATE(pAd, "RXFRAME");
 
-    /* ATE MAC TRx configuration */
-    MtATESetMacTxRx(pAd, 6, 1, band_idx); // ENUM_ATE_MAC_RX_RXV: MAC to PHY Rx Enable
+	/* ATE MAC TRx configuration */
+	MtATESetMacTxRx(pAd, 6, 1, band_idx); // ENUM_ATE_MAC_RX_RXV: MAC to PHY Rx Enable
 
-    return status;
-    err0:
-        return FALSE;
+	return status;
+	err0:
+		return FALSE;
 }
+
 
 INT32 SetATESpeIdx(
 	PRTMP_ADAPTER pAd,
@@ -5096,7 +4987,7 @@ INT32 SetATESpeIdx(
 		{
 			case 0:
 				pAd->fgEBFCertOn = simple_strtol(value, 0, 10);
-				break;
+				break;		
 			default:
 			{
 				status = FALSE;
@@ -5106,7 +4997,7 @@ INT32 SetATESpeIdx(
 		}
 	}
 	
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: BF certification On: %d\n", __FUNCTION__, pAd->fgEBFCertOn));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: BF certification On: %d !!!!!\n", __FUNCTION__, pAd->fgEBFCertOn));
 
 	return status;
 }
@@ -5186,7 +5077,7 @@ INT32 SetATEEBfTx(
         Info->eTxBf = eTxBf;
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Info->eTxBf = %d !!!!! \n", __FUNCTION__, Info->eTxBf));
     }
-#endif /* DBDC_MODE */
+#endif /*DBDC_MODE*/
     ATECtrl->wcid_ref = WlanIdx; // For Sportan certification, only Golden
 	NdisCopyMemory(ATECtrl->pfmu_info[PfmuId].addr, addr, MAC_ADDR_LEN);
 
@@ -5205,7 +5096,7 @@ INT32 SetATEEBfTx(
         else
         	SetATESpeIdx(pAd, "0");    		
     }
-#endif /* DBDC_MODE */
+#endif /*DBDC_MODE*/
 	pate_pkt = TESTMODE_GET_PARAM(ATECtrl, BandIdx, pate_pkt);
 
 	/* Generate new packet with new contents */
@@ -5250,7 +5141,7 @@ INT32 SetATEEBFCE(
 		{
 			case 0:
 				pAd->fgEBFCertification = simple_strtol(value, 0, 10);
-				break;	
+				break;		
 			default:
 			{
 				status = FALSE;
@@ -5261,7 +5152,7 @@ INT32 SetATEEBFCE(
 	}
 	
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: eBF Certification: %d\n", __FUNCTION__, pAd->fgEBFCertification));
-	
+
 	return status;
 }
 
@@ -5453,6 +5344,7 @@ INT32 ATEInit(RTMP_ADAPTER *pAd)
 	ATECtrl->TxCount = 0xFFFFFFFF;
 	ATECtrl->payload[0] = 0xAA;
 	ATECtrl->FixedPayload = 1;
+	ATECtrl->IPG = 200;/* 200 : sync with QA */
 	ATECtrl->TxLength = 1058;/* 1058 : sync with QA */
 	ATECtrl->BW = BW_20;
 	ATECtrl->PhyMode = MODE_OFDM;
@@ -5480,14 +5372,6 @@ INT32 ATEInit(RTMP_ADAPTER *pAd)
 	ATECtrl->duty_cycle= 0;
 	ATECtrl->pkt_tx_time = 0;
 
-	ATECtrl->ipg_param.ipg = 0;
-	ATECtrl->ipg_param.sig_ext = SIG_EXTENSION;
-	ATECtrl->ipg_param.slot_time = DEFAULT_SLOT_TIME;
-	ATECtrl->ipg_param.sifs_time = DEFAULT_SIFS_TIME;
-	ATECtrl->ipg_param.ac_num = QID_AC_BE;
-    ATECtrl->ipg_param.aifsn = MIN_AIFSN;
-    ATECtrl->ipg_param.cw = MIN_CW;
-    ATECtrl->ipg_param.txop = 0;
 #ifdef TXBF_SUPPORT
     ATECtrl->eTxBf = FALSE;
     ATECtrl->iTxBf = FALSE;
@@ -5772,28 +5656,29 @@ INT32 SetATE(
 	}
 #endif /* PRE_CAL_TRX_SET1_SUPPORT */
 #ifdef PRE_CAL_TRX_SET2_SUPPORT
-	else if ((strcmp(Arg, "PRECAL") > 0) && (mode & ATE_START))
+    else if ((strcmp(Arg, "PRECAL") > 0) && (mode & ATE_START))
 	{
-		UINT32 ChGrpId = 0;
-		Ret = sscanf(Arg + strlen("PRECAL") + 1, "%d", &ChGrpId);
-		if (Ret == 1)
-		{
-			MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: ChGrpId %d\n",__FUNCTION__, ChGrpId));
-		}
-	
+	    UINT32 ChGrpId = 0;
+
+        Ret = sscanf(Arg + strlen("PRECAL") + 1, "%d", &ChGrpId);
+        if (Ret == 1)
+        {
+            MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: ChGrpId %d\n",__FUNCTION__, ChGrpId));
+        }
+        
 		Ret = ATEOp->PreCalTest(pAd, 0, ChGrpId);
 		Ret = 0;
 	}
-	else if ((strcmp(Arg, "PRECALTX") > 0) && (mode & ATE_START))
+    else if ((strcmp(Arg, "PRECALTX") > 0) && (mode & ATE_START))
 	{
 		UINT32 ChGrpId = 0;
-	    
-		Ret = sscanf(Arg + strlen("PRECALTX") + 1, "%d", &ChGrpId);
-		if (Ret == 1)
-		{
-			MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: ChGrpId %d\n",__FUNCTION__, ChGrpId));
-		}
-		    
+
+        Ret = sscanf(Arg + strlen("PRECALTX") + 1, "%d", &ChGrpId);
+        if (Ret == 1)
+        {
+            MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: ChGrpId %d\n",__FUNCTION__, ChGrpId));
+        }
+        
 		Ret = ATEOp->PreCalTest(pAd, 1, ChGrpId);
 		Ret = 0;
 	}  
@@ -6072,7 +5957,7 @@ INT32 set_ate_start_tx_ext(PRTMP_ADAPTER pAd, RTMP_STRING *arg)
     TESTMODE_SET_PARAM(ate_ctrl, band_idx, eTxBf, param.ebf);
 #endif
     ate_ctrl->wcid_ref = param.wlan_id;
-    TESTMODE_SET_PARAM(ate_ctrl, band_idx, ipg_param.ipg, param.aifs);        //Fix me
+    TESTMODE_SET_PARAM(ate_ctrl, band_idx, IPG, param.aifs);        //Fix me
     TESTMODE_SET_PARAM(ate_ctrl, band_idx, Sgi, param.gi);
     TESTMODE_SET_PARAM(ate_ctrl, band_idx, TxAntennaSel, param.tx_path);
     TESTMODE_SET_PARAM(ate_ctrl, band_idx, Nss, param.nss);
@@ -6096,8 +5981,7 @@ INT32 set_ate_start_tx_ext(PRTMP_ADAPTER pAd, RTMP_STRING *arg)
     TxPower.Band_idx = Ch_Band;
 
     ret = ate_ops->SetTxPower0(pAd, TxPower);
-    ret = ate_ops->SetIPG(pAd, band_idx);
-
+    ret = ate_ops->SetSlotTime(pAd, param.aifs, param.aifs, band_idx);
     ret = ate_ops->StartTx(pAd, param.band_idx);
     if (ret == 0)
         ret = TRUE;
@@ -6158,6 +6042,26 @@ VOID rtmp_ate_init(RTMP_ADAPTER *pAd)
 		ATEExit(pAd);
 		return;
 	}
+}
+
+VOID RTMPCfgTssiGainFromEEPROM(RTMP_ADAPTER *pAd)
+{
+	USHORT value;
+	RT28xx_EEPROM_READ16(pAd, EEPROM_TSSI_GAIN_AND_ATTENUATION, value);
+	value = (value & 0x00FF);
+
+	if (IS_RT5390(pAd))
+		pAd->TssiGain = 0x02;	 /* RT5390 uses 2 as TSSI gain/attenuation default value */
+	else
+		pAd->TssiGain = 0x03; /* RT5392 uses 3 as TSSI gain/attenuation default value */
+
+	if ((value != 0x00) && (value != 0xFF))
+		pAd->TssiGain =  (UCHAR) (value & 0x000F);
+
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: EEPROM_TSSI_GAIN_AND_ATTENUATION = 0x%X, pAd->TssiGain=0x%x\n",
+			__FUNCTION__,
+			value,
+			pAd->TssiGain));
 }
 
 #ifdef SINGLE_SKU_V2

@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
     Who         When          What
     --------    ----------    ----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #ifndef __AP_H__
 #define __AP_H__
 
@@ -38,7 +40,6 @@
 #define VERIWAVE_5G_PKT_CNT_TH 200
 #define BYTES_PER_SEC_TO_MBPS 17
 #define TX_MODE_RATIO_THRESHOLD 70
-#define RX_MODE_RATIO_THRESHOLD	70
 #define STA_NUMBER_FOR_TRIGGER                1
 #define MULTI_CLIENT_NUMS_TH 16
 #define MULTI_CLIENT_2G_NUMS_TH 16
@@ -73,6 +74,16 @@
 	}																	\
 }
 
+#ifdef CUSTOMER_RSG_FEATURE
+#define TIMESTAMP_GET(__pAd, __TimeStamp)			\
+	{													\
+		UINT32 tsf_l=0, tsf_h=0; UINT64 __Value64;				\
+		AsicGetTsfTime((__pAd), &tsf_h, &tsf_l);\
+		__TimeStamp = (UINT64)tsf_l;					\
+		__Value64 = (UINT64)tsf_h;						\
+		__TimeStamp |= (tsf_h << 32);				\
+	}	
+#endif
 
 typedef struct _AUTH_FRAME_INFO{
 	UCHAR addr1[MAC_ADDR_LEN];
@@ -176,23 +187,7 @@ VOID APSyncStateMachineInit(
     IN PRTMP_ADAPTER pAd,
     IN STATE_MACHINE *Sm,
     OUT STATE_MACHINE_FUNC Trans[]);
-#ifdef EZ_MOD_SUPPORT
-VOID EzStateMachineInit(
-	IN RTMP_ADAPTER *pAd,
-	IN STATE_MACHINE *Sm,
-	OUT STATE_MACHINE_FUNC Trans[]);
-#else
-//! Levarage from MP1.0 CL#170063
-VOID EzRoamStateMachineInit(
-	IN RTMP_ADAPTER *pAd,
-	IN STATE_MACHINE *Sm,
-	OUT STATE_MACHINE_FUNC Trans[]);
 
-VOID APTriBandStateMachineInit(
-	IN RTMP_ADAPTER *pAd,
-	IN STATE_MACHINE *Sm,
-	OUT STATE_MACHINE_FUNC Trans[]);
-#endif
 VOID APScanTimeout(
 	IN PVOID SystemSpecific1,
 	IN PVOID FunctionContext,
@@ -212,6 +207,49 @@ VOID ApSiteSurvey_by_wdev(
 	IN	BOOLEAN				ChannelSel,
 	IN  struct wifi_dev 	*wdev);
 
+#if defined(CUSTOMER_RSG_FEATURE) || defined (CUSTOMER_DCC_FEATURE)
+VOID Update_Wtbl_Counters(
+	IN PRTMP_ADAPTER   pAd);
+
+#endif
+#ifdef CUSTOMER_RSG_FEATURE
+VOID UpdateRadioStatCounters(
+	IN PRTMP_ADAPTER   	pAd);
+
+VOID ReadChannelStats(
+	IN PRTMP_ADAPTER 	pAd);
+
+VOID ClearChannelStatsCr(
+	IN PRTMP_ADAPTER  	pAd);
+
+VOID ResetChannelStats(
+	IN PRTMP_ADAPTER 	pAd);
+
+#endif
+#ifdef CUSTOMER_DCC_FEATURE
+VOID GetTxRxActivityTime(
+	IN PRTMP_ADAPTER   pAd,
+	IN UINT wcid);
+VOID RemoveOldStaList(
+	IN PRTMP_ADAPTER 	pAd);
+
+VOID APResetStreamingStatus(
+	IN PRTMP_ADAPTER  	pAd);
+UCHAR Channel2Index(   
+	IN PRTMP_ADAPTER 	pAd,
+	IN UCHAR 			channel);
+
+VOID ApSiteSurveyNew_by_wdev(
+	IN	PRTMP_ADAPTER  	pAd,
+	IN 	UINT			Channel,
+	IN  UINT 			Timeout,
+	IN	UCHAR			ScanType,
+	IN	BOOLEAN			ChannelSel,
+	IN  struct wifi_dev *wdev);
+
+VOID RemoveOldBssEntry(
+	IN PRTMP_ADAPTER 	pAd);
+#endif
 VOID SupportRate(
 	IN PUCHAR SupRate,
 	IN UCHAR SupRateLen,
@@ -261,7 +299,10 @@ VOID APAsicRxAntEvalTimeout(RTMP_ADAPTER *pAd);
 UCHAR get_apidx_by_addr(RTMP_ADAPTER *pAd, UCHAR *addr);
 
 NDIS_STATUS APOneShotSettingInitialize(RTMP_ADAPTER *pAd);
-
+#ifdef CONFIG_INIT_RADIO_ONOFF
+VOID ApAutoChannelAtBootUp(RTMP_ADAPTER *pAd);
+VOID APStartUpForMain(RTMP_ADAPTER *pAd);
+#endif
 //INT ap_func_init(RTMP_ADAPTER *pAd);
 
 VOID APShutdown(RTMP_ADAPTER *pAd);
@@ -309,9 +350,9 @@ VOID QBSS_LoadAlarmResume(RTMP_ADAPTER *pAd);
 UINT32 QBSS_LoadBusyTimeGet(RTMP_ADAPTER *pAd);
 BOOLEAN QBSS_LoadIsAlarmIssued(RTMP_ADAPTER *pAd);
 BOOLEAN QBSS_LoadIsBusyTimeAccepted(RTMP_ADAPTER *pAd, UINT32 BusyTime);
-UINT32 QBSS_LoadElementAppend(RTMP_ADAPTER *pAd, UINT8 *buf_p);
+UINT32 QBSS_LoadElementAppend(RTMP_ADAPTER *pAd, UINT8 *pBeaconBuf, QLOAD_CTRL *pQloadCtrl);
 VOID QBSS_LoadUpdate(RTMP_ADAPTER *pAd, ULONG UpTime);
-VOID QBSS_LoadStatusClear(RTMP_ADAPTER *pAd);
+VOID QBSS_LoadStatusClear(RTMP_ADAPTER	*pAd, UCHAR	Channel);
 
 INT	Show_QoSLoad_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
 #ifdef CONFIG_HOTSPOT_R2
@@ -341,21 +382,6 @@ VOID IAPP_L2_UpdatePostCtrl(RTMP_ADAPTER *pAd, UINT8 *mac, INT wdev_idx);
 INT rtmp_ap_init(RTMP_ADAPTER *pAd);
 VOID rtmp_ap_exit(RTMP_ADAPTER *pAd);
 
-#ifdef STA_FORCE_ROAM_SUPPORT
-#define FROAM_SUPP_DEF			FALSE // TRUE by default?
-#define STA_LOW_RSSI			65	// absolute
-#define STA_DETECT_RSSI			55	// absolute
-#define	STALIST_AGEOUT_TIME 	5	// sec
-#define	MNTRLIST_AGEOUT_TIME 	4	// sec
-#define	MNTR_MIN_PKT_COUNT 		5
-#define	MNTR_MIN_TIME 			1	// sec
-#define	AVG_RSSI_PKT_COUNT 		5
-#define	ACLLIST_AGEOUT_TIME 	4	// sec
-#define	ACLLIST_HOLD_TIME 		2	// sec
-
-void load_froam_defaults(RTMP_ADAPTER *pAd);
-void froam_notify_sta_disconnect(void *ad_obj, void *pEntry);
-#endif
 
 #endif  /* __AP_H__ */
 

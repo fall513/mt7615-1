@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,7 +14,7 @@
 	Module Name:
 	txs.c
 */
-
+#endif /* MTK_LICENSE */
 /**
  * @addtogroup tx_rx_path Wi-Fi
  * @{
@@ -525,16 +526,16 @@ INT32 TxSTypeCtlPerPktType(RTMP_ADAPTER *pAd, UINT8 PktType, UINT8 PktSubType, U
             /*indicate which widx might be used for send the kinw of type/subtype pkt.*/
 			if (WlanIdx < 64)
 			{
-				TxSCtl->TxSStatusPerWlanIdx[0] |= (1 << WlanIdx);
+				TxSCtl->TxSStatusPerWlanIdx[0] |= (1 << (UINT64)WlanIdx);
 			}
 			else if (WlanIdx >= 64 && WlanIdx < 128)
 			{
-				TxSCtl->TxSStatusPerWlanIdx[1] |= (1 << WlanIdx);
+				TxSCtl->TxSStatusPerWlanIdx[1] |= (1 << (UINT64)WlanIdx);
 			}
 			else
 			{
-				TxSCtl->TxSStatusPerWlanIdx[0] = 0xffffffffffffffff;
-				TxSCtl->TxSStatusPerWlanIdx[1] = 0xffffffffffffffff;
+				TxSCtl->TxSStatusPerWlanIdx[0] = -1;
+				TxSCtl->TxSStatusPerWlanIdx[1] = -1;
 			}
 
 			TxSType->DumpTxSReport = DumpTxSReport;
@@ -568,28 +569,9 @@ INT32 ParseTxSPacket(RTMP_ADAPTER *pAd, UINT32 Pid, UINT8 Format, CHAR *Data)
 {
 	TXS_STRUC *txs_entry = (TXS_STRUC *)Data;
 		TXS_D_0 *TxSD0 = &txs_entry->TxSD0;
-#ifdef WH_EZ_SETUP
-	TXS_D_2 *TxSD2 = &txs_entry->TxSD2;
-	BOOLEAN TxError = (TxSD0->ME || TxSD0->RE || TxSD0->LE || TxSD0->BE || TxSD0->TxOp || TxSD0->PSBit || TxSD0->BAFail);
-#endif
 
 	if (Format == TXS_FORMAT0)
 	{
-#ifdef WH_EZ_SETUP
-			if ((Pid == PID_P2P_ACTION))
-			{
-				MAC_TABLE_ENTRY	*pEntry = NULL;
-				struct wifi_dev *wdev = NULL;
-				pEntry = &pAd->MacTab.Content[TxSD2->TxS_WlanIdx];
-				wdev = pEntry->wdev;
-				if(IS_EZ_SETUP_ENABLED(wdev)){
-					EZ_DEBUG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,("Received TXS: Wcid=%d\n", TxSD2->TxS_WlanIdx));
-					if(TxError && IS_EZ_SETUP_ENABLED(wdev)){
-						ez_handle_action_txstatus(pAd, TxSD2->TxS_WlanIdx);
-					}
-				}
-			}		
-#endif
 
 			if (TxSD0->ME || TxSD0->RE || TxSD0->LE || TxSD0->BE || TxSD0->TxOp || TxSD0->PSBit || TxSD0->BAFail)
 	{

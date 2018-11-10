@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
  /***************************************************************************
  * MediaTek Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -15,7 +16,7 @@
  ***************************************************************************
 
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "mgmt/be_internal.h"
 
@@ -42,26 +43,7 @@ static VOID radio_operate_init(struct wifi_dev *wdev)
 	if(!WMODE_CAP_AC(wdev->PhyMode))
 		vht_bw = VHT_BW_2040;
 	else
-	{
-		if ((wdev->wdev_type == WDEV_TYPE_AP) || (wdev->wdev_type == WDEV_TYPE_GO)) 
-		{
-			INT8 max_vht_bw;
-			vht_bw = cfg->vht_conf.vht_bw;
-			/* Get the max vht bw by region instead of config only */
-			max_vht_bw = get_max_vht_bw_by_region(wdev);
-			if (max_vht_bw >= VHT_BW_2040)
-			{
-				vht_bw = max_vht_bw;
-			}
-			else
-			{
-				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
-						("%s : Error! Check! wdev->channel=%d\n", __FUNCTION__,wdev->channel));
-			}
-		} 
-		else
-			vht_bw = cfg->vht_conf.vht_bw;
-	}
+		vht_bw = cfg->vht_conf.vht_bw;
 
 	wlan_operate_set_vht_bw(wdev,vht_bw);
 	/*frag threshold*/

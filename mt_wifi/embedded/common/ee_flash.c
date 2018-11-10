@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +26,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #ifdef RTMP_FLASH_SUPPORT
 
 #include	"rt_config.h"
@@ -461,6 +462,8 @@ NDIS_STATUS rtmp_nv_init(RTMP_ADAPTER *pAd)
 	RtmpFlashRead(pAd->CalDPDAPart2GImage, pAd->flash_offset + DPDPART2_OFFSET, CAL_IMAGE_SIZE);
 	pAd->bDPDReloaded = TRUE;
 #endif /* PRE_CAL_TRX_SET1_SUPPORT */
+
+
 #endif /* MULTIPLE_CARD_SUPPORT */
 
 	pE2pCtrl->e2pCurMode = E2P_FLASH_MODE;

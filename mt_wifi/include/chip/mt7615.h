@@ -96,7 +96,6 @@ enum {
 void ShowDCOCData(struct _RTMP_ADAPTER *pAd, RXDCOC_RESULT_T RxDcocResult);
 void ShowDPDData(struct _RTMP_ADAPTER *pAd, TXDPD_RESULT_T TxDPDResult);
 void mt7615_apply_cal_data(struct _RTMP_ADAPTER *pAd, struct _MT_SWITCH_CHANNEL_CFG SwChCfg);
-
 #endif /* PRE_CAL_TRX_SET1_SUPPORT */
 
 #if defined(PRE_CAL_TRX_SET1_SUPPORT) || defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)

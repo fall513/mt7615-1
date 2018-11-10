@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,6 +14,7 @@
 	Module Name:
 	mt_ate.c
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 static VOID MtATEWTBL2Update(RTMP_ADAPTER *pAd, UCHAR wcid)
 {	
@@ -188,6 +190,10 @@ static INT32 MT_ATEStart(RTMP_ADAPTER *pAd)
 	APStop(pAd);
 #endif /* CONFIG_AP_SUPPORT */
 
+#ifdef RTMP_MAC_SDIO
+	if_ops->init(pAd);
+	if_ops->clean_trx_q(pAd);
+#endif /* RTMP_MAC_SDIO */
 
 #ifdef RTMP_MAC_PCI
 	if_ops->init(pAd);
@@ -730,6 +736,10 @@ static INT32 MT_ATEStopTx(RTMP_ADAPTER *pAd, UINT32 Mode)
 		if_ops->clean_trx_q(pAd);
 
 
+#ifdef RTMP_MAC_SDIO
+	if(if_ops->clean_trx_q)
+		if_ops->clean_trx_q(pAd);
+#endif /* RTMP_MAC_SDIO */
 
 		ATECtrl->Mode &= ~ATE_TXFRAME;
 
@@ -1218,6 +1228,174 @@ INT	MT_SetATESoundingProc(RTMP_ADAPTER *pAd, UCHAR SDEnFlg)
 
 
 
+#ifdef RTMP_MAC_SDIO
+static INT32 sdio_ate_init(RTMP_ADAPTER *pAd){
+	ATE_CTRL *ATECtrl = &pAd->ATECtrl;
+	UINT32 reg;
+	
+	RTMP_SDIO_WRITE32(pAd, WHLPCR, W_INT_EN_SET);
+	RTMP_SDIO_READ32(pAd, WHLPCR, &reg);
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("<-- %s, own back 0x%08x\n", __FUNCTION__,reg));
+	ATECtrl->agg_num = 10;
+	if(!ATECtrl->pAtePacket)
+		os_alloc_mem(pAd, (PUCHAR *)&ATECtrl->pAtePacket, ATECtrl->TxLength);
+	
+	return NDIS_STATUS_SUCCESS;
+}
+
+static INT32 sdio_clean_q (RTMP_ADAPTER *pAd){
+	ATE_CTRL *ATECtrl = &pAd->ATECtrl;
+	/* Polling TX/RX path until packets empty usb need ??*/
+	rtmp_tx_swq_exit(pAd, WCID_ALL);
+	if(ATECtrl->pAtePacket)
+		RTMPZeroMemory(ATECtrl->pAtePacket, ATECtrl->TxLength);
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s -->\n", __FUNCTION__));
+	ATECtrl->tx_pg = 0;
+	ATECtrl->txed_pg = 0;
+	return NDIS_STATUS_SUCCESS;
+}
+
+static INT32 sdio_setup_frame(RTMP_ADAPTER *pAd, UINT32 q_idx){
+	ATE_CTRL *ATECtrl = &pAd->ATECtrl;
+	TXINFO_STRUC *pTxInfo;
+	UCHAR *buf;
+	MAC_TX_INFO mac_info;
+	HTTRANSMIT_SETTING Transmit;
+	ATECtrl->HLen = LENGTH_802_11;
+
+	NdisZeroMemory(&pAd->NullFrame, 24);
+	NdisZeroMemory(&Transmit, sizeof(Transmit));
+	pAd->NullFrame.FC.Type = FC_TYPE_DATA;
+	pAd->NullFrame.FC.SubType = SUBTYPE_DATA_NULL;
+	pAd->NullFrame.FC.ToDs = 1;
+	
+	COPY_MAC_ADDR(pAd->NullFrame.Addr1, ATECtrl->Addr1);
+	COPY_MAC_ADDR(pAd->NullFrame.Addr2, ATECtrl->Addr2);
+	COPY_MAC_ADDR(pAd->NullFrame.Addr3, ATECtrl->Addr3);
+
+		
+	buf = ATECtrl->pAtePacket;
+	RTMPZeroMemory(buf, ATECtrl->TxLength);
+	
+	pTxInfo = (TXINFO_STRUC *)buf;
+	NdisZeroMemory((UCHAR *)&mac_info, sizeof(mac_info));
+	mac_info.FRAG = FALSE;
+	mac_info.Ack = FALSE;
+	mac_info.NSeq = FALSE;
+	mac_info.hdr_len = ATECtrl->HLen;
+	mac_info.hdr_pad = 0;
+	mac_info.WCID = 0;
+	mac_info.Length = ATECtrl->TxLength;
+	mac_info.PID = 0;
+	mac_info.bss_idx = 0;
+	mac_info.TID = 0;
+	mac_info.prot = 0;
+	switch (ATECtrl->TxAntennaSel) {
+	case 0: /* Both */
+		mac_info.AntPri = 0;
+	    mac_info.SpeEn = 1;
+		break;
+	case 1: /* TX0 */
+		mac_info.AntPri = 0;
+		mac_info.SpeEn = 0;
+		break;
+	case 2: /* TX1 */
+		mac_info.AntPri = 2; //b'010
+		mac_info.SpeEn = 0;
+		break;
+	}
+	Transmit.field.MCS = ATECtrl->Mcs;
+	Transmit.field.BW = ATECtrl->BW;
+	Transmit.field.ShortGI = ATECtrl->Sgi;
+	Transmit.field.STBC = ATECtrl->Stbc;
+	Transmit.field.MODE = ATECtrl->PhyMode;
+		
+	mac_info.q_idx = Q_IDX_AC1;
+	mac_info.SpeEn = 1;
+	
+	if (ATECtrl->PhyMode == MODE_CCK){
+		mac_info.Preamble = LONG_PREAMBLE;
+		if (ATECtrl->Mcs == 9){
+			Transmit.field.MCS = 0;
+			mac_info.Preamble = SHORT_PREAMBLE;	
+		}else if (ATECtrl->Mcs == 10){
+			Transmit.field.MCS = 1;
+			mac_info.Preamble = SHORT_PREAMBLE;	
+		}else if (ATECtrl->Mcs == 11){
+			Transmit.field.MCS = 2;
+			mac_info.Preamble = SHORT_PREAMBLE;	
+		}
+	}
+	mac_info.IsAutoRate = FALSE;
+	write_tmac_info(pAd, (UCHAR *)buf, &mac_info, &Transmit);
+	RTMPMoveMemory((VOID *)&buf[sizeof(TMAC_TXD_L)], (VOID *)&pAd->NullFrame, ATECtrl->TxLength);
+	return NDIS_STATUS_SUCCESS;
+}
+
+static INT32 sdio_test_frame_tx(RTMP_ADAPTER *pAd)
+{
+	ATE_CTRL *ATECtrl = &pAd->ATECtrl;
+    P_TX_CTRL_T prTxCtrl = &pAd->rTxCtrl;
+	UINT32 pkt_len = sizeof(TMAC_TXD_L) + ATECtrl->TxLength;
+	UCHAR *pPacket = ATECtrl->pAtePacket;
+	UCHAR *pucOutputBuf = NULL;
+	INT32 ret = 0;
+	UINT16 u2PgCnt =0;
+	UINT32 agg_size = 0;
+	UCHAR agg_cnt = ATECtrl->agg_num;
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("<-- %s, pkt_len:%u, TMAC_TXD_L:%u, TxDoneCount:%u\n", __FUNCTION__, pkt_len, sizeof(TMAC_TXD_L), pAd->ATECtrl.TxDoneCount));
+	pAd->ATECtrl.TxDoneCount = 0;
+		if(!pPacket && !prTxCtrl->pucTxCoalescingBufPtr)
+		goto sdio_test_frame_tx_err;
+	
+	pucOutputBuf = prTxCtrl->pucTxCoalescingBufPtr;
+	do{
+
+		u2PgCnt = MTSDIOTxGetPageCount(pkt_len, TRUE);
+   		ret = MTSDIOTxAcquireResource(pAd, TC0_INDEX, u2PgCnt);
+		if(ret == NDIS_STATUS_FAILURE)
+			break;
+		NdisMoveMemory(pucOutputBuf, pPacket, pkt_len);
+		pkt_len = ((pkt_len + 0x3)&~0x3);/* round up to 4 byte alignment*/
+		pucOutputBuf += pkt_len;
+		agg_size += pkt_len;
+		ATECtrl->tx_pg += u2PgCnt;
+		agg_cnt--;
+	}while(agg_cnt>0);
+	
+	if(agg_size == 0)
+		goto sdio_test_frame_tx_err;
+
+	ret = MTSDIOMultiWrite(pAd, WTDR1, prTxCtrl->pucTxCoalescingBufPtr, agg_size);
+	if(ret)
+		goto sdio_test_frame_tx_err;
+
+    MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("(%s) buf(%p) offset:%p len = %d\n", __FUNCTION__, prTxCtrl->pucTxCoalescingBufPtr, pucOutputBuf, ((pkt_len + 0x3) &~0x3)));
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%s -->, agg_size:%u, PgCnt: %d, pkt_len: 0x%x, AGG_CNT_Remain: 0x%x\n", __FUNCTION__,agg_size, ATECtrl->tx_pg, pkt_len,agg_cnt));
+
+	return ret;
+sdio_test_frame_tx_err:
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s() fail, %d\n",__FUNCTION__,ret));
+	return NDIS_STATUS_FAILURE;
+}
+
+static INT32 sdio_clean_test_rx_frame(RTMP_ADAPTER *pAd)
+{
+	PNDIS_PACKET prRxPacket = pAd->SDIORxPacket;
+	if(prRxPacket)
+		RELEASE_NDIS_PACKET(pAd, prRxPacket, NDIS_STATUS_SUCCESS);
+	return NDIS_STATUS_SUCCESS;
+}
+
+static INT32 sdio_test_leave(RTMP_ADAPTER *pAd)
+{
+	ATE_CTRL *ATECtrl = &pAd->ATECtrl;
+	if(!ATECtrl->pAtePacket)
+		os_free_mem(ATECtrl->pAtePacket);
+
+	return NDIS_STATUS_SUCCESS;
+}
+#endif
 #ifdef RTMP_MAC_PCI
 static INT32 pci_ate_init(RTMP_ADAPTER *pAd){
 	ATE_CTRL *ATECtrl = &pAd->ATECtrl;
@@ -1463,6 +1641,16 @@ static ATE_OPERATION MT_ATEOp = {
 #endif /* MT_MAC */
 };
 
+#ifdef RTMP_MAC_SDIO
+static ATE_IF_OPERATION ate_if_ops = {
+	.init = sdio_ate_init,
+	.clean_trx_q = sdio_clean_q,
+	.clean_test_rx_frame = sdio_clean_test_rx_frame,
+	.setup_frame = sdio_setup_frame,
+	.test_frame_tx = sdio_test_frame_tx,
+	.ate_leave = sdio_test_leave,
+};
+#else
 #ifdef RTMP_MAC_PCI
  static ATE_IF_OPERATION ate_if_ops = {
 	.init = pci_ate_init,
@@ -1481,6 +1669,7 @@ static ATE_IF_OPERATION ate_if_ops = {
 	.ate_leave = NULL,
 };
 #endif /* RTMP_MAC_PCI */
+#endif /* RTMP_MAC_SDIO */
 
 INT32 MT_ATEInit(RTMP_ADAPTER *pAd)
 {

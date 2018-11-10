@@ -786,7 +786,6 @@ VOID MemInfoListInital(VOID);
 UINT32 ShowMemAllocInfo(VOID);
 UINT32 ShowPktAllocInfo(VOID);
 #endif /* MEM_ALLOC_INFO_SUPPORT */
-INT32 CFG80211OS_UpdateRegRuleByRegionIdx(IN VOID *pCB, IN VOID *pChDesc2G, IN VOID *pChDesc5G);
 
 #endif /* __RT_OS_UTIL_H__ */
 

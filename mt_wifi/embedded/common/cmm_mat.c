@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -30,7 +31,7 @@
     --------------  ----------      ----------------------------------------------
     Shiang  		02-26-2007      Init version
 */
-
+#endif /* MTK_LICENSE */
 #ifdef MAT_SUPPORT
 
 #include "rt_config.h"
@@ -330,14 +331,8 @@ BOOLEAN MATPktRxNeedConvert(
 		{
 			/*BSSID match the ApCliBssid ?(from a valid AP) */
 			if ((pAd->ApCfg.ApCliTab[i].Valid == TRUE) 
-				&& (net_dev == pAd->ApCfg.ApCliTab[i].wdev.if_dev)
-#ifdef MWDS
-				&& (pAd->ApCfg.ApCliTab[i].bEnableMWDS == FALSE)
-#endif /* MWDS */
-			){
-				//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,("MATPktRxNeedConvert TRUE for ApCliTab[%d]\n",i));
+				&& (net_dev == pAd->ApCfg.ApCliTab[i].wdev.if_dev))
 				return TRUE;
-			}
 			i++;
 		}
 #endif /* APCLI_SUPPORT */

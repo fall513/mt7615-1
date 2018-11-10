@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,10 +14,10 @@
 	Module Name:
 	andes_mt.c
 */
-
+#endif /* MTK_LICENSE */
 #include	"rt_config.h"
 
-#if defined (RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) 
+#if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
 #include    "phy/rlm_cal_cache.h"
 #endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */
 
@@ -970,10 +971,7 @@ static VOID ExtEventBTCoexHandler(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 	if (SubOpCode == 0x01)
 	{
 		struct _EVENT_COEX_CMD_RESPONSE_T *CoexResp =
-		(struct _EVENT_COEX_CMD_RESPONSE_T *)coext_event_t->aucBuffer;
-#ifdef RT_BIG_ENDIAN
-		CoexResp->u4Status = le2cpu32(CoexResp->u4Status);
-#endif
+            (struct _EVENT_COEX_CMD_RESPONSE_T *)coext_event_t->aucBuffer;
 		MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
             ("--->Cmd_Resp=0x%x\n", CoexResp->u4Status));
 
@@ -981,11 +979,7 @@ static VOID ExtEventBTCoexHandler(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 	else if (SubOpCode == 0x02)
 	{
 		struct _EVENT_COEX_REPORT_COEX_MODE_T *CoexReportMode =
-		(struct _EVENT_COEX_REPORT_COEX_MODE_T *)coext_event_t->aucBuffer;
-#ifdef RT_BIG_ENDIAN
-		CoexReportMode->u4SupportCoexMode = le2cpu32(CoexReportMode->u4SupportCoexMode);
-		CoexReportMode->u4CurrentCoexMode = le2cpu32(CoexReportMode->u4CurrentCoexMode);
-#endif
+            (struct _EVENT_COEX_REPORT_COEX_MODE_T *)coext_event_t->aucBuffer;
 		MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
             ("--->SupportCoexMode=0x%x\n", CoexReportMode->u4SupportCoexMode));
 		MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
@@ -1208,7 +1202,7 @@ static VOID EventThermalProtect(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 
         
     }
-	if (Reason == THERAML_PROTECTION_REASON_TEMPERATURE)
+    if (Reason == THERAML_PROTECTION_REASON_TEMPERATURE)
     {
         MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("======== Thermal Re-Calibration due to Temperature Diff ===== \n"));   
     }
@@ -1300,9 +1294,7 @@ static VOID ExtEventTmrCalcuInfoHandler(
 
 	ptmr_calcu_info = (P_EXT_EVENT_TMR_CALCU_INFO_T)Data;
 	p_tmr_frm = (TMR_FRM_STRUC *)ptmr_calcu_info->aucTmrFrm;
-#ifdef RT_BIG_ENDIAN
-	RTMPEndianChange(p_tmr_frm,sizeof(TMR_FRM_STRUC));
-#endif
+
 	/*Tmr pkt comes to FW event, fw already take cares of the whole calculation.*/
 	TmrReportParser(pAd, p_tmr_frm, TRUE, le2cpu32(ptmr_calcu_info->u4TOAECalibrationResult));
 }
@@ -1321,7 +1313,13 @@ static VOID ExtEventCswNotifyHandler(
         return ;
     }
     wdev->csa_count = csa_notify_event->ucChannelSwitchCount;
-
+#ifdef CUSTOMER_DCC_FEATURE
+	if((pAd->CommonCfg.channelSwitch.CHSWMode == CHANNEL_SWITCHING_MODE) && (pAd->Dot11_H.RDMode != RD_SWITCHING_MODE))
+	{
+			pAd->CommonCfg.channelSwitch.CHSWCount = pAd->CommonCfg.channelSwitch.CHSWPeriod;
+			ChannelSwitchingCountDownProcNew(pAd);
+	}
+#endif
     if ((HcIsRfSupport(pAd,RFIC_5GHZ))
             && (pAd->CommonCfg.bIEEE80211H == 1)
             && (pAd->Dot11_H.RDMode == RD_SWITCHING_MODE))
@@ -1357,7 +1355,6 @@ static VOID ExtEventBssAcQPktNumHandler(RTMP_ADAPTER *pAd,
 
 #ifdef RT_BIG_ENDIAN
 		prPerBssInfo->au4AcqPktCnt[WMM_AC_BK] = le2cpu32(prPerBssInfo->au4AcqPktCnt[WMM_AC_BK]);
-		prPerBssInfo->au4AcqPktCnt[WMM_AC_BE] = le2cpu32(prPerBssInfo->au4AcqPktCnt[WMM_AC_BE]);
 		prPerBssInfo->au4AcqPktCnt[WMM_AC_VI] = le2cpu32(prPerBssInfo->au4AcqPktCnt[WMM_AC_VI] );
 		prPerBssInfo->au4AcqPktCnt[WMM_AC_VO] = le2cpu32(prPerBssInfo->au4AcqPktCnt[WMM_AC_VO]);
 #endif
@@ -1390,14 +1387,9 @@ static VOID ExtEventReprocessPktHandler(RTMP_ADAPTER *pAd,
 				(P_CMD_PKT_REPROCESS_EVENT_T)Data;
 	PNDIS_PACKET pPacket = NULL;
 	UINT8 Type=0;
-	UINT16 reprocessToken = 0;
+	UINT16 reprocessToken = prReprocessPktEvt->u2MsduToken;
 	PKT_TOKEN_CB *pktTokenCb = pAd->PktTokenCb;
 	PKT_TOKEN_QUEUE *listq = &pktTokenCb->tx_id_list;
-#ifdef RT_BIG_ENDIAN
-	prReprocessPktEvt->u2MsduToken = le2cpu16(prReprocessPktEvt->u2MsduToken);
-#endif
-	reprocessToken = prReprocessPktEvt->u2MsduToken;
-
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,
 			("%s - Reprocess Token ID = %d\n",__FUNCTION__,reprocessToken));
 	
@@ -1469,6 +1461,42 @@ static VOID ExtEventGetHotspotCapabilityHandler(RTMP_ADAPTER *pAd,
 
 
 #endif /* CONFIG_HOTSPOT_R2 */
+#ifdef CUSTOMER_RSG_FEATURE
+static VOID ExtEventGetWtblTxCounter(RTMP_ADAPTER *pAd,UINT8 *Data, UINT32 Length)
+{
+	EXT_EVENT_WTBL_TX_COUNTER_RESULT_T *CmdWtblTxCounterResult = (EXT_EVENT_WTBL_TX_COUNTER_RESULT_T *)Data;
+
+    if(CmdWtblTxCounterResult->u4Field & GET_WTBL_TX_COUNT)
+    {
+		pAd->RadioStatsCounter.TotalTxCount += CmdWtblTxCounterResult->CurrentBWTxCount + 
+										CmdWtblTxCounterResult->OtherBWTxCount;
+
+	
+		pAd->RadioStatsCounter.TxDataCount += CmdWtblTxCounterResult->CurrentBWTxCount + 
+											CmdWtblTxCounterResult->OtherBWTxCount;
+
+		pAd->RadioStatsCounter.TxRetriedPktCount += CmdWtblTxCounterResult->DataFrameRetryCnt +
+												CmdWtblTxCounterResult->MgmtRetryCnt;
+    }
+#ifdef CUSTOMER_DCC_FEATURE	
+	if(CmdWtblTxCounterResult->u4Field & GET_WTBL_PER_STA_TX_COUNT)
+	{
+		UINT32 WcidIdx;	
+		PMAC_TABLE_ENTRY pEntry = NULL;	
+		for(WcidIdx = 0; WcidIdx < MAX_LEN_OF_MAC_TABLE; WcidIdx ++)
+		{	
+			pEntry = &pAd->MacTab.Content[WcidIdx];
+			if (pEntry && IS_ENTRY_CLIENT(pEntry) && pEntry->Sst == SST_ASSOC)
+			{
+				pEntry->TxRetriedPktCount += CmdWtblTxCounterResult->PerStaRetriedPktCnt[WcidIdx];
+				pEntry->pMbss->TxRetriedPktCount += CmdWtblTxCounterResult->PerStaRetriedPktCnt[WcidIdx];
+			}
+			
+		}
+	}
+#endif	
+}
+#endif
 static BOOLEAN IsUnsolicitedEvent(EVENT_RXD *event_rxd)
 {
     if ((GET_EVENT_FW_RXD_SEQ_NUM(event_rxd) == 0)                          ||
@@ -1484,348 +1512,314 @@ static BOOLEAN IsUnsolicitedEvent(EVENT_RXD *event_rxd)
 #if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
 static INT ExtEventPreCalStoreProc(RTMP_ADAPTER *pAd, UINT32 EventId, UINT8 *Data)
 {        
-
-	UINT32 Offset = 0, IDOffset = 0, LenOffset = 0, HeaderSize = 0, CalDataSize = 0, BitMap = 0;
-	UINT32 i, Length, TotalSize, ChGroupId = 0;
-#ifdef RTMP_FLASH_SUPPORT	
+    UINT32 Offset = 0, IDOffset = 0, LenOffset = 0, HeaderSize = 0, CalDataSize = 0, BitMap = 0;
+    UINT32 i, Length, TotalSize, ChGroupId = 0;
     UINT16 DoPreCal = 0;
-#endif
-	static int rf_count;
-	int rf_countMax;
+    static int rf_count;
+    int rf_countMax;
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-	("\x1b[41m %s ------------> \x1b[m\n",__FUNCTION__));
-
-	rf_countMax = pAd->ChGrpMap == 0x1FF ? 9:6;
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+    ("\x1b[41m %s ------------> \x1b[m\n",__FUNCTION__));
     
-	switch (EventId)
-	{
-		case PRECAL_TXLPF:
-		{
-			TXLPF_CAL_INFO_T *prTxLPFGetEvent = (TXLPF_CAL_INFO_T *)Data;
+    rf_countMax = pAd->ChGrpMap == 0x1FF ? 9:6;
+            
+    switch (EventId)
+    {
+        case PRECAL_TXLPF:
+            {
+                TXLPF_CAL_INFO_T *prTxLPFGetEvent = (TXLPF_CAL_INFO_T *)Data;
                               
-			/* Store header */
-			HeaderSize = (UINT32)(uintptr_t)&((TXLPF_CAL_INFO_T *)NULL)->au4Data[0];
-			/* Update Cal data size */
-			CalDataSize = TXLPF_PER_GROUP_DATA_SIZE;
-			/* Update channel group BitMap */
-#ifdef RT_BIG_ENDIAN
-			prTxLPFGetEvent->u2BitMap = le2cpu16(prTxLPFGetEvent->u2BitMap);
-			RTMPEndianChange((UCHAR *)prTxLPFGetEvent->au4Data, sizeof(prTxLPFGetEvent->au4Data));
-#endif
-			BitMap = prTxLPFGetEvent->u2BitMap;             
-		}
-		break;
-		case PRECAL_TXIQ:
-		{
-			TXIQ_CAL_INFO_T *prTxIQGetEvent = (TXIQ_CAL_INFO_T *)Data;
+                /* Store header */
+                HeaderSize = (UINT32)(uintptr_t)&((TXLPF_CAL_INFO_T *)NULL)->au4Data[0];
+                /* Update Cal data size */
+                CalDataSize = TXLPF_PER_GROUP_DATA_SIZE;
+                /* Update channel group BitMap */
+                BitMap = prTxLPFGetEvent->u2BitMap;             
+            }
+            break;
+        case PRECAL_TXIQ:
+            {
+                TXIQ_CAL_INFO_T *prTxIQGetEvent = (TXIQ_CAL_INFO_T *)Data;
                               
-			/* Store header */
-			HeaderSize = (UINT32)(uintptr_t)&((TXIQ_CAL_INFO_T *)NULL)->au4Data[0];
-			/* Update Cal data size */
-			CalDataSize = TXIQ_PER_GROUP_DATA_SIZE;
-			/* Update channel group BitMap */
-#ifdef RT_BIG_ENDIAN
-			prTxIQGetEvent->u2BitMap = le2cpu16(prTxIQGetEvent->u2BitMap);
-			RTMPEndianChange((UCHAR *)prTxIQGetEvent->au4Data, sizeof(prTxIQGetEvent->au4Data));
-#endif
-			BitMap = prTxIQGetEvent->u2BitMap;               
-		}
-		break;
-		case PRECAL_TXDC:
-		{
-			TXDC_CAL_INFO_T *prTxDCGetEvent = (TXDC_CAL_INFO_T *)Data;
+                /* Store header */
+                HeaderSize = (UINT32)(uintptr_t)&((TXIQ_CAL_INFO_T *)NULL)->au4Data[0];
+                /* Update Cal data size */
+                CalDataSize = TXIQ_PER_GROUP_DATA_SIZE;
+                /* Update channel group BitMap */
+                BitMap = prTxIQGetEvent->u2BitMap;               
+            }
+            break;
+        case PRECAL_TXDC:
+            {
+                TXDC_CAL_INFO_T *prTxDCGetEvent = (TXDC_CAL_INFO_T *)Data;
                               
-			/* Store header */
-			HeaderSize = (UINT32)(uintptr_t)&((TXDC_CAL_INFO_T *)NULL)->au4Data[0];
-			/* Update Cal data size */
-			CalDataSize = TXDC_PER_GROUP_DATA_SIZE;
-			/* Update channel group BitMap */
-#ifdef RT_BIG_ENDIAN
-			prTxDCGetEvent->u2BitMap = le2cpu16(prTxDCGetEvent->u2BitMap);
-			RTMPEndianChange((UCHAR *)prTxDCGetEvent->au4Data, sizeof(prTxDCGetEvent->au4Data));
-#endif
-			BitMap = prTxDCGetEvent->u2BitMap;             
-		}
-		break;
-		case PRECAL_RXFI:
-		{
-			RXFI_CAL_INFO_T *prRxFIGetEvent = (RXFI_CAL_INFO_T *)Data;
+                /* Store header */
+                HeaderSize = (UINT32)(uintptr_t)&((TXDC_CAL_INFO_T *)NULL)->au4Data[0];
+                /* Update Cal data size */
+                CalDataSize = TXDC_PER_GROUP_DATA_SIZE;
+                /* Update channel group BitMap */
+                BitMap = prTxDCGetEvent->u2BitMap;             
+            }            
+            break;
+        case PRECAL_RXFI:
+            {
+                RXFI_CAL_INFO_T *prRxFIGetEvent = (RXFI_CAL_INFO_T *)Data;
                               
-			/* Store header */
-			HeaderSize = (UINT32)(uintptr_t)&((RXFI_CAL_INFO_T *)NULL)->au4Data[0];
-			/* Update Cal data size */
-			CalDataSize = RXFI_PER_GROUP_DATA_SIZE;
-			/* Update channel group BitMap */
-#ifdef RT_BIG_ENDIAN
-			prRxFIGetEvent->u2BitMap = le2cpu16(prRxFIGetEvent->u2BitMap); 
-			RTMPEndianChange((UCHAR *)prRxFIGetEvent->au4Data, sizeof(prRxFIGetEvent->au4Data));
-#endif
-			BitMap = prRxFIGetEvent->u2BitMap;
-		}
-		break;
-		case PRECAL_RXFD:
-		{
-			RXFD_CAL_INFO_T *prRxFDGetEvent = (RXFD_CAL_INFO_T *)Data;
+                /* Store header */
+                HeaderSize = (UINT32)(uintptr_t)&((RXFI_CAL_INFO_T *)NULL)->au4Data[0];
+                /* Update Cal data size */
+                CalDataSize = RXFI_PER_GROUP_DATA_SIZE;
+                /* Update channel group BitMap */
+                BitMap = prRxFIGetEvent->u2BitMap;               
+            }             
+            break;
+        case PRECAL_RXFD:
+             {
+                RXFD_CAL_INFO_T *prRxFDGetEvent = (RXFD_CAL_INFO_T *)Data;
                               
-			/* Store header */
-			HeaderSize = (UINT32)(uintptr_t)&((RXFD_CAL_INFO_T *)NULL)->au4Data[0];
-			/* Update Cal data size */
-			CalDataSize = RXFD_PER_GROUP_DATA_SIZE;
-			
-#ifdef RT_BIG_ENDIAN
-			prRxFDGetEvent->u2BitMap = le2cpu16(prRxFDGetEvent->u2BitMap);
-			prRxFDGetEvent->u4ChGroupId = le2cpu32(prRxFDGetEvent->u4ChGroupId);
-			RTMPEndianChange((UCHAR *)prRxFDGetEvent->au4Data, sizeof(prRxFDGetEvent->au4Data));
-#endif
-			/* Update channel group BitMap */
-			BitMap = prRxFDGetEvent->u2BitMap;
-			/* Update group ID */
-			ChGroupId = prRxFDGetEvent->u4ChGroupId;
-			MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-			("\x1b[33m%s: RXFD ChGroupId %d\x1b[m\n", __FUNCTION__, ChGroupId));               
-		}                           
-		break;
-		default:
-			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-			("\x1b[41m %s: Not support this calibration item !!!! \x1b[m\n", __FUNCTION__));
-		break;           
-	}
+                /* Store header */
+                HeaderSize = (UINT32)(uintptr_t)&((RXFD_CAL_INFO_T *)NULL)->au4Data[0];
+                /* Update Cal data size */
+                CalDataSize = RXFD_PER_GROUP_DATA_SIZE;
+                /* Update channel group BitMap */
+                BitMap = prRxFDGetEvent->u2BitMap;
+                /* Update group ID */
+                ChGroupId = prRxFDGetEvent->u4ChGroupId;
+                MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+                ("\x1b[33m%s: RXFD ChGroupId %d\x1b[m\n", __FUNCTION__, ChGroupId));               
+            }                           
+            break;
+        default:
+            MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+            ("\x1b[41m %s: Not support this calibration item !!!! \x1b[m\n", __FUNCTION__));
+            break;           
+    }
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-	("\x1b[33m%s: EventID = %d, Bitmp = %x\x1b[m\n", __FUNCTION__, EventId, BitMap));
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+    ("\x1b[33m%s: EventID = %d, Bitmp = %x\x1b[m\n", __FUNCTION__, EventId, BitMap));
 
-	/* Update offset parameter */
-	IDOffset = LenOffset = Offset = pAd->PreCalWriteOffSet;
+    /* Update offset parameter */
+    IDOffset = LenOffset = Offset = pAd->PreCalWriteOffSet;
 
-	LenOffset += 4; /*Skip ID field*/
+    LenOffset += 4; //Skip ID field
     
-	Offset += 8; /*Skip (ID + Len) field*/
-	if (pAd->PreCalStoreBuffer != NULL)
-	{
-		/* Store ID */    
-		os_move_mem(pAd->PreCalStoreBuffer + IDOffset, &EventId, sizeof(EventId));
+    Offset += 8; //Skip (ID + Len) field
+
+    if (pAd->PreCalStoreBuffer != NULL)
+    {
+        /* Store ID */    
+        os_move_mem(pAd->PreCalStoreBuffer + IDOffset, &EventId, sizeof(EventId));
         
-		/* Store header */
-		os_move_mem(pAd->PreCalStoreBuffer + Offset, Data, (ULONG)HeaderSize);
+        /* Store header */
+        os_move_mem(pAd->PreCalStoreBuffer + Offset, Data, (ULONG)HeaderSize);
+
+        Offset += HeaderSize; //Skip header
+        Data += HeaderSize; //Skip header
         
-		Offset += HeaderSize; /*Skip header*/
-		Data += HeaderSize; /*Skip header*/
+        /* Store pre-cal data */
+        if (EventId == PRECAL_RXFD)
+        {            
+            if ((rf_count < rf_countMax) && (BitMap & (1 << ChGroupId)))
+            {
+                rf_count++;
+                os_move_mem(pAd->PreCalStoreBuffer + Offset, Data, CalDataSize);
+                Offset += CalDataSize;
+            }               
+        }
+        else
+        {
+            int count = 0;
+            int countMax = pAd->ChGrpMap == 0x1FF ? 8:5;
+
+            for (i = 0; i < CHANNEL_GROUP_NUM; i++)
+            {
+                if (count > countMax)
+                    break;
+
+                if (BitMap & (1 << i))
+                {
+                    count++;
+                    os_move_mem(pAd->PreCalStoreBuffer + Offset, Data + i * CalDataSize, CalDataSize);
+                    Offset += CalDataSize;
+                }
+            }      
+        }  
         
-		/* Store pre-cal data */
-		if (EventId == PRECAL_RXFD)
-		{
-			if ((rf_count < rf_countMax) && (BitMap & (1 << ChGroupId)))
-			{
-				rf_count++;
-				os_move_mem(pAd->PreCalStoreBuffer + Offset, Data, CalDataSize);
-				Offset += CalDataSize;
-			}               
-		}
-		else
-		{
-			int count = 0;
-			int countMax = pAd->ChGrpMap == 0x1FF ? 8:5;
-			for (i = 0; i < CHANNEL_GROUP_NUM; i++)
-			{
+        /* Update current temp buffer write-offset */
+        pAd->PreCalWriteOffSet = Offset;
         
-				if (count > countMax)
-					break;
-        
-				if (BitMap & (1 << i))
-				{
-					count++;
-					os_move_mem(pAd->PreCalStoreBuffer + Offset, Data + i * CalDataSize, CalDataSize);
-					Offset += CalDataSize;
-				}
-			}      
-		}  
-        
-		/* Update current temp buffer write-offset */
-		pAd->PreCalWriteOffSet = Offset;
-        
-		/* Calculate buffer size (len + header + data) for each calibration item */
-		Length = Offset - LenOffset;
-        
-		/* Store buffer size for each calibration item */
-		os_move_mem(pAd->PreCalStoreBuffer + LenOffset, &Length, sizeof(Length));
-        
-		/* The last event ID - update calibration data to flash */
-		if (EventId == PRECAL_RXFI)
-		{
-			TotalSize = pAd->PreCalWriteOffSet;
+        /* Calculate buffer size (len + header + data) for each calibration item */
+        Length = Offset - LenOffset;
+
+        /* Store buffer size for each calibration item */
+        os_move_mem(pAd->PreCalStoreBuffer + LenOffset, &Length, sizeof(Length));
+
+        /* The last event ID - update calibration data to flash */
+        if (EventId == PRECAL_RXFI)
+        {
+            TotalSize = pAd->PreCalWriteOffSet;
 #ifdef RTMP_FLASH_SUPPORT
-			/* Write pre-cal data to flash */
+            /* Write pre-cal data to flash */
 			if (pAd->E2pAccessMode == E2P_FLASH_MODE)
-				RtmpFlashWrite(pAd->PreCalStoreBuffer, pAd->flash_offset + PRECALPART_OFFSET, TotalSize);
+            	RtmpFlashWrite(pAd->PreCalStoreBuffer, pAd->flash_offset + PRECALPART_OFFSET, TotalSize);
 #endif/* RTMP_FLASH_SUPPORT */
-			if (pAd->E2pAccessMode == E2P_BIN_MODE)            
+			if (pAd->E2pAccessMode == E2P_BIN_MODE)
 				rtmp_cal_write_to_bin(pAd, pAd->PreCalStoreBuffer, PRECALPART_OFFSET, TotalSize);
 
             /* Raise DoPreCal bits */   
 			if(pAd->E2pAccessMode == E2P_FLASH_MODE || pAd->E2pAccessMode == E2P_BIN_MODE)
 			{
-#ifdef RTMP_FLASH_SUPPORT
-            	RT28xx_EEPROM_READ16(pAd, 0x52, DoPreCal);	
-	            DoPreCal |= (1 << 2);
-	    	    RT28xx_EEPROM_WRITE16(pAd, 0x52, DoPreCal);
-#endif/* RTMP_FLASH_SUPPORT */
+            RT28xx_EEPROM_READ16(pAd, 0x52, DoPreCal);	
+            DoPreCal |= (1 << 2);
+    	    RT28xx_EEPROM_WRITE16(pAd, 0x52, DoPreCal);
 			}
-        
-			/* Reset parameter */
-			pAd->PreCalWriteOffSet = 0; 
-			rf_count = 0;
-			MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,    
-			("\x1b[41m %s: Pre-calibration done !! \x1b[m\n",__FUNCTION__));            
-		}
-	}
-	else
-	{
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,    
-		("\x1b[41m %s: PreCalStoreBuffer is NULL !! \x1b[m\n",__FUNCTION__));              
-	}
-    
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,    
-	("\x1b[41m %s <------------ \x1b[m\n",__FUNCTION__));
 
-	return TRUE;
+            /* Reset parameter */
+            pAd->PreCalWriteOffSet = 0; 
+            rf_count = 0;
+            
+            MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,    
+            ("\x1b[41m %s: Pre-calibration done !! \x1b[m\n",__FUNCTION__)); 
+            
+        }
+    }
+    else
+    {
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,    
+        ("\x1b[41m %s: PreCalStoreBuffer is NULL !! \x1b[m\n",__FUNCTION__));              
+    }
+
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,    
+    ("\x1b[41m %s <------------ \x1b[m\n",__FUNCTION__));
+
+    return TRUE;
 }
 
 NTSTATUS PreCalTxLPFStoreProcHandler(PRTMP_ADAPTER pAd, PCmdQElmt CMDQelmt)                            
 {
-	ExtEventPreCalStoreProc(pAd, PRECAL_TXLPF, CMDQelmt->buffer);
+    ExtEventPreCalStoreProc(pAd, PRECAL_TXLPF, CMDQelmt->buffer);
 
-	return 0;
+    return 0;
 }
 
 NTSTATUS PreCalTxIQStoreProcHandler(PRTMP_ADAPTER pAd, PCmdQElmt CMDQelmt)                            
 {
-	ExtEventPreCalStoreProc(pAd, PRECAL_TXIQ, CMDQelmt->buffer);
+    ExtEventPreCalStoreProc(pAd, PRECAL_TXIQ, CMDQelmt->buffer);
 
-	return 0;
+    return 0;
 }
 
 NTSTATUS PreCalTxDCStoreProcHandler(PRTMP_ADAPTER pAd, PCmdQElmt CMDQelmt)                            
 {
-	ExtEventPreCalStoreProc(pAd, PRECAL_TXDC, CMDQelmt->buffer);
+    ExtEventPreCalStoreProc(pAd, PRECAL_TXDC, CMDQelmt->buffer);
 
-	return 0;
+    return 0;
 }
 
 NTSTATUS PreCalRxFIStoreProcHandler(PRTMP_ADAPTER pAd, PCmdQElmt CMDQelmt)                           
 {
-	ExtEventPreCalStoreProc(pAd, PRECAL_RXFI, CMDQelmt->buffer);
+    ExtEventPreCalStoreProc(pAd, PRECAL_RXFI, CMDQelmt->buffer);
 
-	return 0;
+    return 0;
 }
 
 NTSTATUS PreCalRxFDStoreProcHandler(PRTMP_ADAPTER pAd, PCmdQElmt CMDQelmt)                            
 {
-	ExtEventPreCalStoreProc(pAd, PRECAL_RXFD, CMDQelmt->buffer);
+    ExtEventPreCalStoreProc(pAd, PRECAL_RXFD, CMDQelmt->buffer);
 
-	return 0;
+    return 0;
 }
 
 static VOID ExtEventTxLPFCalInfoHandler(
         RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 {
-	hex_dump("P_TXLPF_CAL_INFO", Data, Length);
-	
-	if (RLM_PRECAL_TXLPF_TO_FLASH_CHECK(Data))
-	{
-		/* Store pre-cal data to flash */
-		RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_TXLPF, (VOID*)Data, Length);
-	}   
-	else
-	{
-    RlmCalCacheTxLpfInfo(pAd->rlmCalCache, Data, Length);
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
-	}  
-
+    hex_dump("P_TXLPF_CAL_INFO", Data, Length); 
+    if (RLM_PRECAL_TXLPF_TO_FLASH_CHECK(Data))
+    {
+        /* Store pre-cal data to flash */
+        RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_TXLPF, (VOID*)Data, Length);
+    }   
+    else
+    {
+        RlmCalCacheTxLpfInfo(pAd->rlmCalCache, Data, Length);
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+        ("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
+    }    
     return;
 };
 
 static VOID ExtEventTxIQCalInfoHandler(
         RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 {
-	hex_dump("P_TXIQ_CAL_INFO", Data, Length);
-	
-	if (RLM_PRECAL_TXIQ_TO_FLASH_CHECK(Data))
-	{
-		/* Store pre-cal data to flash */
-		RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_TXIQ, (VOID*)Data, Length);
-	}   
-	else
-	{
-    RlmCalCacheTxIqInfo(pAd->rlmCalCache, Data, Length);
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
-	}    
-
+    hex_dump("P_TXIQ_CAL_INFO", Data, Length);
+    if (RLM_PRECAL_TXIQ_TO_FLASH_CHECK(Data))
+    {
+        /* Store pre-cal data to flash */
+        RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_TXIQ, (VOID*)Data, Length);
+    }   
+    else
+    {
+        RlmCalCacheTxIqInfo(pAd->rlmCalCache, Data, Length);    
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+        ("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
+    }    
     return;
 };
 
 static VOID ExtEventTxDCCalInfoHandler(
         RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 {
-	hex_dump("P_TXDC_CAL_INFO", Data, Length);
-	
-	if (RLM_PRECAL_TXDC_TO_FLASH_CHECK(Data))
-	{
-		/* Store pre-cal data to flash */
-		RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_TXDC, (VOID*)Data, Length);
-	}   
-	else
-	{
-    RlmCalCacheTxDcInfo(pAd->rlmCalCache, Data, Length);
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
-	}
-
+    hex_dump("P_TXDC_CAL_INFO", Data, Length);    
+    if (RLM_PRECAL_TXDC_TO_FLASH_CHECK(Data))
+    {
+        /* Store pre-cal data to flash */
+        RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_TXDC, (VOID*)Data, Length);
+    }   
+    else
+    {
+        RlmCalCacheTxDcInfo(pAd->rlmCalCache, Data, Length);    
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+        ("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
+    }    
     return;
 };
 
 static VOID ExtEventRxFICalInfoHandler(
         RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 {
-	hex_dump("P_RXFI_CAL_INFO", Data, Length);
-	
-	if (RLM_PRECAL_RXFI_TO_FLASH_CHECK(Data))
-	{
-		/* Store pre-cal data to flash */
-		RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_RXFI, (VOID*)Data, Length);
-	}    
-	else
-	{
-    RlmCalCacheRxFiInfo(pAd->rlmCalCache, Data, Length);
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
-	}  
-
+    hex_dump("P_RXFI_CAL_INFO", Data, Length);
+    if (RLM_PRECAL_RXFI_TO_FLASH_CHECK(Data))
+    {
+        /* Store pre-cal data to flash */
+        RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_RXFI, (VOID*)Data, Length);
+    }    
+    else
+    {
+        RlmCalCacheRxFiInfo(pAd->rlmCalCache, Data, Length);    
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+        ("\x1b[42m%s: not to flash \x1b[m\n", __FUNCTION__));
+    }    
     return;
 };
 
 static VOID ExtEventRxFDCalInfoHandler(
         RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 {
-	hex_dump("P_RXFD_CAL_INFO", Data, Length);
-	
-	if (RLM_PRECAL_RXFD_TO_FLASH_CHECK(Data))
-	{
-		/* Store pre-cal data to flash */
-		RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_RXFD, (VOID*)Data, Length);
-	}    
-	else
-	{
-    RlmCalCacheRxFdInfo(pAd->rlmCalCache, Data, Length);
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
-	}  
-
+    hex_dump("P_RXFD_CAL_INFO", Data, Length);
+    if (RLM_PRECAL_RXFD_TO_FLASH_CHECK(Data))
+    {
+        /* Store pre-cal data to flash */
+        RTEnqueueInternalCmd(pAd, CMDTHRED_PRECAL_RXFD, (VOID*)Data, Length);
+    }    
+    else
+    {
+        RlmCalCacheRxFdInfo(pAd->rlmCalCache, Data, Length);
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+        ("\x1b[42m%s: Not store to flash !! \x1b[m\n", __FUNCTION__));    
+    }    
     return;
 };
-#endif  /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */
+#endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */
 
 static VOID EventExtEventHandler(RTMP_ADAPTER *pAd, UINT8 ExtEID, UINT8 *Data,
                                         UINT32 Length, EVENT_RXD *event_rxd)
@@ -1918,7 +1912,7 @@ static VOID EventExtEventHandler(RTMP_ADAPTER *pAd, UINT8 ExtEID, UINT8 *Data,
             ExtEventBssAcQPktNumHandler(pAd, Data, Length);
             break;
 
-#if defined (RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
+#if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
         case EXT_EVENT_ID_TXLPF_CAL_INFO:
             ExtEventTxLPFCalInfoHandler(pAd, Data, Length);
             break;
@@ -1951,6 +1945,11 @@ static VOID EventExtEventHandler(RTMP_ADAPTER *pAd, UINT8 ExtEID, UINT8 *Data,
         	ExtEventGetHotspotCapabilityHandler(pAd, Data, Length);
         	break;
 #endif /* CONFIG_HOTSPOT_R2 */
+#ifdef CUSTOMER_RSG_FEATURE
+		case EXT_EVENT_ID_GET_WTBL_TX_COUNTER:
+			ExtEventGetWtblTxCounter(pAd, Data, Length);
+			break;
+#endif
 
 		default:
 			MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
@@ -2470,25 +2469,29 @@ VOID EventTxPowerHandler(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 VOID EventTxPowerShowInfo(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
 {
     P_EXT_EVENT_TXPOWER_INFO_T prEventTxPowerInfo;
-    UINT8    TMACIdx, LoopIdx, RatePowerTableIdx, ColumnIdx, BFBackoffIdx, BBPCRIdx;
-    UINT8    Value;
-    UINT8    ucBandIdx;
     BOOLEAN  fg2GEPA;
     BOOLEAN  fg5GEPA;
-    BOOLEAN  fgSKUEnable;
-    BOOLEAN  fgPERCENTAGEEnable;
-    BOOLEAN  fgBFBACKOFFEnable;
-    BOOLEAN  fgThermalCompEnable;   
-    INT8     cSKUTable[SKU_TABLE_SIZE_ALL];
-    INT8     cThermalCompValue;
-    INT8     cPowerDrop;
-    UINT32   u4RatePowerCRValue[RATE_POWER_TMAC_SIZE];
-    INT8     cTxPwrBFBackoffValue[BF_BACKOFF_MODE][BF_BACKOFF_CASE];
-    UINT32   u4BackoffCRValue[6];
-    UINT32   u4PowerBoundCRValue;
-    UINT32   u4BBPAddress;
-    UINT8    ucPwrBoundIdx;
-    
+    UCHAR    SKUEnable_B0, SKUEnable_B1;
+    INT8     SKUTable_B0[SKU_TOTAL_SIZE];
+    INT8     SKUTable_B1[SKU_TOTAL_SIZE];
+    INT8     SKUTable_NSSoffset_B0[4];
+    INT8     SKUTable_NSSoffset_B1[4];
+    UINT32   RatePowerCRValue[16];    // TMAC: 0x820F4020~0x820F405C
+    UCHAR    PERCENTAGEEnable_B0, PERCENTAGEEnable_B1;
+    UINT8    PowerDrop_B0, PowerDrop_B1;
+    UCHAR    BFBACKOFFEnable_B0, BFBACKOFFEnable_B1;
+    INT8     BFBACKOFFTableOn[10];
+    INT8     BFBACKOFFTableOff[10];
+    UINT32   BackoffCRValue_B0[6];    // BBP: 0x8207067C~82070690
+    UINT32   BackoffCRValue_B1[6];    // BBP: 0x8207087C~82070890
+    UCHAR    PowerBoundEnable;
+    UINT8    PowerBoundValue;
+    UINT32   PowerBoundCRValue;       // TMAC: 0x820F4080
+    UCHAR    ThermalCompEnable;
+    INT8     ThermalCompValue;
+    UINT8    SKUIdx, TMACIdx, LoopIdx, RatePowerTableIdx, ColumnIdx, BFBackoffIdx, BBPCRIdx;
+    UINT8    Value;
+
     TX_POWER_BOUND_TABLE_T TxPowerBoundTable[4] =
         {
             { MAX_POWER_BAND0  , 0, 0},
@@ -2497,7 +2500,7 @@ VOID EventTxPowerShowInfo(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
             { MIN_POWER_BAND1  , 0, 0}
         };
 
-    TX_RATE_POWER_TABLE_T  TxRatePowerTable[30] =
+    TX_RATE_POWER_TABLE_T  TxRatePowerTable_B0[30] =
         {
             { OFDM_48M      , 0, 0},
             { OFDM_24M_36M  , 0, 0},
@@ -2529,73 +2532,149 @@ VOID EventTxPowerShowInfo(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
             { VHT160        , 0, 0},
             { VHT80         , 0, 0},
             { VHT40         , 0, 0}
-        }; 
+        };
+
+    TX_RATE_POWER_TABLE_T  TxRatePowerTable_B1[30] =
+        {
+            { OFDM_48M      , 0, 0},
+            { OFDM_24M_36M  , 0, 0},
+            { OFDM_12M_18M  , 0, 0},
+            { OFDM_6M_9M    , 0, 0},
+            { HT20_MCS5     , 0, 0},
+            { HT20_MCS3_4   , 0, 0},
+            { HT20_MCS1_2   , 0, 0},
+            { HT20_MCS0     , 0, 0},
+            { HT40_MCS5     , 0, 0},
+            { HT40_MCS3_4   , 0, 0},
+            { HT40_MCS1_2   , 0, 0},
+            { HT40_MCS0     , 0, 0},
+            { HT40_MCS32    , 0, 0},
+            { CCK_5M11M     , 0, 0},
+            { OFDM_54M      , 0, 0},
+            { CCK_1M2M      , 0, 0},
+            { HT40_MCS7     , 0, 0},
+            { HT40_MCS6     , 0, 0},
+            { HT20_MCS7     , 0, 0},
+            { HT20_MCS6     , 0, 0},
+            { VHT20_MCS5_6  , 0, 0},
+            { VHT20_MCS3_4  , 0, 0},
+            { VHT20_MCS1_2  , 0, 0},
+            { VHT20_MCS0    , 0, 0},
+            { VHT20_MCS9    , 0, 0},
+            { VHT20_MCS8    , 0, 0},
+            { VHT20_MCS7    , 0, 0},
+            { VHT160        , 0, 0},
+            { VHT80         , 0, 0},
+            { VHT40         , 0, 0}
+        };
 
     prEventTxPowerInfo = (P_EXT_EVENT_TXPOWER_INFO_T)Data;
-#ifdef RT_BIG_ENDIAN
-	RTMPEndianChange((UCHAR *)prEventTxPowerInfo->u4RatePowerCRValue, sizeof(prEventTxPowerInfo->u4RatePowerCRValue));
-	RTMPEndianChange((UCHAR *)prEventTxPowerInfo->u4BackoffCRValue, sizeof(prEventTxPowerInfo->u4BackoffCRValue));
-	prEventTxPowerInfo->u4PowerBoundCRValue = le2cpu32(prEventTxPowerInfo->u4PowerBoundCRValue);
-#endif
-    /* get Band Info */
-    ucBandIdx = prEventTxPowerInfo->ucBandIdx;
 
     /* EPPROME Info */
     fg2GEPA = prEventTxPowerInfo->fg2GEPA;
     fg5GEPA = prEventTxPowerInfo->fg5GEPA;
 
-    /* SKU enable/disable */
-    fgSKUEnable = prEventTxPowerInfo->fgSKUEnable;
+    /* SKU Info */
+    SKUEnable_B0 = prEventTxPowerInfo->ucSKUEnable_B0;
+    SKUEnable_B1 = prEventTxPowerInfo->ucSKUEnable_B1;
 
-    /* Power Percentage enable/disable */
-    fgPERCENTAGEEnable = prEventTxPowerInfo->fgPERCENTAGEEnable;
-    cPowerDrop         = prEventTxPowerInfo->cPowerDrop;
+    for (SKUIdx = 0; SKUIdx < SKU_TABLE_SIZE; SKUIdx++)
+    {
+        SKUTable_B0[SKUIdx] = prEventTxPowerInfo->cSKUTable_B0[SKUIdx];
+        SKUTable_B1[SKUIdx] = prEventTxPowerInfo->cSKUTable_B1[SKUIdx];
+    }
 
-    /* BF Backoff enable/disable */
-    fgBFBACKOFFEnable = prEventTxPowerInfo->fgBFBACKOFFEnable;
+    for (SKUIdx = SKU_TABLE_SIZE; SKUIdx < SKU_TOTAL_SIZE; SKUIdx++)
+    {
+        SKUTable_NSSoffset_B0[SKUIdx-SKU_TABLE_SIZE] = prEventTxPowerInfo->cSKUTable_B0[SKUIdx];
+        SKUTable_NSSoffset_B1[SKUIdx-SKU_TABLE_SIZE] = prEventTxPowerInfo->cSKUTable_B1[SKUIdx];
+    }
 
-    /* SKU Info */   
-    os_move_mem(cSKUTable, prEventTxPowerInfo->cSKUTable, SKU_TABLE_SIZE_ALL);
-
-    /* TMAC Info */
-    os_move_mem(u4RatePowerCRValue, prEventTxPowerInfo->u4RatePowerCRValue, RATE_POWER_TMAC_SIZE*4);
+    for (TMACIdx = 0; TMACIdx < RATE_POWER_TMAC_SIZE; TMACIdx++){
+        RatePowerCRValue[TMACIdx] = prEventTxPowerInfo->u4RatePowerCRValue[TMACIdx];
+    }
 
     /* Per Rate Tx Power for TMAC CR (Band0) */
-    for (TMACIdx = 0, LoopIdx = 0, RatePowerTableIdx = 0; TMACIdx < RATE_POWER_TMAC_SIZE; TMACIdx++)
+    LoopIdx = 0;
+    RatePowerTableIdx = 0;
+    for (TMACIdx = 0; TMACIdx < RATE_POWER_TMAC_SIZE_BAND0; TMACIdx++)
     {
-        for (ColumnIdx = 0; ColumnIdx < CR_COLUMN_SIZE; ColumnIdx++, LoopIdx++)
+        for (ColumnIdx = 0; ColumnIdx < CR_COLUMN_SIZE; ColumnIdx++)
         {
-            Value = (UINT8)((u4RatePowerCRValue[TMACIdx] & BITS((3-ColumnIdx)*8,(3-ColumnIdx)*8+7)) >> ((3-ColumnIdx)*8));
+            Value = (UINT8)((RatePowerCRValue[TMACIdx] & BITS((3-ColumnIdx)*8,(3-ColumnIdx)*8+7)) >> ((3-ColumnIdx)*8));
 
             /* Update Power DAC value and Power Decimal value for valid CR value in TMAC column */
             if ((LoopIdx != 24) && (LoopIdx != 28))
             {
-                TxRatePowerTable[RatePowerTableIdx].CRValue = Value;
 
-                if (TxRatePowerTable[RatePowerTableIdx].CRValue > 63)
-                    TxRatePowerTable[RatePowerTableIdx].PowerDecimal = (INT8)TxRatePowerTable[RatePowerTableIdx].CRValue - 128;
+                TxRatePowerTable_B0[RatePowerTableIdx].CRValue = Value;
+
+                if (TxRatePowerTable_B0[RatePowerTableIdx].CRValue > 63)
+                    TxRatePowerTable_B0[RatePowerTableIdx].PowerDecimal = (INT8)TxRatePowerTable_B0[RatePowerTableIdx].CRValue - 128;
                 else 
-                    TxRatePowerTable[RatePowerTableIdx].PowerDecimal = (INT8)TxRatePowerTable[RatePowerTableIdx].CRValue;
+                    TxRatePowerTable_B0[RatePowerTableIdx].PowerDecimal = (INT8)TxRatePowerTable_B0[RatePowerTableIdx].CRValue;
 
                 RatePowerTableIdx++;
             }
+
+            LoopIdx++;
         }
     }
 
+    /* Per Rate Tx Power for TMAC CR (Band1) */
+    LoopIdx = 0;
+    RatePowerTableIdx = 0;
+    for (TMACIdx = RATE_POWER_TMAC_SIZE_BAND0; TMACIdx < RATE_POWER_TMAC_SIZE; TMACIdx++)
+    {
+        for (ColumnIdx = 0; ColumnIdx < CR_COLUMN_SIZE; ColumnIdx++)
+        {
+            Value = (UINT8)((RatePowerCRValue[TMACIdx] & BITS((3-ColumnIdx)*8,(3-ColumnIdx)*8+7)) >> ((3-ColumnIdx)*8));
+
+            /* Update Power DAC value and Power Decimal value for valid CR value in TMAC column */
+            if ((LoopIdx != 24) && (LoopIdx != 28))
+            {
+                TxRatePowerTable_B1[RatePowerTableIdx].CRValue = Value;
+
+                if (TxRatePowerTable_B1[RatePowerTableIdx].CRValue > 63)
+                    TxRatePowerTable_B1[RatePowerTableIdx].PowerDecimal = (INT8)TxRatePowerTable_B1[RatePowerTableIdx].CRValue - 128;
+                else 
+                    TxRatePowerTable_B1[RatePowerTableIdx].PowerDecimal = (INT8)TxRatePowerTable_B1[RatePowerTableIdx].CRValue;
+
+                RatePowerTableIdx++;
+            }
+
+            LoopIdx++;
+        }
+    }
+
+    /* Power Percentage Info */
+    PERCENTAGEEnable_B0  = prEventTxPowerInfo->ucPERCENTAGEEnable_B0;
+    PERCENTAGEEnable_B1  = prEventTxPowerInfo->ucPERCENTAGEEnable_B1;
+    PowerDrop_B0         = prEventTxPowerInfo->ucPowerDrop_B0;
+    PowerDrop_B1         = prEventTxPowerInfo->ucPowerDrop_B1;
+
     /* BF Backoff Info */
-    u4BBPAddress = (0 == ucBandIdx)? (0x8207067C):(0x8207087C);
-    
-    os_move_mem(cTxPwrBFBackoffValue, prEventTxPowerInfo->cTxPwrBFBackoffValue, BF_BACKOFF_MODE*BF_BACKOFF_CASE);
-    os_move_mem(u4BackoffCRValue, prEventTxPowerInfo->u4BackoffCRValue, BFBACKOFF_BBPCR_SIZE*4);
-    
+    BFBACKOFFEnable_B0  = prEventTxPowerInfo->ucBFBACKOFFEnable_B0;
+    BFBACKOFFEnable_B1  = prEventTxPowerInfo->ucBFBACKOFFEnable_B1;
+
+    for (BFBackoffIdx = 0; BFBackoffIdx < BFBACKOFF_TABLE_SIZE; BFBackoffIdx++){
+        BFBACKOFFTableOn[BFBackoffIdx]  = prEventTxPowerInfo->cBFBACKOFFTableOn[BFBackoffIdx];
+        BFBACKOFFTableOff[BFBackoffIdx] = prEventTxPowerInfo->cBFBACKOFFTableOff[BFBackoffIdx];
+    }
+
+    for (BBPCRIdx = 0; BBPCRIdx < BFBACKOFF_BBPCR_SIZE; BBPCRIdx++){
+       BackoffCRValue_B0[BBPCRIdx] = prEventTxPowerInfo->u4BackoffCRValue_B0[BBPCRIdx];
+       BackoffCRValue_B1[BBPCRIdx] = prEventTxPowerInfo->u4BackoffCRValue_B1[BBPCRIdx];
+    }
+
     /* Power Upper Bound Info */
-    ucPwrBoundIdx = ucBandIdx << 1;
-    
-    u4PowerBoundCRValue = prEventTxPowerInfo->u4PowerBoundCRValue;       // TMAC: 0x820F4080
+    PowerBoundEnable    = prEventTxPowerInfo->ucPowerBoundEnable;
+    PowerBoundValue     = prEventTxPowerInfo->ucPowerBoundValue;
+    PowerBoundCRValue   = prEventTxPowerInfo->u4PowerBoundCRValue;       // TMAC: 0x820F4080
 
     for (ColumnIdx = 0; ColumnIdx < CR_COLUMN_SIZE; ColumnIdx++)
     {
-        Value = (UINT8)((u4PowerBoundCRValue & BITS((3-ColumnIdx)*8,(3-ColumnIdx)*8+7)) >> ((3-ColumnIdx)*8));
+        Value = (UINT8)((PowerBoundCRValue & BITS((3-ColumnIdx)*8,(3-ColumnIdx)*8+7)) >> ((3-ColumnIdx)*8));
         TxPowerBoundTable[ColumnIdx].CRValue = Value;
 
         if (TxPowerBoundTable[ColumnIdx].CRValue > 63)
@@ -2605,8 +2684,8 @@ VOID EventTxPowerShowInfo(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
     }
 
     /* Thermal Compensation Info */
-    fgThermalCompEnable  = prEventTxPowerInfo->fgThermalCompEnable;
-    cThermalCompValue    = prEventTxPowerInfo->cThermalCompValue;
+    ThermalCompEnable   = prEventTxPowerInfo->ucThermalCompEnable;
+    ThermalCompValue    = prEventTxPowerInfo->ucThermalCompValue;
 
     /* Show Info in Debug Log */
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
@@ -2620,155 +2699,204 @@ VOID EventTxPowerShowInfo(RTMP_ADAPTER *pAd, UINT8 *Data, UINT32 Length)
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                                SKU Info                                      \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  SKU Enable status:  (Band%d): %d                                            \n", ucBandIdx, fgSKUEnable));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  SKU Enable status:  (Band0): %d, (Band1): %d                                \n", SKUEnable_B0, SKUEnable_B1));
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("----------------------------------------------------------------------------- \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         Band%d                                                               \n", ucBandIdx));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         CCK_1M2M    = 0x%02x                                                 \n", cSKUTable[CCK1M2M]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         CCK_5M11M   = 0x%02x                                                 \n", cSKUTable[CCK5M11M]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_6M9M   = 0x%02x                                                 \n", cSKUTable[OFDM6M9M]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_12M18M = 0x%02x                                                 \n", cSKUTable[OFDM12M18M]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_24M36M = 0x%02x                                                 \n", cSKUTable[OFDM24M36M]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_48M    = 0x%02x                                                 \n", cSKUTable[OFDM48M]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_54M    = 0x%02x                                                 \n", cSKUTable[OFDM54M]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M0     = 0x%02x                                                 \n", cSKUTable[HT20M0]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M32    = 0x%02x                                                 \n", cSKUTable[HT20M32]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M1M2   = 0x%02x                                                 \n", cSKUTable[HT20M1M2]));    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M3M4   = 0x%02x                                                 \n", cSKUTable[HT20M3M4]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M5     = 0x%02x                                                 \n", cSKUTable[HT20M5]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M6     = 0x%02x                                                 \n", cSKUTable[HT20M6]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M7     = 0x%02x                                                 \n", cSKUTable[HT20M7]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M0     = 0x%02x                                                 \n", cSKUTable[HT40M0]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M32    = 0x%02x                                                 \n", cSKUTable[HT40M32]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M1M2   = 0x%02x                                                 \n", cSKUTable[HT40M1M2]));    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M3M4   = 0x%02x                                                 \n", cSKUTable[HT40M3M4]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M5     = 0x%02x                                                 \n", cSKUTable[HT40M5]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M6     = 0x%02x                                                 \n", cSKUTable[HT40M6]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M7     = 0x%02x                                                 \n", cSKUTable[HT40M7]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M0    = 0x%02x                                                 \n", cSKUTable[VHT20M0]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M1M2  = 0x%02x                                                 \n", cSKUTable[VHT20M1M2]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M3M4  = 0x%02x                                                 \n", cSKUTable[VHT20M3M4]));    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M5M6  = 0x%02x                                                 \n", cSKUTable[VHT20M5M6]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M7    = 0x%02x                                                 \n", cSKUTable[VHT20M7]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M8    = 0x%02x                                                 \n", cSKUTable[VHT20M8]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M9    = 0x%02x                                                 \n", cSKUTable[VHT20M9]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M0    = 0x%02x                                                 \n", cSKUTable[VHT40M0]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M1M2  = 0x%02x                                                 \n", cSKUTable[VHT40M1M2]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M3M4  = 0x%02x                                                 \n", cSKUTable[VHT40M3M4]));    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M5M6  = 0x%02x                                                 \n", cSKUTable[VHT40M5M6]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M7    = 0x%02x                                                 \n", cSKUTable[VHT40M7]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M8    = 0x%02x                                                 \n", cSKUTable[VHT40M8]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M9    = 0x%02x                                                 \n", cSKUTable[VHT40M9]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M0    = 0x%02x                                                 \n", cSKUTable[VHT80M0]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M1M2  = 0x%02x                                                 \n", cSKUTable[VHT80M1M2]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M3M4  = 0x%02x                                                 \n", cSKUTable[VHT80M3M4]));    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M5M6  = 0x%02x                                                 \n", cSKUTable[VHT80M5M6]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M7    = 0x%02x                                                 \n", cSKUTable[VHT80M7]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M8    = 0x%02x                                                 \n", cSKUTable[VHT80M8]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M9    = 0x%02x                                                 \n", cSKUTable[VHT80M9]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M0   = 0x%02x                                                 \n", cSKUTable[VHT160M0]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M1M2 = 0x%02x                                                 \n", cSKUTable[VHT160M1M2]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M3M4 = 0x%02x                                                 \n", cSKUTable[VHT160M3M4]));    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M5M6 = 0x%02x                                                 \n", cSKUTable[VHT160M5M6]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M7   = 0x%02x                                                 \n", cSKUTable[VHT160M7]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M8   = 0x%02x                                                 \n", cSKUTable[VHT160M8]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M9   = 0x%02x                                                 \n", cSKUTable[VHT160M9]));
-                                                                                                                    
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         1SS_OFFSET  = 0x%02x                                                 \n", cSKUTable[TXPOWER_1SS_OFFSET]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         2SS_OFFSET  = 0x%02x                                                 \n", cSKUTable[TXPOWER_2SS_OFFSET]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         3SS_OFFSET  = 0x%02x                                                 \n", cSKUTable[TXPOWER_3SS_OFFSET]));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         4SS_OFFSET  = 0x%02x                                                 \n", cSKUTable[TXPOWER_4SS_OFFSET]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         Band0                          Band1                                 \n"));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         CCK_1M2M    = 0x%02x           CCK_1M2M    = 0x%02x                  \n", SKUTable_B0[CCK1M2M], SKUTable_B1[CCK_1M2M]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         CCK_5M11M   = 0x%02x           CCK_5M11M   = 0x%02x                  \n", SKUTable_B0[CCK5M11M], SKUTable_B1[CCK_5M11M]));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_6M9M   = 0x%02x           OFDM_6M9M   = 0x%02x                  \n", SKUTable_B0[OFDM6M9M], SKUTable_B1[OFDM6M9M]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_12M18M = 0x%02x           OFDM_12M18M = 0x%02x                  \n", SKUTable_B0[OFDM12M18M], SKUTable_B1[OFDM12M18M]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_24M36M = 0x%02x           OFDM_24M36M = 0x%02x                  \n", SKUTable_B0[OFDM24M36M], SKUTable_B1[OFDM24M36M]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_48M    = 0x%02x           OFDM_48M    = 0x%02x                  \n", SKUTable_B0[OFDM48M], SKUTable_B1[OFDM_48M]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         OFDM_54M    = 0x%02x           OFDM_54M    = 0x%02x                  \n", SKUTable_B0[OFDM54M], SKUTable_B1[OFDM_54M]));
+    
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M0     = 0x%02x           HT20_M0     = 0x%02x                  \n", SKUTable_B0[HT20M0], SKUTable_B1[HT20M0]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M32    = 0x%02x           HT20_M32    = 0x%02x                  \n", SKUTable_B0[HT20M32], SKUTable_B1[HT20M32]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M1M2   = 0x%02x           HT20_M1M2   = 0x%02x                  \n", SKUTable_B0[HT20M1M2], SKUTable_B1[HT20M1M2]));    
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M3M4   = 0x%02x           HT20_M3M4   = 0x%02x                  \n", SKUTable_B0[HT20M3M4], SKUTable_B1[HT20M3M4]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M5     = 0x%02x           HT20_M5     = 0x%02x                  \n", SKUTable_B0[HT20M5], SKUTable_B1[HT20M5]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M6     = 0x%02x           HT20_M6     = 0x%02x                  \n", SKUTable_B0[HT20M6], SKUTable_B1[HT20M6]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT20_M7     = 0x%02x           HT20_M7     = 0x%02x                  \n", SKUTable_B0[HT20M7], SKUTable_B1[HT20M7]));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M0     = 0x%02x           HT40_M0     = 0x%02x                  \n", SKUTable_B0[HT40M0], SKUTable_B1[HT40M0]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M32    = 0x%02x           HT40_M32    = 0x%02x                  \n", SKUTable_B0[HT40M32], SKUTable_B1[HT40M32]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M1M2   = 0x%02x           HT40_M1M2   = 0x%02x                  \n", SKUTable_B0[HT40M1M2], SKUTable_B1[HT40M1M2]));    
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M3M4   = 0x%02x           HT40_M3M4   = 0x%02x                  \n", SKUTable_B0[HT40M3M4], SKUTable_B1[HT40M3M4]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M5     = 0x%02x           HT40_M5     = 0x%02x                  \n", SKUTable_B0[HT40M5], SKUTable_B1[HT40M5]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M6     = 0x%02x           HT40_M6     = 0x%02x                  \n", SKUTable_B0[HT40M6], SKUTable_B1[HT40M6]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         HT40_M7     = 0x%02x           HT40_M7     = 0x%02x                  \n", SKUTable_B0[HT40M7], SKUTable_B1[HT40M7]));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M0    = 0x%02x           VHT20_M0    = 0x%02x                  \n", SKUTable_B0[VHT20M0], SKUTable_B1[VHT20M0]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M1M2  = 0x%02x           VHT20_M1M2  = 0x%02x                  \n", SKUTable_B0[VHT20M1M2], SKUTable_B1[VHT20M1M2]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M3M4  = 0x%02x           VHT20_M3M4  = 0x%02x                  \n", SKUTable_B0[VHT20M3M4], SKUTable_B1[VHT20M3M4]));    
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M5M6  = 0x%02x           VHT20_M5M6  = 0x%02x                  \n", SKUTable_B0[VHT20M5M6], SKUTable_B1[VHT20M5M6]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M7    = 0x%02x           VHT20_M7    = 0x%02x                  \n", SKUTable_B0[VHT20M7], SKUTable_B1[VHT20M7]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M8    = 0x%02x           VHT20_M8    = 0x%02x                  \n", SKUTable_B0[VHT20M8], SKUTable_B1[VHT20M8]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT20_M9    = 0x%02x           VHT20_M9    = 0x%02x                  \n", SKUTable_B0[VHT20M9], SKUTable_B1[VHT20M9]));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M0    = 0x%02x           VHT40_M0    = 0x%02x                  \n", SKUTable_B0[VHT20M0], SKUTable_B1[VHT20M0]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M1M2  = 0x%02x           VHT40_M1M2  = 0x%02x                  \n", SKUTable_B0[VHT20M1M2], SKUTable_B1[VHT20M1M2]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M3M4  = 0x%02x           VHT40_M3M4  = 0x%02x                  \n", SKUTable_B0[VHT20M3M4], SKUTable_B1[VHT20M3M4]));    
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M5M6  = 0x%02x           VHT40_M5M6  = 0x%02x                  \n", SKUTable_B0[VHT20M5M6], SKUTable_B1[VHT20M5M6]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M7    = 0x%02x           VHT40_M7    = 0x%02x                  \n", SKUTable_B0[VHT20M7], SKUTable_B1[VHT20M7]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M8    = 0x%02x           VHT40_M8    = 0x%02x                  \n", SKUTable_B0[VHT20M8], SKUTable_B1[VHT20M8]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT40_M9    = 0x%02x           VHT40_M9    = 0x%02x                  \n", SKUTable_B0[VHT20M9], SKUTable_B1[VHT20M9]));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M0    = 0x%02x           VHT80_M0    = 0x%02x                  \n", SKUTable_B0[VHT20M0], SKUTable_B1[VHT20M0]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M1M2  = 0x%02x           VHT80_M1M2  = 0x%02x                  \n", SKUTable_B0[VHT20M1M2], SKUTable_B1[VHT20M1M2]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M3M4  = 0x%02x           VHT80_M3M4  = 0x%02x                  \n", SKUTable_B0[VHT20M3M4], SKUTable_B1[VHT20M3M4]));    
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M5M6  = 0x%02x           VHT80_M5M6  = 0x%02x                  \n", SKUTable_B0[VHT20M5M6], SKUTable_B1[VHT20M5M6]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M7    = 0x%02x           VHT80_M7    = 0x%02x                  \n", SKUTable_B0[VHT20M7], SKUTable_B1[VHT20M7]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M8    = 0x%02x           VHT80_M8    = 0x%02x                  \n", SKUTable_B0[VHT20M8], SKUTable_B1[VHT20M8]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT80_M9    = 0x%02x           VHT80_M9    = 0x%02x                  \n", SKUTable_B0[VHT20M9], SKUTable_B1[VHT20M9]));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M0   = 0x%02x           VHT160_M0   = 0x%02x                  \n", SKUTable_B0[VHT20M0], SKUTable_B1[VHT20M0]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M1M2 = 0x%02x           VHT160_M1M2 = 0x%02x                  \n", SKUTable_B0[VHT20M1M2], SKUTable_B1[VHT20M1M2]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M3M4 = 0x%02x           VHT160_M3M4 = 0x%02x                  \n", SKUTable_B0[VHT20M3M4], SKUTable_B1[VHT20M3M4]));    
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M5M6 = 0x%02x           VHT160_M5M6 = 0x%02x                  \n", SKUTable_B0[VHT20M5M6], SKUTable_B1[VHT20M5M6]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M7   = 0x%02x           VHT160_M7   = 0x%02x                  \n", SKUTable_B0[VHT20M7], SKUTable_B1[VHT20M7]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M8   = 0x%02x           VHT160_M8   = 0x%02x                  \n", SKUTable_B0[VHT20M8], SKUTable_B1[VHT20M8]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         VHT160_M9   = 0x%02x           VHT160_M9   = 0x%02x                  \n", SKUTable_B0[VHT20M9], SKUTable_B1[VHT20M9]));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         1SS_OFFSET  = 0x%02x           1SS_OFFSET   = 0x%02x                 \n", SKUTable_NSSoffset_B0[0], SKUTable_NSSoffset_B1[0]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         2SS_OFFSET  = 0x%02x           2SS_OFFSET   = 0x%02x                 \n", SKUTable_NSSoffset_B0[1], SKUTable_NSSoffset_B1[1]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         3SS_OFFSET  = 0x%02x           3SS_OFFSET   = 0x%02x                 \n", SKUTable_NSSoffset_B0[2], SKUTable_NSSoffset_B1[2]));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("         4SS_OFFSET  = 0x%02x           4SS_OFFSET   = 0x%02x                 \n", SKUTable_NSSoffset_B0[3], SKUTable_NSSoffset_B1[3]));
 
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                          Power Percentage Info                               \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Power Percentage Enable status :  (Band%d): %d                              \n", ucBandIdx, fgPERCENTAGEEnable));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  PowerDrop status               :  (Band%d): %d                              \n", ucBandIdx, cPowerDrop));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Power Percentage Enable status:  (Band0): %d, (Band1): %d                   \n", PERCENTAGEEnable_B0, PERCENTAGEEnable_B1));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  PowerDrop status              :  (Band0): %d, (Band1): %d                   \n", PowerDrop_B0, PowerDrop_B1));
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                             BF Backoff Info                                  \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BF BACKOFF Enable status:  (Band%d): %d                                     \n", ucBandIdx, fgBFBACKOFFEnable));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BF BACKOFF Enable status:  (Band0): %d, (Band1): %d                         \n", BFBACKOFFEnable_B0, BFBACKOFFEnable_B1));
 
     for (BFBackoffIdx = 0; BFBackoffIdx < BFBACKOFF_TABLE_SIZE; BFBackoffIdx++){
-        MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BFBACKOFFTableOn[%d]  = 0x%02x                                          \n", BFBackoffIdx, cTxPwrBFBackoffValue[BF_BACKOFF_ON_MODE][BFBackoffIdx]));
+        MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BFBACKOFFTableOn[%d]  = 0x%x                                            \n", BFBackoffIdx, BFBACKOFFTableOn[BFBackoffIdx]));
     }
 
     for (BFBackoffIdx = 0; BFBackoffIdx < BFBACKOFF_TABLE_SIZE; BFBackoffIdx++){
-        MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BFBACKOFFTableOff[%d] = 0x%02x                                          \n", BFBackoffIdx, cTxPwrBFBackoffValue[BF_BACKOFF_OFF_MODE][BFBackoffIdx]));
+        MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BFBACKOFFTableOff[%d] = 0x%x                                            \n", BFBackoffIdx, BFBACKOFFTableOff[BFBackoffIdx]));
     }
 
     for (BBPCRIdx = 0; BBPCRIdx < BFBACKOFF_BBPCR_SIZE; BBPCRIdx++){
-        MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BackoffCRValue[%d] 0x%x = 0x%08x                                        \n", BBPCRIdx, u4BBPAddress+4*BBPCRIdx, u4BackoffCRValue[BBPCRIdx]));
+        MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BackoffCRValue_B0[%d] 0x%x = 0x%x                                       \n", BBPCRIdx, 0x8207067C+4*BBPCRIdx ,BackoffCRValue_B0[BBPCRIdx]));
+    }
+
+    for (BBPCRIdx = 0; BBPCRIdx < BFBACKOFF_BBPCR_SIZE; BBPCRIdx++){
+        MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  BackoffCRValue_B1[%d] 0x%x = 0x%x                                       \n", BBPCRIdx, 0x8207087C+4*BBPCRIdx, BackoffCRValue_B1[BBPCRIdx]));
     }
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                          Power Upper Bound Info                              \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Power Bound CRValue (0x820F4080) = 0x%08x                                   \n", u4PowerBoundCRValue));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Power Bound Enable   = %d                                                   \n", PowerBoundEnable));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Power Bound Value    = 0x%x                                                 \n", PowerBoundValue));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Power Bound CRValue (0x820F4080) = 0x%x                                     \n", PowerBoundCRValue));
     
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                         Thermal Compensation Info                            \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Thermal Compensation Enable: %d                                             \n", fgThermalCompEnable));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Thermal Compensation Value : %d                                             \n", cThermalCompValue));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Thermal Compensation Enable = %d                                            \n", ThermalCompEnable));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("  Thermal Compensation Value  = %d                                            \n", ThermalCompValue));
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                            TMAC Info (Band%d)                                \n", ucBandIdx));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                            TMAC Info (Band0)                                 \n"));
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [CCK_1M2M]       Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[CCK_1M2M].CRValue, TxRatePowerTable[CCK_1M2M].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [CCK_5M11M]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[CCK_5M11M].CRValue, TxRatePowerTable[CCK_5M11M].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_6M_9M]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[OFDM_6M_9M].CRValue, TxRatePowerTable[OFDM_6M_9M].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_12M_18M]   Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[OFDM_12M_18M].CRValue, TxRatePowerTable[OFDM_12M_18M].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_24M_36M]   Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[OFDM_24M_36M].CRValue, TxRatePowerTable[OFDM_24M_36M].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_48M]       Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[OFDM_48M].CRValue, TxRatePowerTable[OFDM_48M].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_54M]       Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[OFDM_54M].CRValue, TxRatePowerTable[OFDM_54M].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS0]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT20_MCS0].CRValue, TxRatePowerTable[HT20_MCS0].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS1_2]    Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT20_MCS1_2].CRValue, TxRatePowerTable[HT20_MCS1_2].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS3_4]    Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT20_MCS3_4].CRValue, TxRatePowerTable[HT20_MCS3_4].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS5]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT20_MCS5].CRValue, TxRatePowerTable[HT20_MCS5].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS6]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT20_MCS6].CRValue, TxRatePowerTable[HT20_MCS6].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS7]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT20_MCS7].CRValue, TxRatePowerTable[HT20_MCS7].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS32]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT40_MCS32].CRValue, TxRatePowerTable[HT40_MCS32].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS0]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT40_MCS0].CRValue, TxRatePowerTable[HT40_MCS0].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS1_2]    Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT40_MCS1_2].CRValue, TxRatePowerTable[HT40_MCS1_2].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS3_4]    Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT40_MCS3_4].CRValue, TxRatePowerTable[HT40_MCS3_4].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS5]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT40_MCS5].CRValue, TxRatePowerTable[HT40_MCS5].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS6]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT40_MCS6].CRValue, TxRatePowerTable[HT40_MCS6].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS7]      Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[HT40_MCS7].CRValue, TxRatePowerTable[HT40_MCS7].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS0]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT20_MCS0].CRValue, TxRatePowerTable[VHT20_MCS0].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS1_2]   Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT20_MCS1_2].CRValue, TxRatePowerTable[VHT20_MCS1_2].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS3_4]   Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT20_MCS3_4].CRValue, TxRatePowerTable[VHT20_MCS3_4].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS5_6]   Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT20_MCS5_6].CRValue, TxRatePowerTable[VHT20_MCS5_6].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS7]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT20_MCS7].CRValue, TxRatePowerTable[VHT20_MCS7].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS8]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT20_MCS8].CRValue, TxRatePowerTable[VHT20_MCS8].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS9]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT20_MCS9].CRValue, TxRatePowerTable[VHT20_MCS9].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [CCK_1M2M]       Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[CCK_1M2M].CRValue, TxRatePowerTable_B0[CCK_1M2M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [CCK_5M11M]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[CCK_5M11M].CRValue, TxRatePowerTable_B0[CCK_5M11M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_6M_9M]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[OFDM_6M_9M].CRValue, TxRatePowerTable_B0[OFDM_6M_9M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_12M_18M]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[OFDM_12M_18M].CRValue, TxRatePowerTable_B0[OFDM_12M_18M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_24M_36M]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[OFDM_24M_36M].CRValue, TxRatePowerTable_B0[OFDM_24M_36M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_48M]       Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[OFDM_48M].CRValue, TxRatePowerTable_B0[OFDM_48M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_54M]       Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[OFDM_54M].CRValue, TxRatePowerTable_B0[OFDM_54M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS0]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT20_MCS0].CRValue, TxRatePowerTable_B0[HT20_MCS0].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS1_2]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT20_MCS1_2].CRValue, TxRatePowerTable_B0[HT20_MCS1_2].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS3_4]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT20_MCS3_4].CRValue, TxRatePowerTable_B0[HT20_MCS3_4].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS5]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT20_MCS5].CRValue, TxRatePowerTable_B0[HT20_MCS5].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS6]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT20_MCS6].CRValue, TxRatePowerTable_B0[HT20_MCS6].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS7]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT20_MCS7].CRValue, TxRatePowerTable_B0[HT20_MCS7].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS32]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT40_MCS32].CRValue, TxRatePowerTable_B0[HT40_MCS32].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS0]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT40_MCS0].CRValue, TxRatePowerTable_B0[HT40_MCS0].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS1_2]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT40_MCS1_2].CRValue, TxRatePowerTable_B0[HT40_MCS1_2].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS3_4]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT40_MCS3_4].CRValue, TxRatePowerTable_B0[HT40_MCS3_4].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS5]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT40_MCS5].CRValue, TxRatePowerTable_B0[HT40_MCS5].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS6]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT40_MCS6].CRValue, TxRatePowerTable_B0[HT40_MCS6].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS7]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[HT40_MCS7].CRValue, TxRatePowerTable_B0[HT40_MCS7].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS0]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT20_MCS0].CRValue, TxRatePowerTable_B0[VHT20_MCS0].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS1_2]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT20_MCS1_2].CRValue, TxRatePowerTable_B0[VHT20_MCS1_2].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS3_4]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT20_MCS3_4].CRValue, TxRatePowerTable_B0[VHT20_MCS3_4].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS5_6]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT20_MCS5_6].CRValue, TxRatePowerTable_B0[VHT20_MCS5_6].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS7]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT20_MCS7].CRValue, TxRatePowerTable_B0[VHT20_MCS7].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS8]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT20_MCS8].CRValue, TxRatePowerTable_B0[VHT20_MCS8].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS9]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT20_MCS9].CRValue, TxRatePowerTable_B0[VHT20_MCS9].PowerDecimal));
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("----------------------------------------------------------------------------- \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT40][Offset]  Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT40].CRValue, TxRatePowerTable[VHT40].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT80][Offset]  Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT80].CRValue, TxRatePowerTable[VHT80].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT160][Offset] Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxRatePowerTable[VHT160].CRValue, TxRatePowerTable[VHT160].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT40][Offset]  Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT40].CRValue, TxRatePowerTable_B0[VHT40].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT80][Offset]  Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT80].CRValue, TxRatePowerTable_B0[VHT80].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT160][Offset] Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B0[VHT160].CRValue, TxRatePowerTable_B0[VHT160].PowerDecimal));
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("----------------------------------------------------------------------------- \n"));
 
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [MAX][Bound]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxPowerBoundTable[ucPwrBoundIdx].CRValue, TxPowerBoundTable[ucPwrBoundIdx].PowerDecimal));
-    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [MIN][Bound]     Power DAC value: 0x%02x,   Power Decimal value: %03d        \n", TxPowerBoundTable[ucPwrBoundIdx+1].CRValue, TxPowerBoundTable[ucPwrBoundIdx+1].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [MAX][Bound]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxPowerBoundTable[MAX_POWER_BAND0].CRValue, TxPowerBoundTable[MAX_POWER_BAND0].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [MIN][Bound]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxPowerBoundTable[MIN_POWER_BAND0].CRValue, TxPowerBoundTable[MIN_POWER_BAND0].PowerDecimal));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("                            TMAC Info (Band1)                                 \n"));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [CCK_1M2M]       Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[CCK_1M2M].CRValue, TxRatePowerTable_B1[CCK_1M2M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [CCK_5M11M]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[CCK_5M11M].CRValue, TxRatePowerTable_B1[CCK_5M11M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_6M_9M]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[OFDM_6M_9M].CRValue, TxRatePowerTable_B1[OFDM_6M_9M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_12M_18M]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[OFDM_12M_18M].CRValue, TxRatePowerTable_B1[OFDM_12M_18M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_24M_36M]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[OFDM_24M_36M].CRValue, TxRatePowerTable_B1[OFDM_24M_36M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_48M]       Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[OFDM_48M].CRValue, TxRatePowerTable_B1[OFDM_48M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [OFDM_54M]       Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[OFDM_54M].CRValue, TxRatePowerTable_B1[OFDM_54M].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS0]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT20_MCS0].CRValue, TxRatePowerTable_B1[HT20_MCS0].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS1_2]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT20_MCS1_2].CRValue, TxRatePowerTable_B1[HT20_MCS1_2].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS3_4]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT20_MCS3_4].CRValue, TxRatePowerTable_B1[HT20_MCS3_4].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS5]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT20_MCS5].CRValue, TxRatePowerTable_B1[HT20_MCS5].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS6]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT20_MCS6].CRValue, TxRatePowerTable_B1[HT20_MCS6].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT20_MCS7]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT20_MCS7].CRValue, TxRatePowerTable_B1[HT20_MCS7].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS32]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT40_MCS32].CRValue, TxRatePowerTable_B1[HT40_MCS32].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS0]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT40_MCS0].CRValue, TxRatePowerTable_B1[HT40_MCS0].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS1_2]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT40_MCS1_2].CRValue, TxRatePowerTable_B1[HT40_MCS1_2].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS3_4]    Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT40_MCS3_4].CRValue, TxRatePowerTable_B1[HT40_MCS3_4].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS5]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT40_MCS5].CRValue, TxRatePowerTable_B1[HT40_MCS5].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS6]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT40_MCS6].CRValue, TxRatePowerTable_B1[HT40_MCS6].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [HT40_MCS7]      Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[HT40_MCS7].CRValue, TxRatePowerTable_B1[HT40_MCS7].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS0]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT20_MCS0].CRValue, TxRatePowerTable_B1[VHT20_MCS0].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS1_2]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT20_MCS1_2].CRValue, TxRatePowerTable_B1[VHT20_MCS1_2].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS3_4]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT20_MCS3_4].CRValue, TxRatePowerTable_B1[VHT20_MCS3_4].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS5_6]   Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT20_MCS5_6].CRValue, TxRatePowerTable_B1[VHT20_MCS5_6].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS7]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT20_MCS7].CRValue, TxRatePowerTable_B1[VHT20_MCS7].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS8]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT20_MCS8].CRValue, TxRatePowerTable_B1[VHT20_MCS8].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT20_MCS9]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT20_MCS9].CRValue, TxRatePowerTable_B1[VHT20_MCS9].PowerDecimal));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("----------------------------------------------------------------------------- \n"));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT40][Offset]  Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT40].CRValue, TxRatePowerTable_B1[VHT40].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT80][Offset]  Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT80].CRValue, TxRatePowerTable_B1[VHT80].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [VHT160][Offset] Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxRatePowerTable_B1[VHT160].CRValue, TxRatePowerTable_B1[VHT160].PowerDecimal));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("----------------------------------------------------------------------------- \n"));
+
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [MAX][Bound]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxPowerBoundTable[MAX_POWER_BAND1].CRValue, TxPowerBoundTable[MAX_POWER_BAND1].PowerDecimal));
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,(" [MIN][Bound]     Power DAC value: 0x%x,   Power Decimal value: %d            \n", TxPowerBoundTable[MIN_POWER_BAND1].CRValue, TxPowerBoundTable[MIN_POWER_BAND1].PowerDecimal));
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,("============================================================================= \n"));
 }

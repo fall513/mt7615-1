@@ -186,8 +186,7 @@ VOID InsertChannelRepIE(
 	OUT PULONG pFrameLen,
 	IN RTMP_STRING *pCountry,
 	IN UINT8 RegulatoryClass,
-	IN UINT8 *ChReptList,
-	IN UCHAR PhyMode
+	IN UINT8 *ChReptList
 	);
 
 VOID InsertTpcReportIE(
@@ -219,8 +218,19 @@ VOID NotifyChSwAnnToPeerAPs(
 VOID RguClass_BuildBcnChList(
 	IN PRTMP_ADAPTER pAd,
 	OUT PUCHAR pBuf,
-	OUT	PULONG pBufLen,
-	IN UCHAR PhyMode,
-	IN UCHAR RegClass);
+	OUT	PULONG pBufLen);
+#ifdef CUSTOMER_DCC_FEATURE
+INT NotifyChSwAnnToConnectedSTAs(
+	IN PRTMP_ADAPTER pAd,
+	IN UINT8 		ChSwMode,
+	IN UINT8 		Channel);
+
+VOID EnqueueChSwAnnNew(
+	IN PRTMP_ADAPTER pAd,
+	IN PUCHAR pDA, 
+	IN UINT8 ChSwMode,
+	IN UINT8 NewCh,
+	IN PUCHAR pSA);
+#endif
 #endif /* __SPECTRUM_H__ */
 

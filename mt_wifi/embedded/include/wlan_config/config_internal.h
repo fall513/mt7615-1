@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
  /***************************************************************************
  * MediaTek Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -15,7 +16,7 @@
  ***************************************************************************
 
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __CONFIG_INTERNAL_H__
 #define __CONFIG_INTERNAL_H__
 

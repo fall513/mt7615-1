@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Mediatek Inc.
  * 5F., No.5, Taiyuan 1st St., Zhubei City,
@@ -25,7 +26,7 @@
     UnifyLOGTF   2014.07.11     Initial version
 
 ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
@@ -143,8 +144,7 @@
 		DBG_CAT_POWER	|\
 		DBG_CAT_COEX	|\
 		DBG_CAT_P2P		|\
-		DBG_CAT_TOKEN	|\
-		DBG_CAT_CMW     |\
+		DBG_CAT_TOKEN		|\
 		DBG_CAT_RSV1	|\
 		DBG_CAT_RSV2)
 
@@ -155,8 +155,8 @@
 #define PRINT_MAC(addr)	\
 	addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]
 
-extern int			DebugLevel;
 #ifdef DBG
+extern int			DebugLevel;
 extern ULONG		DebugCategory;
 extern ULONG		DebugSubCategory[];
 

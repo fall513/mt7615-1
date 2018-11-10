@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
 	--------	----------		----------------------------------------------
 	Name		Date			Modification logs
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 
@@ -38,11 +40,19 @@
 
 #if defined(PRE_CAL_TRX_SET1_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) || defined(RLM_CAL_CACHE_SUPPORT)
 #ifdef MT_FIRST_CARD
+#ifdef INTELP6_SUPPORT
+#define FIRST_CAL_FILE_PATH		"/nvram/MT7615_CALDATA1.bin"
+#else
 #define FIRST_CAL_FILE_PATH	"/etc_ro/Wireless/RT2860/CALDATA1.bin"
+#endif
 #endif /* MT_FIRST_CARD */
 
 #ifdef MT_SECOND_CARD
+#ifdef INTELP6_SUPPORT
+#define SECOND_CAL_FILE_PATH	"/nvram/MT7615_CALDATA2.bin"
+#else
 #define SECOND_CAL_FILE_PATH	"/etc_ro/Wireless/iNIC/CALDATA2.bin"
+#endif
 #endif /* MT_SECOND_CARD */
 #endif /* PRE_CAL_TRX_SET1_SUPPORT */
 
@@ -299,9 +309,8 @@ INT NICReadEEPROMParameters(RTMP_ADAPTER *pAd, RTMP_STRING *mac_addr)
 	EEPROM_ANTENNA_STRUC Antenna;
 	EEPROM_NIC_CONFIG2_STRUC NicConfig2;
 	USHORT  Addr01,Addr23,Addr45 ;
-
 #ifdef PRE_CAL_TRX_SET2_SUPPORT    
-	UINT16 DoPreCal = 0;
+    UINT16 DoPreCal = 0;
 #endif /* PRE_CAL_TRX_SET2_SUPPORT */
 #ifdef PA_TRIM_SUPPORT
     UINT16 DoPATrim = 0;
@@ -312,12 +321,12 @@ INT NICReadEEPROMParameters(RTMP_ADAPTER *pAd, RTMP_STRING *mac_addr)
 
 	if (pAd->chipOps.eeinit)
 	{
-#if defined (MULTIPLE_CARD_SUPPORT) || defined (WCX_SUPPORT)
+#if defined (WCX_SUPPORT)
 	/* do nothing */
 #else
-		/* If we are run in Multicard mode, the eeinit shall execute in RTMP_CardInfoRead() */
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s():Calling eeinit\n", __FUNCTION__));
 		pAd->chipOps.eeinit(pAd);
-#endif /* MULTIPLE_CARD_SUPPORT || WCX_SUPPORT */
+#endif /*WCX_SUPPORT */
 
 #ifdef RF_LOCKDOWN
         /* Merge RF parameters in Effuse to E2p buffer */
@@ -332,6 +341,7 @@ INT NICReadEEPROMParameters(RTMP_ADAPTER *pAd, RTMP_STRING *mac_addr)
             pAd->chipOps.Config_Effuse_Country(pAd);
         }
 #endif /* RF_LOCKDOWN */
+
 	}
 	
 #ifdef PRE_CAL_TRX_SET2_SUPPORT
@@ -378,7 +388,7 @@ INT NICReadEEPROMParameters(RTMP_ADAPTER *pAd, RTMP_STRING *mac_addr)
 				}
 
 				if (ret_cal_data == NDIS_STATUS_SUCCESS)
-					ret = MtCmdPreCalReStoreProc(pAd, (INT32 *)pAd->PreCalReStoreBuffer);        
+					ret = MtCmdPreCalReStoreProc(pAd, (INT32 *)pAd->PreCalReStoreBuffer); 
 			}
 		}
 	}
@@ -413,28 +423,11 @@ INT NICReadEEPROMParameters(RTMP_ADAPTER *pAd, RTMP_STRING *mac_addr)
 #endif /* PA_TRIM_SUPPORT */
 	
 #ifdef MT_DFS_SUPPORT	/*Dynamically enable or disable DFS calibration in firmware. Must be performed before power on calibration*/
-	DfsSetCalibration(pAd, pAd->DfsParameter.DisableDfsCal);
-	DfsZeroWaitTPRatio(pAd, pAd->DfsParameter.TPDutyRatio);
-	DfsSetNewChList(pAd);
+	    DfsSetCalibration(pAd, pAd->CommonCfg.DfsParameter.DisableDfsCal);
+	DFsSetFalseAlarmPrevent(pAd, pAd->CommonCfg.DfsParameter.bFalseAlarmPrevent);
+
 #endif	
 	
-#ifdef MT_MAC
-#if defined(MT7603)||defined(MT7628)||defined(MT7636)||defined(MT7615)||defined(MT7637)||defined(MT7622)
-	/*Send EEprom parameter to FW*/
-#ifdef CONFIG_ATE
-	if(!ATE_ON(pAd))
-#endif
-	{
-#ifdef FWDL_IN_PROBE
-		if (pAd->MCUCtrl.fwdl_in_probe == TRUE)
-			RTMP_DRIVER_FWDL_IN_PROBE_CAL_WAIT_AND_CLEAR(pAd);
-		else
-#endif
-
-		MtCmdEfusBufferModeSet(pAd,pAd->eeprom_type);  // Effuse Buffer Mode must Guarantee 4T condition
-	}
-#endif /*#if defined(MT7603)||defined(MT7628)||defined(MT7636))||defined(MT7615)*/
-#endif /* MT_MAC */
 	/* Read MAC setting from EEPROM and record as permanent MAC address */
 
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("Initialize MAC Address from E2PROM \n"));
@@ -590,8 +583,12 @@ INT NICReadEEPROMParameters(RTMP_ADAPTER *pAd, RTMP_STRING *mac_addr)
 
 #ifdef WSC_INCLUDED
 	/* WSC hardware push button function 0811 */
+#ifdef VENDOR_FEATURE6_SUPPORT
+	WSC_HDR_BTN_MR_HDR_SUPPORT_SET(pAd, 1);		// always enable PBC support
+#else
 	if ((pAd->MACVersion == 0x28600100) || (pAd->MACVersion == 0x28700100))
 		WSC_HDR_BTN_MR_HDR_SUPPORT_SET(pAd, NicConfig2.field.EnableWPSPBC);
+#endif
 #endif /* WSC_INCLUDED */
 
 #ifdef CONFIG_AP_SUPPORT
@@ -801,7 +798,7 @@ static NDIS_STATUS rtmp_ee_bin_init(PRTMP_ADAPTER pAd)
 		else
 			printk("%s(): bDCOCReloaded = false.\n", __func__);
 
-		if ((NDIS_STATUS_SUCCESS == rtmp_cal_load_from_bin(pAd, pAd->CalDPDAPart1Image, DPDPART1_OFFSET, CAL_IMAGE_SIZE)) || 
+		if ((NDIS_STATUS_SUCCESS == rtmp_cal_load_from_bin(pAd, pAd->CalDPDAPart1Image, DPDPART1_OFFSET, CAL_IMAGE_SIZE)) && 
 			(NDIS_STATUS_SUCCESS == rtmp_cal_load_from_bin(pAd, pAd->CalDPDAPart2GImage, DPDPART2_OFFSET, CAL_IMAGE_SIZE)))
 			pAd->bDPDReloaded = TRUE;
 		else
@@ -899,8 +896,7 @@ INT RtmpChipOpsEepromHook(RTMP_ADAPTER *pAd, INT infType,INT forceMode)
 			pChipOps->eeinit = rtmp_ee_bin_init;
 			pChipOps->eeread = rtmp_ee_bin_read16;
 			pChipOps->eewrite = rtmp_ee_bin_write16;
-#ifdef BB_SOC
-			pChipOps->eeread_range = rtmp_ee_bin_read_with_range;
+#ifdef VENDOR_FEATURE6_SUPPORT
 			pChipOps->eewrite_range = rtmp_ee_bin_write_with_range;
 #endif
 			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("NVM is BIN mode\n"));
@@ -1045,26 +1041,8 @@ INT rtmp_ee_bin_write16(
 
 	return 0;
 }
-#ifdef BB_SOC
-BOOLEAN rtmp_ee_bin_read_with_range(PRTMP_ADAPTER pAd, UINT16 start, UINT16 Length, UCHAR *pbuf)
-{
-    BOOLEAN IsEmpty = 0;
-    UINT16  u2Loop;
-    UCHAR   ucValue = 0;
 
-    memcpy(pbuf, pAd->EEPROMImage + start, Length);
-        
-    for (u2Loop = 0; u2Loop < Length; u2Loop++)
-    {
-        ucValue |= pbuf[u2Loop];
-    }
-    
-     if ((ucValue == 0xff) || (ucValue == 0x00))
-          IsEmpty = 1;
-
-      return IsEmpty;
-}
-
+#ifdef VENDOR_FEATURE6_SUPPORT
 INT rtmp_ee_bin_write_with_range(PRTMP_ADAPTER pAd, USHORT start, USHORT Length, UCHAR *pbuf)
 {
 	
@@ -1082,6 +1060,8 @@ INT rtmp_ee_load_from_bin(
 	INT ret_val;
 	RTMP_OS_FD srcf;
 	RTMP_OS_FS_INFO osFSInfo;
+	UINT free_blk = 0, i;
+	UINT_16 efuse_val = 0;
 	PEEPROM_CONTROL pE2pCtrl = &pAd->E2pCtrl;
 
 	pE2pCtrl->e2pCurMode = E2P_BIN_MODE;
@@ -1109,14 +1089,23 @@ INT rtmp_ee_load_from_bin(
 		if (pAd->chipCap.EEPROM_DEFAULT_BIN_FILE != NULL)
 		{
 			src = pAd->chipCap.EEPROM_DEFAULT_BIN_FILE;
-			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s::bin FileName=%s\n", __FUNCTION__, pAd->chipCap.EEPROM_DEFAULT_BIN_FILE));
 		}
 		else
 		{
 			src = BIN_FILE_PATH;
-			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s::src FileName=%s\n", __FUNCTION__, src));
 		}
 	}
+
+	/* With Multiple Cards and single driver,
+	 * the Bin File Name and Path is present
+	 * in Card.dat file. */
+#ifndef RT_SOC_SUPPORT
+#ifdef MULTIPLE_CARD_SUPPORT
+	src = pAd->MC_BinFileName;
+#endif
+#endif
+
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s::src FileName=%s\n", __FUNCTION__, src));
 
 	RtmpOSFSInfoChange(&osFSInfo, TRUE);
 
@@ -1166,15 +1155,34 @@ INT rtmp_ee_load_from_bin(
 	return TRUE;
 
 error:
-	if (pAd->chipCap.EEPROM_DEFAULT_BIN != NULL)
+	/* Try to read the contents from default Efuse first*/
+
+	eFuseGetFreeBlockCount(pAd, &free_blk);
+	if (free_blk < pAd->chipCap.EFUSE_RESERVED_SIZE) {
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+			 ("Can't find bin file, Load EEPROM Buffer from efuse.\n"));
+		NdisZeroMemory(pAd->EEPROMImage, MAX_EEPROM_BIN_FILE_SIZE);
+		for (i=0; i < MAX_EEPROM_BIN_FILE_SIZE; i+=2)
+		{
+			eFuseRead(pAd, i, &efuse_val, 2);
+			efuse_val = cpu2le16(efuse_val);
+			NdisMoveMemory(&pAd->EEPROMImage[i], &efuse_val, 2);
+		}
+		pE2pCtrl->e2pSource = E2P_SRC_FROM_EFUSE;
+		pE2pCtrl->BinSource = "EFUSE";
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+			 ("Can't find bin file, Create one from efuse.\n"));
+		rtmp_ee_write_to_bin(pAd);
+	}
+	else if (pAd->chipCap.EEPROM_DEFAULT_BIN != NULL)
 	{
 		NdisMoveMemory(pAd->EEPROMImage, pAd->chipCap.EEPROM_DEFAULT_BIN,
-		pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE > MAX_EEPROM_BUFFER_SIZE?MAX_EEPROM_BUFFER_SIZE:pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE);
-		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("Load EEPROM Buffer from default BIN.\n"));
+		pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE > MAX_EEPROM_BUFFER_SIZE ? MAX_EEPROM_BUFFER_SIZE : pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE);
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+			 ("Can't find bin file and Efuse is no good, Load EEPROM Buffer from default BIN.\n"));
 		pE2pCtrl->e2pSource = E2P_SRC_FROM_BIN;
 		pE2pCtrl->BinSource = "Default bin";
 	}
-
 	return FALSE;
 }
 
@@ -1205,6 +1213,10 @@ NDIS_STATUS rtmp_cal_load_from_bin(
 	else
 #endif /* MT_SECOND_CARD */
 	src = CAL_FILE_PATH;
+
+#ifdef MULTIPLE_CARD_SUPPORT
+       src = pAd->MC_CalBinFileName;
+#endif
 
 	//MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::FileName=%s\n", __FUNCTION__, src));
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s::FileName=%s\n", __FUNCTION__, src));		// Anjan - debug
@@ -1285,8 +1297,11 @@ NDIS_STATUS rtmp_cal_write_to_bin(
 #endif /* MT_SECOND_CARD */
 	src = CAL_FILE_PATH;
 
+#ifdef MULTIPLE_CARD_SUPPORT
+       src = pAd->MC_CalBinFileName;
+#endif
 
-	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::FileName=%s\n", __FUNCTION__, src));
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s::FileName=%s\n", __FUNCTION__, src));
 
 	RtmpOSFSInfoChange(&osFSInfo, TRUE);
 
@@ -1538,14 +1553,23 @@ INT rtmp_ee_write_to_bin(
 		if (pAd->chipCap.EEPROM_DEFAULT_BIN_FILE != NULL)
 		{
 			src = pAd->chipCap.EEPROM_DEFAULT_BIN_FILE;
-			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::bin FileName=%s\n", __FUNCTION__, pAd->chipCap.EEPROM_DEFAULT_BIN_FILE));
 		}
 		else
 		{
 			src = BIN_FILE_PATH;
-			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::src FileName=%s\n", __FUNCTION__, src));
 		}
 	}
+
+	/* With Multiple Cards and single driver,
+	 * the Bin File Name and Path is present
+	 * in Card.dat file. */
+#ifndef RT_SOC_SUPPORT
+#ifdef MULTIPLE_CARD_SUPPORT
+	src = pAd->MC_BinFileName;
+#endif
+#endif
+
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::src FileName=%s\n", __FUNCTION__, src));
 
 	RtmpOSFSInfoChange(&osFSInfo, TRUE);
 
@@ -1580,25 +1604,13 @@ INT rtmp_ee_write_to_bin(
 INT Set_LoadEepromBufferFromBin_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
 	LONG bEnable = simple_strtol(arg, 0, 10);
-	INT result;
 
 	if (bEnable < 0)
 		return FALSE;
 	else
 	{
 		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("Load EEPROM buffer from BIN, and change to BIN buffer mode\n"));
-		result = rtmp_ee_load_from_bin(pAd);
-
-		if ( result == FALSE )
-		{
-			if ( pAd->chipCap.EEPROM_DEFAULT_BIN != NULL )
-			{
-				NdisMoveMemory(pAd->EEPROMImage, pAd->chipCap.EEPROM_DEFAULT_BIN,
-					pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE > MAX_EEPROM_BUFFER_SIZE?MAX_EEPROM_BUFFER_SIZE:pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE);
-				MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("Load EEPROM Buffer from default BIN.\n"));
-			}
-
-		}
+		rtmp_ee_load_from_bin(pAd);
 
 		/* Change to BIN eeprom buffer mode */
 		RtmpChipOpsEepromHook(pAd, pAd->infType,E2P_BIN_MODE);
@@ -1653,7 +1665,37 @@ INT Set_bufferMode_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
     UINT EepromType = simple_strtol(arg, 0, 10);
 
+#ifdef NR_PD_DETECTION
+    if (pAd->CommonCfg.LinkTestSupport)
+    {
+        /* Phy Init flag disable */
+        pAd->fgPhyInitDone = FALSE;
+
+        /* Enable RF port TX1, TX2, TX3 */
+        if(pAd->CommonCfg.dbdc_mode)
+        {
+            MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_2G);
+            MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_5G);
+        }
+        else
+        {
+            MtCmdLinkTestTxCtrl(pAd, FALSE, pAd->ucCmwChannelBand);
+        }
+
+        MTWF_LOG(DBG_CAT_CMW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("(Link Test) PHY Init ---> Enter 4T mode !!!\n"));
+    }
+#endif /* NR_PD_DETECTION */
+
     MtCmdEfusBufferModeSet(pAd, EepromType);
+
+#ifdef NR_PD_DETECTION
+    if (pAd->CommonCfg.LinkTestSupport)
+    {
+        /* Phy Init flag enable */
+        pAd->fgPhyInitDone = TRUE;
+    }
+#endif /* NR_PD_DETECTION */
+
     return TRUE;
 }
 

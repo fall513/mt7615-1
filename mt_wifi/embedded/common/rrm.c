@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -14,7 +15,7 @@
  * way altering	the	source code	is stricitly prohibited, unless	the	prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 /****************************************************************************
 	Abstract:
 
@@ -138,6 +139,20 @@ void RRM_ReadParametersFromFile(
 	{
 		for (loop = 0; loop < MAX_MBSSID_NUM(pAd); loop++)
 			pAd->ApCfg.MBSSID[loop].RrmCfg.bDot11kRRMEnable = FALSE;
+	}
+
+	/* Regulatory Class */
+	if (RTMPGetKeyParameter("RegulatoryClass", tmpbuf, 255, buffer, TRUE))
+	{	
+		LONG Value;
+		for (loop=0, macptr = rstrtok(tmpbuf,";");
+				(macptr && loop < MAX_NUM_OF_REGULATORY_CLASS);
+					macptr = rstrtok(NULL,";"), loop++)
+		{
+			Value = simple_strtol(macptr, 0, 10);
+			pAd->CommonCfg.RegulatoryClass[loop] = Value;
+		}
+		
 	}
 
 	return;
@@ -461,13 +476,8 @@ INT RRM_InfoDisplay_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 
 	for (loop = 0; loop < pAd->ApCfg.BssidNum; loop++)
 	{
-		struct wifi_dev *wdev = &pAd->ApCfg.MBSSID[loop].wdev;
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("%d: bDot11kRRMEnable=%d\n",
 			loop, pAd->ApCfg.MBSSID[loop].RrmCfg.bDot11kRRMEnable));
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Regulator Class="));
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("%d ",
-			get_regulatory_class(pAd,wdev->channel,wdev->PhyMode,wdev)));
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("\n"));	
 	}
 
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Country Code=%s\n",
@@ -476,12 +486,23 @@ INT RRM_InfoDisplay_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Power Constraint=%d\n",
 		pAd->CommonCfg.PwrConstraint));
 
+	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Regulator Class="));
+	for (loop = 0; loop < MAX_NUM_OF_REGULATORY_CLASS; loop++)
+	{
+		if (pAd->CommonCfg.RegulatoryClass[loop] == 0)
+			break;
+
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("%d ",
+			pAd->CommonCfg.RegulatoryClass[loop]));
+	}
+	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("\n"));	
+
 #ifdef DBDC_MODE
-    MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Regulator TxPowerPercentage=(%ld, %ld)\n",
-        pAd->CommonCfg.TxPowerPercentage[BAND0], pAd->CommonCfg.TxPowerPercentage[BAND1]));
+	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Regulator TxPowerPercentage=(%ld, %ld)\n",
+		pAd->CommonCfg.TxPowerPercentage[BAND0], pAd->CommonCfg.TxPowerPercentage[BAND1]));
 #else
     MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Regulator TxPowerPercentage=%ld\n",
-        pAd->CommonCfg.TxPowerPercentage[BAND0]));
+		pAd->CommonCfg.TxPowerPercentage[BAND0]));
 #endif
 
 	return TRUE;
@@ -510,7 +531,6 @@ VOID RRM_CfgInit(
 			pRrmCfg->bDot11kRRMEnable = FALSE; //set to default off
 			
 		pRrmCfg->bDot11kRRMNeighborRepTSFEnable = FALSE;
-		init_rrm_capabilities(pRrmCfg, &pAd->ApCfg.MBSSID[loop]);
 	}
 
 	return;
@@ -605,7 +625,13 @@ VOID RRM_PeerNeighborReqAction(
 VOID RRM_BeaconReportHandler(
 	IN PRTMP_ADAPTER pAd,
 	IN PRRM_BEACON_REP_INFO pBcnRepInfo,
-	IN LONG Length)
+	IN LONG Length
+#ifdef CUSTOMER_DCC_FEATURE
+		,
+		IN UCHAR	*Snr,
+		IN CHAR 	*rssi
+#endif
+		)
 {
 	CHAR Rssi;
 	USHORT LenVIE = 0;
@@ -728,7 +754,11 @@ VOID RRM_BeaconReportHandler(
 
 		ie_list->FromBcnReport = TRUE;
 	
-		Idx = BssTableSetEntry(pAd, &pAd->ScanTab, ie_list, Rssi, LenVIE, pVIE);
+		Idx = BssTableSetEntry(pAd, &pAd->ScanTab, ie_list, Rssi, LenVIE, pVIE
+#ifdef CUSTOMER_DCC_FEATURE
+							,Snr, rssi							
+#endif /* CONFIG_AP_SUPPORT */
+							);			
 
 		if (Idx != BSS_NOT_FOUND)
 		{
@@ -752,24 +782,33 @@ VOID RRM_BeaconReportHandler(
 
 	return;
 }
-void RRM_measurement_report_to_host(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem);
-#define USE_BEACON_REPORT_FOR_NEIGHBOR_REPORT
+
 VOID RRM_PeerMeasureRepAction(
 	IN PRTMP_ADAPTER pAd, 
 	IN MLME_QUEUE_ELEM *Elem) 
 {
-#ifdef USE_BEACON_REPORT_FOR_NEIGHBOR_REPORT
 	PFRAME_802_11 pFr = (PFRAME_802_11)Elem->Msg;
 	PUCHAR pFramePtr = pFr->Octet;
 	ULONG MsgLen = Elem->MsgLen;
-	//PMEASURE_REQ_ENTRY pDialogEntry;
+	PMEASURE_REQ_ENTRY pDialogEntry;
 	PMAC_TABLE_ENTRY pEntry;
 	UINT8 DialogToken;
+#ifdef CUSTOMER_DCC_FEATURE
+	UCHAR Snr[4] = {0};
+	CHAR  rssi[4] = {0};
+	Snr[0] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[0]);
+	Snr[1] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[1]);
+	Snr[2] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[2]);
+	Snr[3] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[3]);
+
+	rssi[0] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_0);
+	rssi[1] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_1);
+	rssi[2] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_2);
+	rssi[3] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_3);
 #endif
+
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_TRACE, ("%s::\n", __FUNCTION__));
-	RRM_measurement_report_to_host(pAd, Elem);
-		
-#ifdef USE_BEACON_REPORT_FOR_NEIGHBOR_REPORT
+
 	/* skip Category and action code. */
 	pFramePtr += 2;
 	MsgLen -= 2;
@@ -784,6 +823,14 @@ VOID RRM_PeerMeasureRepAction(
 		check the dialog token field.
 		drop it if the dialog token doesn't match.
 	*/
+	pDialogEntry = NULL;
+	if ((DialogToken != 0)
+		&& ((pDialogEntry = MeasureReqLookUp(pAd, DialogToken)) == NULL))
+		return;
+
+	if (pDialogEntry != NULL)
+		MeasureReqDelete(pAd, pDialogEntry->DialogToken);
+
 	do
 	{
 		PEID_STRUCT eid_ptr;
@@ -809,8 +856,11 @@ VOID RRM_PeerMeasureRepAction(
 						NdisMoveMemory(&ReportType, eid_ptr->Octet + 2, 1);
 						pMeasureRep = (PVOID)(eid_ptr->Octet + 3);
 						if (ReportType == RRM_MEASURE_SUBTYPE_BEACON)
-							RRM_BeaconReportHandler(pAd, pMeasureRep,
-								BcnRepLen);
+							RRM_BeaconReportHandler(pAd, pMeasureRep,BcnRepLen
+#ifdef CUSTOMER_DCC_FEATURE
+													, Snr, rssi 
+#endif 	
+													);
 					}
 					break;
 
@@ -820,177 +870,8 @@ VOID RRM_PeerMeasureRepAction(
 			eid_ptr = (PEID_STRUCT)((UCHAR*)eid_ptr + 2 + eid_ptr->Len);
 		}
 	} while(FALSE);
-#endif
+
 	return;
-}
-
-int rrm_MsgHandle(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq)
-{
-	p_rrm_command_t p_rrm_command = NULL;
-	int status = NDIS_STATUS_FAILURE;
-	
-	os_alloc_mem(NULL, (UCHAR **)&p_rrm_command, wrq->u.data.length);
-	if (p_rrm_command == NULL)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("!!!(%s) : no memory!!!\n", __FUNCTION__));
-		return NDIS_STATUS_FAILURE;
-	}
-
-	copy_from_user(p_rrm_command, wrq->u.data.pointer, wrq->u.data.length);
-
-	switch(p_rrm_command->command_id)
-		{
-
-			case OID_802_11_RRM_CMD_ENABLE:
-				if (p_rrm_command->command_len == 0x1){
-					status = Set_Dot11kRRM_Enable(pAd, p_rrm_command->command_body[0]);
-				} else { 
-					MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Unexpected command len (%d)", p_rrm_command->command_len));
-					status = NDIS_STATUS_FAILURE;
-				}
-				break;
-
-			case OID_802_11_RRM_CMD_CAP:
-				if (p_rrm_command->command_len == 0x8){
-					status = set_rrm_capabilities(pAd, p_rrm_command->command_body);
-				} else { 
-					MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Unexpected command len (%d)", p_rrm_command->command_len));
-					status = NDIS_STATUS_FAILURE;
-				}
-				break;
-
-			case OID_802_11_RRM_CMD_SEND_BEACON_REQ:
-					status = rrm_send_beacon_req(pAd, (p_bcn_req_data_t)p_rrm_command->command_body);
-				break;
-		}
-	os_free_mem(p_rrm_command);
-	return status;
-}
-VOID APUpdateBeaconFrame(RTMP_ADAPTER *pAd, INT apidx);
-VOID ApUpdateCapabilityAndErpIe(RTMP_ADAPTER *pAd,struct _BSS_STRUCT *mbss);
-
-int Set_Dot11kRRM_Enable(RTMP_ADAPTER *pAd, UINT8 enable)
-{
-	POS_COOKIE pObj = (POS_COOKIE) pAd->OS_Cookie;
-	UCHAR ifIndex = pObj->ioctl_if;
-	BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[ifIndex]; 
-
-	if (ifIndex >= pAd->ApCfg.BssidNum)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Unknow If index (%d)", ifIndex));
-		return NDIS_STATUS_FAILURE;
-	}
-
-	pMbss->RrmCfg.bDot11kRRMEnable = (BOOLEAN)(enable) == 0 ? FALSE : TRUE;
-
-	if (pMbss->RrmCfg.bDot11kRRMEnable == TRUE)
-        pMbss->CapabilityInfo |= RRM_CAP_BIT;
-	else
-		pMbss->CapabilityInfo &= ~RRM_CAP_BIT;
-
-	ApUpdateCapabilityAndErpIe(pAd, pMbss);
-	UpdateBeaconHandler(pAd, &pMbss->wdev,IE_CHANGE);
-	return NDIS_STATUS_SUCCESS;
-}
-
-int set_rrm_capabilities(RTMP_ADAPTER *pAd, UINT8 *rrm_capabilities)
-{
-	
-	POS_COOKIE pObj = (POS_COOKIE) pAd->OS_Cookie;
-	UCHAR ifIndex = pObj->ioctl_if;
-	BSS_STRUCT *pMbss; 
-	PRRM_CONFIG pRrmCfg;	
-
-	if (ifIndex >= pAd->ApCfg.BssidNum)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Unknow If index (%d)", ifIndex));
-		return NDIS_STATUS_FAILURE;
-	}
-
-	pMbss = &pAd->ApCfg.MBSSID[ifIndex];
-	pRrmCfg = &pMbss->RrmCfg;
-	NdisCopyMemory((void *)&pRrmCfg->rrm_capabilities, (void *)rrm_capabilities, sizeof(RRM_EN_CAP_IE));
-
-	pRrmCfg->rrm_capabilities.word &= pRrmCfg->max_rrm_capabilities.word;
-
-	if (pMbss->RrmCfg.bDot11kRRMEnable == TRUE)
-    	UpdateBeaconHandler(pAd, &pMbss->wdev,IE_CHANGE);
-
-	return NDIS_STATUS_SUCCESS;
-}
-
-
-int rrm_send_beacon_req(RTMP_ADAPTER *pAd, p_bcn_req_data_t p_bcn_req_data)
-{
-	
-	POS_COOKIE pObj = (POS_COOKIE) pAd->OS_Cookie;
-	UCHAR ifIndex = pObj->ioctl_if;
-	BSS_STRUCT *pMbss; 
-	
-	pMbss = &pAd->ApCfg.MBSSID[ifIndex]; 
-	//PRRM_CONFIG pRrmCfg;	
-	if (ifIndex >= pAd->ApCfg.BssidNum)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Unknow If index (%d)", ifIndex));
-		return NDIS_STATUS_FAILURE;
-	}
-	return RRM_EnqueueBcnReqAction(pAd, pMbss->mbss_idx, p_bcn_req_data);
-}
-void init_rrm_capabilities(PRRM_CONFIG pRrmCfg, BSS_STRUCT *pMBss)
-{
-	pRrmCfg->max_rrm_capabilities.word = 0;
-	pRrmCfg->max_rrm_capabilities.field.NeighborRepCap = 1;
-	pRrmCfg->max_rrm_capabilities.field.BeaconPassiveMeasureCap = 1;
-	pRrmCfg->max_rrm_capabilities.field.BeaconActiveMeasureCap = 1;
-	pRrmCfg->max_rrm_capabilities.field.BeaconTabMeasureCap = 1;
-	pRrmCfg->max_rrm_capabilities.field.APChannelReportCap = 1;
-	pRrmCfg->max_rrm_capabilities.field.BeaconMeasureReportCndCap = 1;
-	pRrmCfg->rrm_capabilities.word = pRrmCfg->max_rrm_capabilities.word;
-}
-extern int DebugLevel;
-
-void RRM_measurement_report_to_host(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
-{
-	PFRAME_802_11 pFr = (PFRAME_802_11)Elem->Msg;
-	PUCHAR pFramePtr = pFr->Octet;
-	ULONG MsgLen = Elem->MsgLen;
-	UINT8 DialogToken;
-	p_rrm_event_t p_rrm_event;
-	p_bcn_rsp_data_t p_bcn_rsp_data;
-	
-	MsgLen -= sizeof(HEADER_802_11);
-	
-	/* skip category and action code. */
-	pFramePtr += 2;
-	MsgLen -= 2;
-	DialogToken = *pFramePtr;
-	
-	pFramePtr += 1;
-	MsgLen -= 1;
-	os_alloc_mem(NULL, (UCHAR **)&p_rrm_event, sizeof(rrm_event_t)+ sizeof(bcn_rsp_data_t) + MsgLen);
-	if (p_rrm_event == NULL)
-		{
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("!!!(%s) : no memory!!!\n", __FUNCTION__));
-			return;
-		}
-		
-
-	p_rrm_event->event_id = 1;	
-	p_rrm_event->event_len = sizeof(bcn_rsp_data_t) + MsgLen;
-	p_bcn_rsp_data = (p_bcn_rsp_data_t)(&p_rrm_event->event_body[0]);
-	p_bcn_rsp_data->dialog_token = DialogToken;
-	p_bcn_rsp_data->ifindex = 1;
-	p_bcn_rsp_data->bcn_rsp_len = MsgLen;
-	COPY_MAC_ADDR(p_bcn_rsp_data->peer_address, pFr->Hdr.Addr2);
-	memcpy(&p_bcn_rsp_data->bcn_rsp[0], pFramePtr, MsgLen);
-	RtmpOSWrielessEventSend(
-				pAd->net_dev,
-				RT_WLAN_EVENT_CUSTOM,
-				OID_802_11_RRM_EVENT,
-				NULL,
-				(UCHAR *) p_rrm_event,
-				sizeof(rrm_event_t) + sizeof(bcn_rsp_data_t) + MsgLen);
-	os_free_mem(p_rrm_event);
 }
 
 #endif /* DOT11K_RRM_SUPPORT */

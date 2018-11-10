@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -23,7 +24,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 /** 
  * @addtogroup wifi_dev_system
  * @{
@@ -77,9 +78,6 @@ INT wdev_tx_pkts(NDIS_HANDLE dev_hnd, PPNDIS_PACKET pkt_list, UINT pkt_cnt, stru
 	BOOLEAN allowToSend;
 	UCHAR wcid = MAX_LEN_OF_MAC_TABLE;
 	UINT Index;
-#ifdef MWDS
-    INT Ret = 0;
-#endif
 #ifdef CONFIG_FPGA_MODE
 	BOOLEAN force_tx;
 #endif /* CONFIG_FPGA_MODE */
@@ -122,11 +120,6 @@ INT wdev_tx_pkts(NDIS_HANDLE dev_hnd, PPNDIS_PACKET pkt_list, UINT pkt_cnt, stru
 			|| (force_tx == TRUE)
 #endif /* CONFIG_FPGA_MODE */
 			)
-			&& (wdev->tx_pkt_allowed))
-		{
-			allowToSend = wdev->tx_pkt_allowed(pAd, wdev, pPacket, &wcid);
-		}
-		else if((wdev->forbid_data_tx != 0) && (wdev->wdev_type == WDEV_TYPE_STA)
 			&& (wdev->tx_pkt_allowed))
 		{
 			allowToSend = wdev->tx_pkt_allowed(pAd, wdev, pPacket, &wcid);
@@ -190,9 +183,7 @@ INT wdev_tx_pkts(NDIS_HANDLE dev_hnd, PPNDIS_PACKET pkt_list, UINT pkt_cnt, stru
 #ifdef CUT_THROUGH_FULL_OFFLOAD
 			if (wdev->tx_pkt_ct_handle && !check_if_fragment(wdev, pPacket))
 			{
-#ifndef MWDS
 				INT32 Ret = 0;
-#endif
 				UCHAR QueIdx = 0, UserPriority = QID_AC_BE;
 				STA_TR_ENTRY *tr_entry = &pAd->MacTab.tr_entry[wcid];
 				RTMP_SET_PACKET_WCID(pPacket, wcid);
@@ -235,19 +226,9 @@ INT wdev_tx_pkts(NDIS_HANDLE dev_hnd, PPNDIS_PACKET pkt_list, UINT pkt_cnt, stru
 
 #ifdef REDUCE_TCP_ACK_SUPPORT
 				if (ReduceTcpAck(pAd, pPacket) == FALSE)
-#endif /* REDUCE_TCP_ACK_SUPPORT */
+#endif
 				{
 					Ret = wdev->tx_pkt_ct_handle(pAd, pPacket, QueIdx, UserPriority);
-#ifdef MWDS
-                    if(wdev->wdev_type != WDEV_TYPE_APCLI)
-                    {
-                        UCHAR *pDestAddr = GET_OS_PKT_DATAPTR(pPacket);
-                        if (pDestAddr && 
-                            MAC_ADDR_IS_GROUP(pDestAddr) &&
-                            (Ret == NDIS_STATUS_SUCCESS))
-                            MWDSSendClonePacket(pAd, wdev->func_idx, pPacket, pDestAddr + MAC_ADDR_LEN);
-                    }
-#endif /* MWDS */
 				}
 
 				return Ret;
@@ -264,24 +245,7 @@ INT wdev_tx_pkts(NDIS_HANDLE dev_hnd, PPNDIS_PACKET pkt_list, UINT pkt_cnt, stru
 				if (ReduceTcpAck(pAd, pPacket) == FALSE)
 #endif
 				{
-#ifndef MWDS
 					wdev->tx_pkt_handle(pAd, pPacket);
-#else
-					Ret = wdev->tx_pkt_handle(pAd, pPacket);
-#endif
-
-#ifdef CONFIG_AP_SUPPORT
-					IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
-					{
-#ifdef MWDS
-						UCHAR *pSrcBufVA = GET_OS_PKT_DATAPTR(pPacket);
-						if (pSrcBufVA && 
-							MAC_ADDR_IS_GROUP(pSrcBufVA) &&
-							(Ret == NDIS_STATUS_SUCCESS))
-							MWDSSendClonePacket(pAd, wdev->func_idx, pPacket, NULL);
-#endif /* MWDS */
-					}
-#endif
 				}
 			}
 			else

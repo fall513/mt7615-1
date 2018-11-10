@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +26,7 @@
     Who         When            What
     --------    ----------      ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 
 #define RTMP_MODULE_OS
 
@@ -45,11 +46,10 @@
 #endif
 #endif
 
-// TODO: shiang-6590, remove it when MP
 #ifdef RTMP_MAC_PCI
 MODULE_LICENSE("Proprietary");
 #endif /* RTMP_MAC_PCI */
-// TODO: End---
+
 
 
 
@@ -121,6 +121,9 @@ int MainVirtualIF_close(IN struct net_device *net_dev)
 
 	if (pAd == NULL)
 		return 0;
+#ifdef VENDOR1_LED_SUPPORT
+	RTMPSetLED(pAd, LED_RADIO_OFF);
+#endif
 
 	netif_carrier_off(net_dev);
 	netif_stop_queue(net_dev);
@@ -183,6 +186,11 @@ int MainVirtualIF_open(struct net_device *net_dev)
 		return -1;
 #endif /* IFUP_IN_PROBE */
 
+#ifdef CONFIG_AP_SUPPORT
+#ifdef VENDOR1_LED_SUPPORT
+	RTMPSetLED(pAd, LED_LINK_DOWN);		// Set solid led on
+#endif /* VENDOR1_LED_SUPPORT */
+#endif /* CONFIG_AP_SUPPORT */
 	RT_MOD_INC_USE_COUNT();
     RT_MOD_HNAT_REG(net_dev);
 
@@ -224,6 +232,10 @@ int mt_wifi_close(VOID *dev)
 	GET_PAD_FROM_NET_DEV(pAd, net_dev);
 	if (pAd == NULL)
 		return 0;
+#ifdef CONFIG_INIT_RADIO_ONOFF
+	if(!((PRTMP_ADAPTER)pAd)->ApCfg.bRadioOn)
+		RTMP_CLEAR_FLAG(((PRTMP_ADAPTER)pAd), fRTMP_ADAPTER_DISABLE_DEQUEUEPACKET);
+#endif
 
 	RTMPDrvClose(pAd, net_dev);
 	
@@ -310,7 +322,9 @@ int mt_wifi_open(VOID *dev)
 #if defined(P2P_APCLI_SUPPORT) || defined(RT_CFG80211_P2P_SUPPORT) || defined(CFG80211_MULTI_STA)
 
 #else
+#ifndef VENDOR1_INITIALIZE_ALL_INTERFACE_AT_INIT
 	RT28xx_MBSS_Init(pAd, net_dev);
+#endif
 #endif /* P2P_APCLI_SUPPORT || RT_CFG80211_P2P_SUPPORT || CFG80211_MULTI_STA */
 #endif /* MBSS_SUPPORT */
 
@@ -355,10 +369,6 @@ int mt_wifi_open(VOID *dev)
 	retval = mt_udma_register(pAd, net_dev);
 	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("Udma Registration %s\n", (retval == 0)? "Success": "Failed"));
 #endif/*RTMP_UDMA_SUPPORT*/
-
-#ifdef FWDL_IN_PROBE
-	RTMP_DRIVER_FWDL_IN_PROBE_CLEAR_FLAG(pAd);
-#endif
 
 	return (retval);
 
@@ -589,6 +599,15 @@ Note:
 */
 int rt28xx_send_packets(struct sk_buff *skb, struct net_device *ndev)
 {
+#ifdef VENDOR_FEATURE6_SUPPORT
+    // Add protection against NULL deferencing CLM #7291
+	// XXX: not needed if caller take precaution
+    if(!ndev)
+    {
+        RELEASE_NDIS_PACKET(NULL, (PNDIS_PACKET)skb, NDIS_STATUS_FAILURE);
+        return 0;
+    }
+#endif
 	if (!(RTMP_OS_NETDEV_STATE_RUNNING(ndev)))
 	{
 		RELEASE_NDIS_PACKET(NULL, (PNDIS_PACKET)skb, NDIS_STATUS_FAILURE);

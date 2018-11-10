@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
     Who       When            What
     ---------------------------------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 #ifdef CARRIER_DETECTION_SUPPORT

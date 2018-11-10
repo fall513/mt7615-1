@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,54 +25,134 @@
     ---------    ----------    ----------------------------------------------
 	Fonchi Wu    2008	  	   created for 802.11h
  */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "action.h"
 
+
+/* The regulatory information in the USA (US) */
+DOT11_REGULATORY_INFO USARegulatoryInfo[] =
+{
+/*  "regulatory class"  "number of channels"  "Max Tx Pwr"  "channel list" */
+    {0,	                {0,                   0,           {0}}}, /* Invlid entry*/
+    {1,                 {4,                   16,           {36, 40, 44, 48}}},
+    {2,                 {4,                   23,           {52, 56, 60, 64}}},
+    {3,                 {4,                   29,           {149, 153, 157, 161}}},
+    {4,                 {11,                  23,           {100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140}}},
+    {5,                 {5,                   30,           {149, 153, 157, 161, 165}}},
+    {6,                 {10,                  14,           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}},
+    {7,                 {10,                  27,           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}},
+    {8,                 {5,                   17,           {11, 13, 15, 17, 19}}},
+    {9,                 {5,                   30,           {11, 13, 15, 17, 19}}},
+    {10,                {2,                   20,           {21, 25}}},
+    {11,                {2,                   33,            {21, 25}}},
+    {12,                {11,                  30,            {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}}}
+};
+#define USA_REGULATORY_INFO_SIZE (sizeof(USARegulatoryInfo) / sizeof(DOT11_REGULATORY_INFO))
+
+
+/* The regulatory information in Europe */
+DOT11_REGULATORY_INFO EuropeRegulatoryInfo[] =
+{
+/*  "regulatory class"  "number of channels"  "Max Tx Pwr"  "channel list" */
+    {0,                 {0,                   0,           {0}}}, /* Invalid entry*/
+    {1,                 {4,                   20,           {36, 40, 44, 48}}},
+    {2,                 {4,                   20,           {52, 56, 60, 64}}},
+    {3,                 {11,                  30,           {100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140}}},
+    {4,                 {13,                  20,           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}}
+};
+#define EU_REGULATORY_INFO_SIZE (sizeof(EuropeRegulatoryInfo) / sizeof(DOT11_REGULATORY_INFO))
+
+
+/* The regulatory information in Japan */
+DOT11_REGULATORY_INFO JapanRegulatoryInfo[] =
+{
+/*  "regulatory class"  "number of channels"  "Max Tx Pwr"  "channel list" */
+    {0,                 {0,                   0,           {0}}}, /* Invalid entry*/
+    {1,                 {4,                   22,           {34, 38, 42, 46}}},
+    {2,                 {3,                   24,           {8, 12, 16}}},
+    {3,                 {3,                   24,           {8, 12, 16}}},
+    {4,                 {3,                   24,           {8, 12, 16}}},
+    {5,                 {3,                   24,           {8, 12, 16}}},
+    {6,                 {3,                   22,           {8, 12, 16}}},
+    {7,                 {4,                   24,           {184, 188, 192, 196}}},
+    {8,                 {4,                   24,           {184, 188, 192, 196}}},
+    {9,                 {4,                   24,           {184, 188, 192, 196}}},
+    {10,                {4,                   24,           {184, 188, 192, 196}}},
+    {11,                {4,                   22,           {184, 188, 192, 196}}},
+    {12,                {4,                   24,           {7, 8, 9, 11}}},
+    {13,                {4,                   24,           {7, 8, 9, 11}}},
+    {14,                {4,                   24,           {7, 8, 9, 11}}},
+    {15,                {4,                   24,           {7, 8, 9, 11}}},
+    {16,                {6,                   24,           {183, 184, 185, 187, 188, 189}}},
+    {17,                {6,                   24,           {183, 184, 185, 187, 188, 189}}},
+    {18,                {6,                   24,           {183, 184, 185, 187, 188, 189}}},
+    {19,                {6,                   24,           {183, 184, 185, 187, 188, 189}}},
+    {20,                {6,                   17,           {183, 184, 185, 187, 188, 189}}},
+    {21,                {6,                   24,           {6, 7, 8, 9, 10, 11}}},
+    {22,                {6,                   24,           {6, 7, 8, 9, 10, 11}}},
+    {23,                {6,                   24,           {6, 7, 8, 9, 10, 11}}},
+    {24,                {6,                   24,           {6, 7, 8, 9, 10, 11}}},
+    {25,                {8,                   24,           {182, 183, 184, 185, 186, 187, 188, 189}}},
+    {26,                {8,                   24,           {182, 183, 184, 185, 186, 187, 188, 189}}},
+    {27,                {8,                   24,           {182, 183, 184, 185, 186, 187, 188, 189}}},
+    {28,                {8,                   24,           {182, 183, 184, 185, 186, 187, 188, 189}}},
+    {29,                {8,                   17,           {182, 183, 184, 185, 186, 187, 188, 189}}},
+    {30,                {13,                  23,           {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}},
+    {31,                {1,                   23,           {14}}},
+    {32,                {4,                   22,           {52, 56, 60, 64}}}
+};
+#define JP_REGULATORY_INFO_SIZE (sizeof(JapanRegulatoryInfo) / sizeof(DOT11_REGULATORY_INFO))
+
+
 UINT8 GetRegulatoryMaxTxPwr(RTMP_ADAPTER *pAd, UINT8 channel)
 {
-	ULONG ChIdx;
-	PCH_REGION pChRegion = NULL;
-	UCHAR FirstChannelIdx, NumCh;
-	UCHAR increment = 0, index = 0, ChannelIdx = 0;
+	ULONG RegulatoryClassLoop, ChIdx;
+	UINT8 RegulatoryClass;
+	UINT8 MaxRegulatoryClassNum;
+	DOT11_REGULATORY_INFO *pRegulatoryClass;
+	RTMP_STRING *pCountry = (RTMP_STRING *)(pAd->CommonCfg.CountryCode);
 
-	/* Get Channel Region (CountryCode)*/
-	pChRegion = GetChRegion(pAd->CommonCfg.CountryCode);
 
-	if (!pChRegion || !pChRegion->pChDesp)
+	if (strncmp(pCountry, "US", 2) == 0)
 	{
-		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-								  ("%s(): pChRegion is NULL\n", __FUNCTION__));
+		MaxRegulatoryClassNum = USA_REGULATORY_INFO_SIZE;
+		pRegulatoryClass = &USARegulatoryInfo[0];
+	}
+	else if (strncmp(pCountry, "JP", 2) == 0)
+	{
+		MaxRegulatoryClassNum = JP_REGULATORY_INFO_SIZE;
+		pRegulatoryClass = &JapanRegulatoryInfo[0];
+	}
+	else
+	{
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Unknow Country (%s)\n",
+					__FUNCTION__, pCountry));
 		return 0xff;
 	}
-	
-	FirstChannelIdx = pChRegion->pChDesp->FirstChannel;
-	NumCh = pChRegion->pChDesp->NumOfCh;
 
-	while (FirstChannelIdx != 0)
+	for (RegulatoryClassLoop = 0;
+			RegulatoryClassLoop<MAX_NUM_OF_REGULATORY_CLASS;
+			RegulatoryClassLoop++)
 	{
-		ChannelIdx = FirstChannelIdx;
-	
-		for (ChIdx=0; ChIdx<NumCh; ChIdx++)
+		DOT11_CHANNEL_SET *pChannelSet;
+
+		RegulatoryClass = pAd->CommonCfg.RegulatoryClass[RegulatoryClassLoop];
+		if (RegulatoryClass >= MaxRegulatoryClassNum)
 		{
-			if (FirstChannelIdx > channel)
-				break;
-		
-			/* check increment */
-			if (ChannelIdx > 14)
-				increment = 4;
-			else
-				increment = 1;
-
-			if (channel == ChannelIdx)
-				return pChRegion->pChDesp[index].MaxTxPwr;
-		
-			ChannelIdx+=increment;
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: %c%c Unknow Requlatory class (%d)\n",
+						__FUNCTION__, pCountry[0], pCountry[1], RegulatoryClass));
+			return 0xff;
 		}
-		index++;
-		FirstChannelIdx = pChRegion->pChDesp[index].FirstChannel;
-		NumCh = pChRegion->pChDesp[index].NumOfCh;
+		pChannelSet = &pRegulatoryClass[RegulatoryClass].ChannelSet;
+		for (ChIdx=0; ChIdx<pChannelSet->NumberOfChannels; ChIdx++)
+		{
+			if (channel == pChannelSet->ChannelList[ChIdx])
+				return pChannelSet->MaxTxPwr;
 
+		}
+		if (ChIdx == pChannelSet->NumberOfChannels)
+			return 0xff;
 	}
 
 	return 0xff;
@@ -749,46 +830,65 @@ VOID InsertChannelRepIE(
 	OUT PULONG pFrameLen,
 	IN RTMP_STRING *pCountry,
 	IN UINT8 RegulatoryClass,
-	IN UINT8 *ChReptList,
-	IN UCHAR PhyMode
+	IN UINT8 *ChReptList
 	)
 {
 	ULONG TempLen;
 	UINT8 Len;
 	UINT8 IEId = IE_AP_CHANNEL_REPORT;
 	PUCHAR pChListPtr = NULL;
+	DOT11_CHANNEL_SET *pChannelSet = NULL;
 	UINT8 i,j;
 	UCHAR ChannelList[16] ={0};
 	UINT8 NumberOfChannels = 0;
 	UINT8 *pChannelList = NULL;
-	PUCHAR channel_set = NULL;
-	UCHAR channel_set_num;
 
-	if(RegulatoryClass == 0)
-		return;
-		
 	Len = 1;
+	if (strncmp(pCountry, "US", 2) == 0)
+	{
+		if (RegulatoryClass >= USA_REGULATORY_INFO_SIZE)
+		{
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: USA Unknow Requlatory class (%d)\n",
+						__FUNCTION__, RegulatoryClass));
+			return;
+		}
+		pChannelSet = &USARegulatoryInfo[RegulatoryClass].ChannelSet;
+	}
+	else if (strncmp(pCountry, "JP", 2) == 0)
+	{
+		if (RegulatoryClass >= JP_REGULATORY_INFO_SIZE)
+		{
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: JP Unknow Requlatory class (%d)\n",
+						__FUNCTION__, RegulatoryClass));
+			return;
+		}
 
-	channel_set = get_channelset_by_reg_class(pAd, RegulatoryClass, PhyMode);
-	channel_set_num = get_channel_set_num(channel_set);
+		pChannelSet = &JapanRegulatoryInfo[RegulatoryClass].ChannelSet;
+	}
+	else
+	{
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: Unknow Country (%s)\n",
+					__FUNCTION__, pCountry));
+		return;
+	}
 
 	/* no match channel set. */
-	if (channel_set == NULL)
+	if (pChannelSet == NULL)
 		return;
 
 	/* empty channel set. */
-	if (channel_set_num == 0)
+	if (pChannelSet->NumberOfChannels == 0)
 		return;
 
 	if (ChReptList) // assign partial channel list
 	{
-		for (i=0; i <channel_set_num; i++)
+		for (i=0; i <pChannelSet->NumberOfChannels; i++)
 		{
-			for (j=0; j<MAX_NUM_OF_REGULATORY_CLASS; j++)
+			for (j=0; j <16; j++)
 			{
-				if (ChReptList[j] == channel_set[i])
+				if (ChReptList[j] == pChannelSet->ChannelList[i])
 				{
-					ChannelList[NumberOfChannels++] = channel_set[i];
+					ChannelList[NumberOfChannels++] = pChannelSet->ChannelList[i];
 				}
 			}
 		}
@@ -797,12 +897,12 @@ VOID InsertChannelRepIE(
 	}
 	else
 	{
-		NumberOfChannels = channel_set_num;	
-		pChannelList = channel_set;
+		NumberOfChannels = pChannelSet->NumberOfChannels;	
+		pChannelList = pChannelSet->ChannelList;
 	}
 
-	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%s: Requlatory class (%d), NumberOfChannels=%d, channel_set_num=%d\n",
-						__FUNCTION__, RegulatoryClass, NumberOfChannels, channel_set_num));
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: Requlatory class (%d), NumberOfChannels=%d, pChannelSet->NumberOfChannels=%d\n",
+						__FUNCTION__, RegulatoryClass,NumberOfChannels,pChannelSet->NumberOfChannels));
 
 	Len += NumberOfChannels;
 	pChListPtr = pChannelList;
@@ -1945,7 +2045,11 @@ static VOID PeerTpcReqAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 
 	RealRssi = RTMPMaxRssi(pAd, ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_0),
 				ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_1),
-				ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_2));
+				ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_2)
+#ifdef CUSTOMER_DCC_FEATURE
+				,ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_3)
+#endif
+);
 
 	/* skip Category and action code.*/
 	pFramePtr += 2;
@@ -2327,6 +2431,143 @@ INT Set_TpcEnable_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 }
 
 #endif /* TPC_SUPPORT */
+#ifdef CUSTOMER_DCC_FEATURE
+#ifdef DOT11_N_SUPPORT
+static VOID InsertSecondaryChOffsetIE(
+        IN PRTMP_ADAPTER pAd,
+        OUT PUCHAR pFrameBuf,
+        OUT PULONG pFrameLen,
+        IN UINT8 Offset)
+{
+        ULONG TempLen;
+        ULONG Len = sizeof(SEC_CHA_OFFSET_IE);
+        UINT8 ElementID = IE_SECONDARY_CH_OFFSET;
+        SEC_CHA_OFFSET_IE SChOffIE;
+
+        SChOffIE.SecondaryChannelOffset = Offset;
+
+        MakeOutgoingFrame(pFrameBuf,      &TempLen,
+                        		  1,      &ElementID,
+                                  1,      &Len,
+                                  Len,    &SChOffIE,
+                                          END_OF_ARGS);
+
+        *pFrameLen = *pFrameLen + TempLen;
+
+
+        return;
+}
+
+#endif
+
+VOID InsertChSwAnnIENew(
+	IN PRTMP_ADAPTER pAd,
+	OUT PUCHAR pFrameBuf,
+	OUT PULONG pFrameLen,
+	IN UINT8 ChSwMode,
+	IN UINT8 NewChannel,
+	IN UINT8 ChSwCnt)
+{
+	ULONG TempLen;
+	ULONG Len = sizeof(CH_SW_ANN_INFO);
+	UINT8 ElementID = IE_CHANNEL_SWITCH_ANNOUNCEMENT;
+	CH_SW_ANN_INFO ChSwAnnIE;
+
+	ChSwAnnIE.ChSwMode = ChSwMode;
+	ChSwAnnIE.Channel = NewChannel;
+	ChSwAnnIE.ChSwCnt = ChSwCnt;
+
+	MakeOutgoingFrame(pFrameBuf,	&TempLen,
+			  	1,	&ElementID,
+				1,	&Len,
+				Len,	&ChSwAnnIE,
+				END_OF_ARGS);
+
+	*pFrameLen = *pFrameLen + TempLen;
+
+	printk("%s \n",__func__);
+	return;
+}
+
+
+INT NotifyChSwAnnToConnectedSTAs(
+	IN PRTMP_ADAPTER pAd,
+	IN UINT8 		ChSwMode,
+	IN UINT8 		Channel)
+{
+	UINT32 i;
+	MAC_TABLE_ENTRY *pEntry;
+
+	if(pAd->Dot11_H.RDMode != RD_SWITCHING_MODE)
+	{
+		pAd->CommonCfg.channelSwitch.CHSWMode = ChSwMode;
+		pAd->CommonCfg.channelSwitch.CHSWCount = 0;
+	}
+	else
+	{
+		pAd->Dot11_H.CSPeriod = pAd->CommonCfg.channelSwitch.CHSWPeriod;
+	}
+	for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++)
+	{
+		pEntry = &pAd->MacTab.Content[i];
+		if (pEntry && IS_ENTRY_CLIENT(pEntry) && (pEntry->Sst == SST_ASSOC))
+		{
+					
+			EnqueueChSwAnnNew(pAd, pEntry->Addr, ChSwMode, Channel, pEntry->bssid);
+		
+		}
+	}
+	if(HcUpdateChannel(pAd,Channel) != 0)
+	{
+		return FALSE;
+	}
+
+	if(HcUpdateCsaCntByChannel(pAd, Channel) != 0)
+	{
+	      return FALSE;
+	}
+	return TRUE;
+}
+
+VOID EnqueueChSwAnnNew(
+	IN PRTMP_ADAPTER pAd,
+	IN PUCHAR pDA, 
+	IN UINT8 ChSwMode,
+	IN UINT8 NewCh,
+	IN PUCHAR pSA)
+{
+	PUCHAR pOutBuffer = NULL;
+	NDIS_STATUS NStatus;
+	ULONG FrameLen;
+
+	HEADER_802_11 ActHdr;
+
+	/* build action frame header.*/
+	MgtMacHeaderInit(pAd, &ActHdr, SUBTYPE_ACTION, 0, pDA, pAd->CurrentAddress, pSA);
+
+	NStatus = MlmeAllocateMemory(pAd, (PVOID)&pOutBuffer);  /*Get an unused nonpaged memory*/
+	if(NStatus != NDIS_STATUS_SUCCESS)
+	{
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s() allocate memory failed \n", __FUNCTION__));
+		return;
+	}
+	NdisMoveMemory(pOutBuffer, (PCHAR)&ActHdr, sizeof(HEADER_802_11));
+	FrameLen = sizeof(HEADER_802_11);
+
+	InsertActField(pAd, (pOutBuffer + FrameLen), &FrameLen, CATEGORY_SPECTRUM, SPEC_CHANNEL_SWITCH);
+
+	InsertChSwAnnIENew(pAd, (pOutBuffer + FrameLen), &FrameLen, ChSwMode, NewCh, pAd->CommonCfg.channelSwitch.CHSWPeriod);
+
+#ifdef DOT11_N_SUPPORT
+	InsertSecondaryChOffsetIE(pAd, (pOutBuffer + FrameLen), &FrameLen, HcGetExtCha(pAd,pAd->CommonCfg.Channel));
+#endif
+
+	MiniportMMRequest(pAd, QID_AC_BE, pOutBuffer, FrameLen);
+	MlmeFreeMemory(pOutBuffer);
+	return;
+}
+
+#endif
 
 #ifdef CONFIG_AP_SUPPORT
 INT Set_PwrConstraint(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
@@ -2383,7 +2624,7 @@ typedef struct __PWR_CONSTRAIN_CFG
 		if (DaltaPwr < PwrConstrainTab[Idx].Attenuation)
 		{
 			pAd->CommonCfg.PwrConstraint = Value;
-            pAd->CommonCfg.TxPowerPercentage[BAND0] = PwrConstrainTab[Idx].TxPowerPercentage;
+			pAd->CommonCfg.TxPowerPercentage[BAND0] = PwrConstrainTab[Idx].TxPowerPercentage;
 
 			break;
 		}
@@ -2402,50 +2643,63 @@ typedef struct __PWR_CONSTRAIN_CFG
 #ifdef DOT11K_RRM_SUPPORT
 #endif /* DOT11K_RRM_SUPPORT */
 
-VOID RguClass_BuildBcnChList(RTMP_ADAPTER *pAd, UCHAR *pBuf, ULONG *pBufLen, UCHAR PhyMode, UCHAR RegClass)
+
+static DOT11_REGULATORY_INFO *GetRugClassRegion(RTMP_STRING *pCountryCode, UINT8 RugClass)
 {
-	//INT loop;
-	ULONG TmpLen;
-	PUCHAR channel_set = NULL;
-	UCHAR channel_set_num, MaxTxPwr;
-	UINT8 i, ChSetMinLimPwr;
-	
-	ChSetMinLimPwr = 0xff;
+	DOT11_REGULATORY_INFO *pRugClass;
 
-	if (RegClass == 0)
-		return;
-
-	channel_set = get_channelset_by_reg_class(pAd, RegClass, PhyMode);
-	channel_set_num = get_channel_set_num(channel_set);
-
-	/* no match channel set. */
-	if (channel_set == NULL)
-		return;
-	
-	/* empty channel set. */
-	if (channel_set_num == 0)
-		return;
-
-	/*
-		There is many channel which have different limit tx power
-		we choose the minimum 
-	*/
-	for (i=0; i<channel_set_num; i++)
+	pRugClass = NULL;
+	do
 	{
-		MaxTxPwr = GetRegulatoryMaxTxPwr(pAd, channel_set[i]);
+		if (strncmp(pCountryCode, "US", 2) == 0)
+		{
+			if (RugClass >= USA_REGULATORY_INFO_SIZE)
+				break;
+			pRugClass = &USARegulatoryInfo[RugClass];
+		}
 
-		if (MaxTxPwr < ChSetMinLimPwr)
-			ChSetMinLimPwr = MaxTxPwr;
+		if (strncmp(pCountryCode, "JP", 2) == 0)
+		{
+			if (RugClass >= JP_REGULATORY_INFO_SIZE)
+				break;
+			pRugClass = &JapanRegulatoryInfo[RugClass];
+
+		}
+	} while (FALSE);
+
+	return pRugClass;
+}
+
+
+VOID RguClass_BuildBcnChList(RTMP_ADAPTER *pAd, UCHAR *pBuf, ULONG *pBufLen)
+{
+	INT loop;
+	ULONG TmpLen;
+	DOT11_REGULATORY_INFO *pRguClassRegion;
+	DOT11_CHANNEL_SET *pChList;
+
+	for (loop = 0 ;loop < MAX_NUM_OF_REGULATORY_CLASS; loop++)
+	{
+		if (pAd->CommonCfg.RegulatoryClass[loop] == 0)
+			break;
+
+		pRguClassRegion = GetRugClassRegion(
+							(RTMP_STRING *)pAd->CommonCfg.CountryCode,
+							pAd->CommonCfg.RegulatoryClass[loop]);
+
+		pChList = &pRguClassRegion->ChannelSet;
+
+		if (pRguClassRegion == NULL)
+			return;
+
+		MakeOutgoingFrame(pBuf + *pBufLen,		&TmpLen,
+							1,                 	&pChList->ChannelList[0],
+							1,                 	&pChList->NumberOfChannels,
+							1,                 	&pChList->MaxTxPwr,
+							END_OF_ARGS);
+
+		*pBufLen += TmpLen;
 	}
-
-	MakeOutgoingFrame(pBuf + *pBufLen,		&TmpLen,
-						1,                 	&channel_set[0],
-						1,                 	&channel_set_num,
-						1,                 	&ChSetMinLimPwr,
-						END_OF_ARGS);
-
-	*pBufLen += TmpLen;
-	
 
 	return;
 }

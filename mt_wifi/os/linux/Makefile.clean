@@ -49,8 +49,6 @@ clean:
 	rm -f $(RT28xx_EMBED_RPATH)/hw_ctrl/hdev/.*.cmd
 	rm -f $(RT28xx_EMBED_RPATH)/security/*.o
 	rm -f $(RT28xx_EMBED_RPATH)/security/.*.cmd
-	rm -f $(RT28xx_EMBED_RPATH)/easy_setup/*.o
-	rm -f $(RT28xx_EMBED_RPATH)/easy_setup/.*.cmd .*.flags .*.d
 	rm -f $(RT28xx_RPATH)/hw_ctrl/*.o
 	rm -f $(RT28xx_RPATH)/hw_ctrl/.*.cmd .*.flags .*.d
 	rm -f $(RT28xx_RPATH)/mcu/*.o

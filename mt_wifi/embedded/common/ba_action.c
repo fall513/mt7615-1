@@ -460,6 +460,7 @@ void ba_timeout_flush(PRTMP_ADAPTER pAd)
 			if (pAd->BATable.ba_timeout_bitmap[idx0] & 0x1) {
 				pBAEntry = &pAd->BATable.BARecEntry[(idx0 << 5) + idx1];
 				ba_flush_reordering_timeout_mpdus(pAd, pBAEntry, now);
+				pBAEntry->check_amsdu_miss = FALSE;
 			}
 
 			pAd->BATable.ba_timeout_bitmap[idx0] >>= 1;
@@ -496,7 +497,7 @@ void ba_timeout_monitor(PRTMP_ADAPTER pAd)
 
 		if (need_check) {
 			pAd->BATable.ba_timeout_check = need_check;
-			RTMP_OS_TASKLET_SCHE(&obj->tr_done_task);
+			RTMP_OS_TASKLET_SCHE(&obj->rx_done_task);
 		}
 	}	
 }
@@ -518,9 +519,9 @@ void ba_flush_reordering_timeout_mpdus(
 /*		 (pBAEntry->list.qlen > ((pBAEntry->BAWinSize*7)/8))) ||*/
 /*		(RTMP_TIME_AFTER((unsigned long)Now32, (unsigned long)(pBAEntry->LastIndSeqAtTimer+(10*REORDERING_PACKET_TIMEOUT))) &&*/
 /*		 (pBAEntry->list.qlen > (pBAEntry->BAWinSize/8)))*/
-	if (RTMP_TIME_AFTER((unsigned long)Now32,
-		(unsigned long)(pBAEntry->LastIndSeqAtTimer + pBAEntry->max_reord_pkt_timeout/6))
-		 &&(pBAEntry->list.qlen > 0))
+	if (RTMP_TIME_AFTER((unsigned long)Now32, (unsigned long)(pBAEntry->LastIndSeqAtTimer+(MAX_REORDERING_PACKET_TIMEOUT/6)))
+		 &&(pBAEntry->list.qlen > 0)
+		)
 	{
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_BA, DBG_LVL_TRACE,("timeout[%d] (%08lx-%08lx = %d > %d): %x, flush all!\n ", pBAEntry->list.qlen, Now32, (pBAEntry->LastIndSeqAtTimer),
 			   (int)((long) Now32 - (long)(pBAEntry->LastIndSeqAtTimer)), MAX_REORDERING_PACKET_TIMEOUT,
@@ -529,7 +530,7 @@ void ba_flush_reordering_timeout_mpdus(
 		pBAEntry->LastIndSeqAtTimer = Now32;
 	}
 	else
-	if (RTMP_TIME_AFTER((unsigned long)Now32, (unsigned long)(pBAEntry->LastIndSeqAtTimer+(pBAEntry->reord_pkt_timeout)))
+	if (RTMP_TIME_AFTER((unsigned long)Now32, (unsigned long)(pBAEntry->LastIndSeqAtTimer+(REORDERING_PACKET_TIMEOUT)))
 		&& (pBAEntry->list.qlen > 0)
 	   )
 		{
@@ -736,13 +737,16 @@ BOOLEAN BARecSessionAdd(
 	if (BAWinSize == 0) {
 		BAWinSize = pAd->CommonCfg.BACapability.field.RxBAWinLimit;
 	}
-
+	
+	NdisAcquireSpinLock(&pAd->BATabLock);
 	/* get software BA rec array index, Idx*/
 	Idx = pEntry->BARecWcidArray[TID];
 
 
 	if (Idx == 0) {
+		NdisReleaseSpinLock(&pAd->BATabLock);
 		pBAEntry = BATableAllocRecEntry(pAd, &Idx);
+		NdisAcquireSpinLock(&pAd->BATabLock);
 	} else {
 		pBAEntry = &pAd->BATable.BARecEntry[Idx];
 		ba_refresh_reordering_mpdus(pAd, pBAEntry);
@@ -755,7 +759,7 @@ BOOLEAN BARecSessionAdd(
 	/* Start fill in parameters.*/
 	if (pBAEntry != NULL)
 	{
-		NdisAcquireSpinLock(&pAd->BATabLock);
+		
 		pBAEntry->REC_BA_Status = Recipient_HandleRes;
 		pBAEntry->BAWinSize = BAWinSize;
 		pBAEntry->Wcid = pEntry->wcid;
@@ -763,11 +767,9 @@ BOOLEAN BARecSessionAdd(
 		pBAEntry->TimeOutValue = pFrame->TimeOutValue;
 		pBAEntry->REC_BA_Status = Recipient_Initialization;
 		pBAEntry->check_amsdu_miss = TRUE;
-		pBAEntry->max_reord_pkt_timeout = MAX_REORDERING_PACKET_TIMEOUT;
-		pBAEntry->reord_pkt_timeout = REORDERING_PACKET_TIMEOUT;
 
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_BA, DBG_LVL_OFF, ("Start Seq = %08x\n",  pFrame->BaStartSeq.field.StartSeq));
-		NdisReleaseSpinLock(&pAd->BATabLock);
+		
 
 		if (pEntry->RXBAbitmap & (1<<TID))
 			RTMPCancelTimer(&pBAEntry->RECBATimer, &Cancelled);
@@ -792,6 +794,7 @@ BOOLEAN BARecSessionAdd(
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_BA, DBG_LVL_TRACE,("Can't Accept ADDBA for %02x:%02x:%02x:%02x:%02x:%02x TID = %d\n",
 				PRINT_MAC(pEntry->Addr), TID));
 	}
+	NdisReleaseSpinLock(&pAd->BATabLock);
 	return(Status);
 }
 
@@ -1031,11 +1034,15 @@ VOID BARecSessionTearDown(
 
 	if (!VALID_UCAST_ENTRY_WCID(pAd, Wcid))
 		return;
+	
+	NdisAcquireSpinLock(&pAd->BATabLock);
 
 	/*  Locate corresponding BA Originator Entry in BA Table with the (pAddr,TID).*/
 	Idx = pAd->MacTab.Content[Wcid].BARecWcidArray[TID];
-	if (Idx == 0)
+	if (Idx == 0){
+		NdisReleaseSpinLock(&pAd->BATabLock);
 		return;
+		}
 
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_BA, DBG_LVL_TRACE,("%s===>Wcid=%d.TID=%d \n", __FUNCTION__, Wcid, TID));
 
@@ -1073,23 +1080,24 @@ VOID BARecSessionTearDown(
 			else
 			{
 				MTWF_LOG(DBG_CAT_PROTO, CATPROTO_BA, DBG_LVL_ERROR, ("%s():alloc memory failed!\n", __FUNCTION__));
+				NdisReleaseSpinLock(&pAd->BATabLock);
 				return;
 			}
 		}
 
 		ba_refresh_reordering_mpdus(pAd, pBAEntry);
 
-		NdisAcquireSpinLock(&pAd->BATabLock);
 		
 		/* Erase Bitmap flag at software mactable*/
 		pAd->MacTab.Content[Wcid].BARecWcidArray[TID] = 0;
 		pAd->MacTab.Content[Wcid].RXBAbitmap &= (~(1<<(pBAEntry->TID)));
 
-		NdisReleaseSpinLock(&pAd->BATabLock);
+		
 		RTMP_DEL_BA_SESSION_FROM_ASIC(pAd, Wcid, TID, BA_SESSION_RECP);
 
 
 	}
+	NdisReleaseSpinLock(&pAd->BATabLock);
 
 	BATableFreeRecEntry(pAd, Idx);
 }
@@ -1900,8 +1908,6 @@ static VOID ba_enqueue_reordering_packet(
 	}
 	else
 	{
-		ULONG Now32;
-
 		if (msdu_blk)
 		{
 			ba_mpdu_blk_free(pAd, msdu_blk);
@@ -1920,20 +1926,14 @@ static VOID ba_enqueue_reordering_packet(
 		 */
 		/*ba_refresh_reordering_mpdus(pAd, pBAEntry);*/
 
-		ba_indicate_reordering_mpdus_le_seq(pAd, pBAEntry, Sequence);
-		pBAEntry->LastIndSeq = Sequence;
+		if ((pRxBlk->AmsduState == FINAL_AMSDU_FORMAT) || (pRxBlk->AmsduState == MSDU_FORMAT))
+		{
+			ba_indicate_reordering_mpdus_le_seq(pAd, pBAEntry, Sequence);
 
-		INDICATE_LEGACY_OR_AMSDU(pAd, pRxBlk, wdev_idx);
-
-		Sequence = ba_indicate_reordering_mpdus_in_order(pAd, pBAEntry, pBAEntry->LastIndSeq);
-
-		if (Sequence != INVALID_RCV_SEQ) {
 			pBAEntry->LastIndSeq = Sequence;
 		}
 
-		NdisGetSystemUpTime(&Now32);
-		pBAEntry->LastIndSeqAtTimer = Now32;
-		pBAEntry->CurMpdu = NULL;
+		INDICATE_LEGACY_OR_AMSDU(pAd, pRxBlk, wdev_idx);
 	}
 }
 

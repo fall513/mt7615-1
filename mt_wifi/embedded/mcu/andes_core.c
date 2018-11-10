@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,6 +14,7 @@
 	Module Name:
 	andes_core.c
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 struct cmd_msg *AndesAllocCmdMsg(RTMP_ADAPTER *ad, unsigned int length)
@@ -431,8 +433,13 @@ VOID AndesRxProcessCmdMsg(RTMP_ADAPTER *ad, struct cmd_msg *rx_msg)
 	RX_BLK RxBlk;
 
 #ifdef MT_MAC
-        rx_hw_hdr_len = MTFillRxBlkAndPacketProcess(ad, &RxBlk, rx_msg->net_pkt);
+	if (ad->chipCap.hif_type == HIF_MT)
+                rx_hw_hdr_len = MTFillRxBlkAndPacketProcess(ad, &RxBlk, rx_msg->net_pkt);
 #endif /* MT_MAC */
+#ifdef RLT_MAC
+	if (ad->chipCap.hif_type == HIF_RLT)
+                AndesRltRxProcessCmdMsg(ad, rx_msg);
+#endif /* RLT_MAC */
 }
 
 
@@ -511,8 +518,8 @@ VOID AndesCleanupCmdMsg(RTMP_ADAPTER *ad, DL_LIST *list)
 	struct MCU_CTRL *ctl = &ad->MCUCtrl;
 
 	lock = AndesGetSpinLock(ctl, list);
-
-	RTMP_SPIN_LOCK_IRQSAVE(lock, &flags);
+    if(lock)
+	    RTMP_SPIN_LOCK_IRQSAVE(lock, &flags);
 	DlListForEachSafe(msg, msg_tmp, list, struct cmd_msg, list) {
                 
 		_AndesUnlinkCmdMsg(msg, list);
@@ -524,7 +531,8 @@ VOID AndesCleanupCmdMsg(RTMP_ADAPTER *ad, DL_LIST *list)
 			AndesFreeCmdMsg(msg);
 	}
 	DlListInit(list);
-	RTMP_SPIN_UNLOCK_IRQRESTORE(lock, &flags);
+    if(lock)
+	    RTMP_SPIN_UNLOCK_IRQRESTORE(lock, &flags);
 }
 
 

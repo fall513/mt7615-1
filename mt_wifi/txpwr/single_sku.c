@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,6 +14,7 @@
 	Module Name:
 	cmm_single_sku.c
 */
+#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)
@@ -156,28 +158,28 @@ RTMP_STRING *rstrtok(RTMP_STRING *s,const RTMP_STRING *ct)
 
 INT	MtSingleSkuLoadParam(RTMP_ADAPTER *pAd)
 {
-    CHAR *buffer;
-    CHAR *readline, *token;
+	CHAR *buffer;
+	CHAR *readline, *token;
 #ifdef RF_LOCKDOWN
 #else
     RTMP_OS_FD_EXT srcf;
-    INT retval = 0;
+	INT retval = 0;
 #endif /* RF_LOCKDOWN */
-    CHAR *ptr;
-    INT index, i;
-    CH_POWER *StartCh = NULL;
+	CHAR *ptr;
+	INT index, i;
+	CH_POWER *StartCh = NULL;
     UCHAR band = 0;
-    UCHAR channel, *temp;
-    CH_POWER *pwr = NULL;   
-    CH_POWER *ch, *ch_temp;
+	UCHAR channel, *temp;
+	CH_POWER *pwr = NULL;	
+	CH_POWER *ch, *ch_temp;
 
     /* Link list Init */
     DlListInit(&pAd->SingleSkuPwrList);
 
     /* allocate memory for buffer SKU value */
-    os_alloc_mem(pAd, (UCHAR **)&buffer, MAX_INI_BUFFER_SIZE);
-    if (buffer == NULL)
-        return FALSE;
+	os_alloc_mem(pAd, (UCHAR **)&buffer, MAX_INI_BUFFER_SIZE);
+	if (buffer == NULL)
+		return FALSE;
 
 #ifdef RF_LOCKDOWN
     pAd->CommonCfg.SKUTableIdx = pAd->EEPROMImage[SINGLE_SKU_TABLE_EFFUSE_ADDRESS] & BITS(0,6);
@@ -278,25 +280,25 @@ INT	MtSingleSkuLoadParam(RTMP_ADAPTER *pAd)
 #else
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: RF_LOCKDOWN Feature OFF !!!\n", __FUNCTION__));
 
-    /* open card information file*/
-    srcf = os_file_open(SINGLE_SKU_TABLE_FILE_NAME, O_RDONLY, 0);
-    if (srcf.Status)
-    {
-        /* card information file does not exist */
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-            ("--> Error opening %s\n", SINGLE_SKU_TABLE_FILE_NAME));
-        goto  free_resource;
-    }
+	/* open card information file*/
+	srcf = os_file_open(SINGLE_SKU_TABLE_FILE_NAME, O_RDONLY, 0);
+	if (srcf.Status)
+	{
+		/* card information file does not exist */
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+			("--> Error opening %s\n", SINGLE_SKU_TABLE_FILE_NAME));
+		goto  free_resource;
+	}
 
-    /* card information file exists so reading the card information */
-    os_zero_mem(buffer, MAX_INI_BUFFER_SIZE);
-    retval = os_file_read(srcf, buffer, MAX_INI_BUFFER_SIZE);
+	/* card information file exists so reading the card information */
+	os_zero_mem(buffer, MAX_INI_BUFFER_SIZE);
+	retval = os_file_read(srcf, buffer, MAX_INI_BUFFER_SIZE);
 
     if (retval < 0)
-    {
-        /* read fail */
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("--> Read %s error %d\n", SINGLE_SKU_TABLE_FILE_NAME, -retval));
-    }
+	{
+		/* read fail */
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("--> Read %s error %d\n", SINGLE_SKU_TABLE_FILE_NAME, -retval));
+	}
     else
     {
 
@@ -305,17 +307,17 @@ INT	MtSingleSkuLoadParam(RTMP_ADAPTER *pAd)
 #ifdef RF_LOCKDOWN
         for (readline = ptr = buffer, index = 0; (ptr = os_str_chr(readline, '\t')) != NULL; readline = ptr + 1, index++)
 #else
-        for (readline = ptr = buffer, index = 0; (ptr = os_str_chr(readline, '\n')) != NULL; readline = ptr + 1, index++)
+		for (readline = ptr = buffer, index = 0; (ptr = os_str_chr(readline, '\n')) != NULL; readline = ptr + 1, index++)
 #endif /* RF_LOCKDOWN */
         {
-            *ptr = '\0';
+			*ptr = '\0';
 
 #ifdef RF_LOCKDOWN
             if (readline[0] == '!')
-                continue;
+				continue;
 #else
             if (readline[0] == '#')
-                continue;
+				continue;
 #endif /* RF_LOCKDOWN */
 
             /* Band Info Parsing */
@@ -342,15 +344,15 @@ INT	MtSingleSkuLoadParam(RTMP_ADAPTER *pAd)
             }
 
             /* Rate Info Parsing for each channel */
-            if (!strncmp(readline, "Ch", 2) )
-            {
+			if (!strncmp(readline, "Ch", 2) )
+			{
                 /* Dynamic allocate memory for parsing structure */
                 os_alloc_mem(pAd, (UCHAR **)&pwr, sizeof(*pwr));
 
                 /* set default value to 0 for parsing structure */
                 os_zero_mem(pwr, sizeof(*pwr));
 
-                token= rstrtok(readline + 2 ," ");
+				token= rstrtok(readline + 2 ," ");
 
                 /* sanity check for non-Null pointer */
                 if (!token)
@@ -362,243 +364,243 @@ INT	MtSingleSkuLoadParam(RTMP_ADAPTER *pAd)
                     continue;
                 }
                 
-                channel = (UCHAR)os_str_tol(token, 0, 10);
-                pwr->StartChannel = channel;
+				channel = (UCHAR)os_str_tol(token, 0, 10);
+				pwr->StartChannel = channel;
                 pwr->band = band;
 
                 /* Rate Info Parsing (CCK) */
-                if (band == 0) // if (pwr->StartChannel <= 14)
-                {
-                    for (i = 0; i < SINGLE_SKU_TABLE_CCK_LENGTH; i++)
-                    {
-                        token = rstrtok(NULL ," ");
+				if (band == 0) // if (pwr->StartChannel <= 14)
+				{
+					for (i = 0; i < SINGLE_SKU_TABLE_CCK_LENGTH; i++)
+					{
+						token = rstrtok(NULL ," ");
 
                         /* sanity check for non-Null pointer */
                         if (!token)
-                            break;
+							break;
 
                         if (*token == ' ')
                             pwr->PwrCCK[i] = os_str_tol(token + 1, 0, 10) * 2;
                         else
-                            pwr->PwrCCK[i] = os_str_tol(token, 0, 10) * 2;
-                    }
-                }
+						    pwr->PwrCCK[i] = os_str_tol(token, 0, 10) * 2;
+					}
+				}
 
                 /* Rate Info Parsing (OFDM) */
-                for (i = 0; i < SINGLE_SKU_TABLE_OFDM_LENGTH; i++)
-                {
-                    token = rstrtok(NULL ," ");
+				for (i = 0; i < SINGLE_SKU_TABLE_OFDM_LENGTH; i++)
+				{
+					token = rstrtok(NULL ," ");
 
-                    /* sanity check for non-Null pointer */
+					/* sanity check for non-Null pointer */
                     if (!token)
-                        break;
+						break;
 
                     if (*token == ' ')
                         pwr->PwrOFDM[i] = os_str_tol(token + 1, 0, 10) * 2;
                     else
                         pwr->PwrOFDM[i] = os_str_tol(token, 0, 10) * 2;
-                }
+				}
 
 #ifdef DOT11_VHT_AC
 
                 /* Rate Info Parsing (VHT20) */
-                for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                {
-                    token = rstrtok(NULL ," ");
+				for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
+				{
+					token = rstrtok(NULL ," ");
 
                     /* sanity check for non-Null pointer */
                     if (!token)
-                        break;
+						break;
 
                     if (*token == ' ')
                         pwr->PwrVHT20[i] = os_str_tol(token + 1, 0, 10) * 2;
                     else
                         pwr->PwrVHT20[i] = os_str_tol(token, 0, 10) * 2;
-                }
+				}
 
                 /* Rate Info Parsing (VHT40) */
-                for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                {
-                    token = rstrtok(NULL ," ");
+				for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
+				{
+					token = rstrtok(NULL ," ");
 
                     /* sanity check for non-Null pointer */
                     if (!token)
-                        break;
+						break;
 
                     if (*token == ' ')
                         pwr->PwrVHT40[i] = os_str_tol(token + 1, 0, 10) * 2;
                     else
                         pwr->PwrVHT40[i] = os_str_tol(token, 0, 10) * 2;
-                }
+				}
 
-                if (band == 1) // if (pwr->StartChannel > 14)
-                {
+				if (band == 1) // if (pwr->StartChannel > 14)
+				{
                     /* Rate Info Parsing (VHT80) */
                     for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                    {
-                        token = rstrtok(NULL ," ");
+					{
+						token = rstrtok(NULL ," ");
 
                         /* sanity check for non-Null pointer */
                         if (!token)
-                            break;
+							break;
 
                         if (*token == ' ')
                             pwr->PwrVHT80[i] = os_str_tol(token + 1, 0, 10) * 2;
                         else
                             pwr->PwrVHT80[i] = os_str_tol(token, 0, 10) * 2;
-                    }
+					}
 
                     /* Rate Info Parsing (VHT160) */
-                    for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                    {
-                        token = rstrtok(NULL ," ");
+					for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
+					{
+						token = rstrtok(NULL ," ");
 
                         /* sanity check for non-Null pointer */
                         if (!token)
-                            break;
+							break;
 
                         if (*token == ' ')
                             pwr->PwrVHT160[i] = os_str_tol(token + 1, 0, 10) * 2;
                         else
                             pwr->PwrVHT160[i] = os_str_tol(token, 0, 10) * 2;
-                    }
-                }
+					}
+				}
 #endif /* DOT11_VHT_AC */
 
                 /* Tx Stream offset Info Parsing */
-                for (i = 0; i < SINGLE_SKU_TABLE_TX_OFFSET_NUM; i++)
-                {
-                    token = rstrtok(NULL ," ");
+				for (i = 0; i < SINGLE_SKU_TABLE_TX_OFFSET_NUM; i++)
+				{
+					token = rstrtok(NULL ," ");
 
                     /* sanity check for non-Null pointer */
                     if (!token)
-                        break;
+						break;
                     
-                    /* parsing order is 3T, 2T, 1T */
-                    pwr->PwrTxStreamDelta[i] = os_str_tol(token, 0, 10) * 2;
-                }
+					/* parsing order is 3T, 2T, 1T */
+					pwr->PwrTxStreamDelta[i] = os_str_tol(token, 0, 10) * 2;
+				}
 
                 /* Tx Spatial Stream offset Info Parsing */
-                for (i = 0; i < SINGLE_SKU_TABLE_NSS_OFFSET_NUM; i++)
-                {
-                    token = rstrtok(NULL ," ");
+				for (i = 0; i < SINGLE_SKU_TABLE_NSS_OFFSET_NUM; i++)
+				{
+					token = rstrtok(NULL ," ");
 
                     /* sanity check for non-Null pointer */
                     if (!token)
-                        break;
+						break;
 
                     /* parsing order is 1SS, 2SS, 3SS, 4SS */
-                    pwr->PwrTxNSSDelta[i] = os_str_tol(token, 0, 10) * 2;
-                }
+					pwr->PwrTxNSSDelta[i] = os_str_tol(token, 0, 10) * 2;
+				}
 
                 /* Create New Data Structure to simpilify the SKU table (Represent together for channels with same rate Info, band Info, Tx Stream offset Info, Tx Spatial stream offset Info) */
-                if (!StartCh)
-                {
+				if (!StartCh)
+				{
                     /* (Begining) assign new pointer head to SKU table contents for this channel */
                     StartCh = pwr;
 
                     /* add tail for Link list */
-                    DlListAddTail(&pAd->SingleSkuPwrList, &pwr->List);
-                }
-                else
-                {
-                    BOOLEAN fgSameCont = TRUE;
+					DlListAddTail(&pAd->SingleSkuPwrList, &pwr->List);
+				}
+				else
+				{
+					BOOLEAN fgSameCont = TRUE;
 
-                    if (band == 0) // if (pwr->StartChannel <= 14)
-                    {
-                        for (i = 0; i < SINGLE_SKU_TABLE_CCK_LENGTH; i++)
-                        {
-                            if (StartCh->PwrCCK[i] != pwr->PwrCCK[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
+					if (band == 0) // if (pwr->StartChannel <= 14)
+					{
+						for (i = 0; i < SINGLE_SKU_TABLE_CCK_LENGTH; i++)
+						{
+							if (StartCh->PwrCCK[i] != pwr->PwrCCK[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
+
+					if (fgSameCont)
+					{
+						for (i = 0; i < SINGLE_SKU_TABLE_OFDM_LENGTH; i++)
+						{
+							if (StartCh->PwrOFDM[i] != pwr->PwrOFDM[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
+
+					if (fgSameCont)
+					{
+						for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
+						{
+							if (StartCh->PwrVHT20[i] != pwr->PwrVHT20[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
+
+					if (fgSameCont)
+					{
+						for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
+						{
+							if (StartCh->PwrVHT40[i] != pwr->PwrVHT40[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
+
+					if (fgSameCont)
+					{
+						for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
+						{
+							if (StartCh->PwrVHT80[i] != pwr->PwrVHT80[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
+
+					if (fgSameCont)
+					{
+						for (i= 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
+						{
+							if (StartCh->PwrVHT160[i] != pwr->PwrVHT160[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
+
+					if (fgSameCont)
+					{
+						for (i = 0; i < SINGLE_SKU_TABLE_TX_OFFSET_NUM; i++)
+						{
+							if (StartCh->PwrTxStreamDelta[i] != pwr->PwrTxStreamDelta[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
 
                     if (fgSameCont)
-                    {
-                        for (i = 0; i < SINGLE_SKU_TABLE_OFDM_LENGTH; i++)
-                        {
-                            if (StartCh->PwrOFDM[i] != pwr->PwrOFDM[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fgSameCont)
-                    {
-                        for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                        {
-                            if (StartCh->PwrVHT20[i] != pwr->PwrVHT20[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fgSameCont)
-                    {
-                        for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                        {
-                            if (StartCh->PwrVHT40[i] != pwr->PwrVHT40[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fgSameCont)
-                    {
-                        for (i = 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                        {
-                            if (StartCh->PwrVHT80[i] != pwr->PwrVHT80[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fgSameCont)
-                    {
-                        for (i= 0; i < SINGLE_SKU_TABLE_VHT_LENGTH; i++)
-                        {
-                            if (StartCh->PwrVHT160[i] != pwr->PwrVHT160[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fgSameCont)
-                    {
-                        for (i = 0; i < SINGLE_SKU_TABLE_TX_OFFSET_NUM; i++)
-                        {
-                            if (StartCh->PwrTxStreamDelta[i] != pwr->PwrTxStreamDelta[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fgSameCont)
-                    {
-                        for (i = 0; i < SINGLE_SKU_TABLE_NSS_OFFSET_NUM; i++)
-                        {
-                            if (StartCh->PwrTxNSSDelta[i] != pwr->PwrTxNSSDelta[i])
-                            {
-                                fgSameCont = FALSE;
-                                break;
-                            }
-                        }
-                    }
+					{
+						for (i = 0; i < SINGLE_SKU_TABLE_NSS_OFFSET_NUM; i++)
+						{
+							if (StartCh->PwrTxNSSDelta[i] != pwr->PwrTxNSSDelta[i])
+							{
+								fgSameCont = FALSE;
+								break;
+							}
+						}
+					}
 
                     if (fgSameCont)
                     {
@@ -609,144 +611,143 @@ INT	MtSingleSkuLoadParam(RTMP_ADAPTER *pAd)
                     }
 
                     /* check similarity of SKU table content for different channel */
-                    if (fgSameCont)
-                    {
-                        os_free_mem(pwr);
-                    }
-                    else
-                    {
+					if (fgSameCont)
+					{
+						os_free_mem(pwr);
+					}
+					else
+					{
                         /* Assign new pointer head to SKU table contents for this channel */
                         StartCh = pwr;
 
                         /* add tail for Link list */
-                        DlListAddTail(&pAd->SingleSkuPwrList, &StartCh->List);
-                    }
-                }
+						DlListAddTail(&pAd->SingleSkuPwrList, &StartCh->List);
+					}
+				}
 
                 /* Increment total channel counts for channels with same SKU table contents */
-                StartCh->num ++;
+				StartCh->num ++;
 
                 /* allocate memory for channel list with same SKU table contents */
                 os_alloc_mem(pAd, (PUCHAR *)&temp, StartCh->num);
 
                 /* backup non-empty channel list to temp buffer */
-                if (NULL != StartCh->Channel)
-                {
+				if (NULL != StartCh->Channel)
+				{
                     /* copy channel list to temp buffer */
                     os_move_mem(temp, StartCh->Channel, StartCh->num - 1);
 
                     /* free memory for channel list used before assign pointer of temp memory buffer */
-                    os_free_mem(StartCh->Channel);
-                }
+					os_free_mem(StartCh->Channel);
+				}
 
                 /* assign pointer of temp memory buffer */
-                StartCh->Channel = temp;
+				StartCh->Channel = temp;
 
                 /* update latest channel number to channel list */
-                StartCh->Channel[StartCh->num - 1] = channel;
-            }
-        }
+				StartCh->Channel[StartCh->num - 1] = channel;
+			}
+		}
 #ifdef RF_LOCKDOWN
 #else
-    }
+	}
 #endif /* RF_LOCKDOWN */
 
     MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("SKU table index: %d \n", pAd->CommonCfg.SKUTableIdx));
 
-    DlListForEachSafe(ch, ch_temp, &pAd->SingleSkuPwrList, CH_POWER, List)
-    {
-        int i;
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("start ch = %d, ch->num = %d\n", ch->StartChannel, ch->num));
+	DlListForEachSafe(ch, ch_temp, &pAd->SingleSkuPwrList, CH_POWER, List)
+	{
+		int i;
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("start ch = %d, ch->num = %d\n", ch->StartChannel, ch->num));
 
         MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("Band: %d \n", ch->band));
 
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("Channel: "));
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("Channel: "));
 
         for ( i = 0 ; i < ch->num ; i++ )
         {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->Channel[i]));
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->Channel[i]));
         }
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
 
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("CCK: "));
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("CCK: "));
 
         for ( i= 0 ; i < SINGLE_SKU_TABLE_CCK_LENGTH ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrCCK[i]));
-        }
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrCCK[i]));
+		}
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
 
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("OFDM: "));
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("OFDM: "));
 
         for ( i= 0 ; i < SINGLE_SKU_TABLE_OFDM_LENGTH ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrOFDM[i]));
-        }
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrOFDM[i]));
+		}
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
 
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT20: "));
-
-        for ( i= 0 ; i < SINGLE_SKU_TABLE_VHT_LENGTH ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%d ", ch->PwrVHT20[i]));
-        }
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
-
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT40: "));
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT20: "));
 
         for ( i= 0 ; i < SINGLE_SKU_TABLE_VHT_LENGTH ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrVHT40[i]));
-        }
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%d ", ch->PwrVHT20[i]));
+		}
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
 
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT80: "));
-
-        for ( i= 0 ; i < SINGLE_SKU_TABLE_VHT_LENGTH ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrVHT80[i]));
-        }
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
-
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT160: "));
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT40: "));
 
         for ( i= 0 ; i < SINGLE_SKU_TABLE_VHT_LENGTH ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrVHT160[i]));
-        }
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrVHT40[i]));
+		}
         MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
 
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("PwrTxStreamDelta: "));
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT80: "));
+
+        for ( i= 0 ; i < SINGLE_SKU_TABLE_VHT_LENGTH ; i++ )
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrVHT80[i]));
+		}
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
+
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("VHT160: "));
+
+        for ( i= 0 ; i < SINGLE_SKU_TABLE_VHT_LENGTH ; i++ )
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrVHT160[i]));
+		}
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
+
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("PwrTxStreamDelta: "));
 
         for ( i= 0 ; i < SINGLE_SKU_TABLE_TX_OFFSET_NUM ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrTxStreamDelta[i]));
-        }      
-        MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrTxStreamDelta[i]));
+		}      
+		MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
 
         MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("PwrTxNSSDelta: "));
-        for ( i= 0 ; i < SINGLE_SKU_TABLE_NSS_OFFSET_NUM ; i++ )
-        {
-            MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrTxNSSDelta[i]));
-        }
+		for ( i= 0 ; i < SINGLE_SKU_TABLE_NSS_OFFSET_NUM ; i++ )
+		{
+			MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%d ", ch->PwrTxNSSDelta[i]));
+		}
         MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("\n"));
 
         MTWF_LOG(DBG_CAT_POWER, DBG_SUBCAT_ALL, DBG_LVL_INFO,("-----------------------------------------------------------------"));
-    }
+	}
     
 #ifdef RF_LOCKDOWN
 #else   
-    /* close file*/
-    retval = os_file_close(srcf);
+	/* close file*/
+	retval = os_file_close(srcf);
 
 free_resource:
 #endif /* RF_LOCKDOWN */
 
-    os_free_mem(buffer);
+	os_free_mem(buffer);
 
-    return TRUE;
+	return TRUE;
 }
-
 
 
 VOID MtSingleSkuUnloadParam(RTMP_ADAPTER *pAd)
@@ -773,13 +774,11 @@ SKUTxPwrOffsetGet(RTMP_ADAPTER *pAd, UINT8 ucBandIdx, UINT8 ucBW, UINT8 ucPhymod
     CHAR        cPowerOffset = 0;
     UINT8       ucRateOffset = 0;
     UINT8       BW_OFFSET[4] = {VHT20_OFFSET, VHT40_OFFSET, VHT80_OFFSET, VHT160C_OFFSET};   
-#ifdef CONFIG_ATE
     ATE_CTRL    *ATECtrl = &(pAd->ATECtrl);
+    UINT8       ucNSS = 0;
 #ifdef DBDC_MODE
     BAND_INFO   *Info = &(ATECtrl->band_ext[0]);
 #endif /* DBDC_MODE */
-#endif
-    UINT8       ucNSS = 0;
 
     /* Compute MCS rate and Nss for HT mode */
     if ((ucPhymode == MODE_HTMIX) || (ucPhymode == MODE_HTGREENFIELD))
@@ -927,7 +926,6 @@ SKUTxPwrOffsetGet(RTMP_ADAPTER *pAd, UINT8 ucBandIdx, UINT8 ucBW, UINT8 ucPhymod
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, (KBLU "%s: ucBW: %d, ucPhymode: %d, ucMCS: %d, ucNss: %d, fgSPE: %d !!!\n" KNRM, __FUNCTION__, ucBW, ucPhymode, ucMCS, ucNss, fgSE));
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, (KBLU "%s: cPowerOffset: 0x%x (%d) !!!\n" KNRM, __FUNCTION__, cPowerOffset, cPowerOffset));
 
-#ifdef CONFIG_ATE
     /* Check if Single SKU is disabled */
     if (BAND0 == ucBandIdx)
     {
@@ -939,13 +937,12 @@ SKUTxPwrOffsetGet(RTMP_ADAPTER *pAd, UINT8 ucBandIdx, UINT8 ucBW, UINT8 ucPhymod
 #ifdef DBDC_MODE    
     else if (BAND1 == ucBandIdx)
     {
-        if(Info && (Info->fgTxPowerSKUEn == FALSE))
+        if (Info->fgTxPowerSKUEn == FALSE)
         {
             cPowerOffset = 0;
         }
     }
 #endif /* DBDC_MODE */
-#endif
 
     return cPowerOffset;
 }
@@ -1287,7 +1284,6 @@ free_resource:
     os_free_mem( buffer);
     return TRUE;
 }
-
 
 VOID MtBfBackOffUnloadTable(RTMP_ADAPTER *pAd)
 {

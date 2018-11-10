@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +26,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 
@@ -182,8 +183,6 @@ VOID SendGASRsp(
 	PGAS_CTRL pGASCtrl = &pAd->ApCfg.MBSSID[Event->ControlIndex].GASCtrl;
 	GAS_PEER_ENTRY *GASPeerEntry;
 	BOOLEAN Cancelled;
-	MAC_TABLE_ENTRY *pEntry = NULL;
-	UCHAR WildcardBssid[MAC_ADDR_LEN]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_TRACE, ("%s\n", __FUNCTION__));
 	
@@ -240,17 +239,8 @@ VOID SendGASRsp(
 
 	GASFrame = (GAS_FRAME *)Buf;		
 
-	pEntry = MacTableLookup(pAd,GASPeerEntry->PeerMACAddr);
-	if(pEntry) 
-	{		
-		ActHeaderInit(pAd, &GASFrame->Hdr, Event->PeerMACAddr ,pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid,
+	ActHeaderInit(pAd, &GASFrame->Hdr, Event->PeerMACAddr ,pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid,
 					   pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid);
-	}
-	else  /* peer is not associated, follow 802.11-2012 , fill Addr3 BSSID with wildcard bssid */
-	{
-		ActHeaderInit(pAd, &GASFrame->Hdr, Event->PeerMACAddr ,pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid,
-					   WildcardBssid);
-	}
 
 	FrameLen += sizeof(HEADER_802_11);
 
@@ -379,11 +369,7 @@ VOID ReceiveGASInitReq(
 	
 	for (APIndex = 0; APIndex < MAX_MBSSID_NUM(pAd); APIndex++)
 	{
-		/* 
-		according to 802.11-2012, public action frame may have Wildcard BSSID in addr3, 
-		use addr1(DA) for searching instead.
-		*/
-		if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr1, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
+		if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr3, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
 		{
 			pGASCtrl = &pAd->ApCfg.MBSSID[APIndex].GASCtrl;
 			break;
@@ -392,8 +378,7 @@ VOID ReceiveGASInitReq(
 
 	if (!pGASCtrl)
 	{
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-			("%s Can not find Peer Control DA=%02X:%02X:%02X:%02X:%02X:%02X\n", __FUNCTION__,PRINT_MAC(GASFrame->Hdr.Addr1)));
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_ERROR, ("%s Can not find Peer Control\n", __FUNCTION__));
 		return;
 	}
 		
@@ -546,8 +531,6 @@ static VOID SendGASCBRsp(
 	PGAS_CTRL pGASCtrl = &pAd->ApCfg.MBSSID[Event->ControlIndex].GASCtrl;
 	BOOLEAN bGASQueryRspFragFound = FALSE;
 	BOOLEAN Cancelled;
-	MAC_TABLE_ENTRY *pEntry = NULL;
-	UCHAR WildcardBssid[MAC_ADDR_LEN]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_TRACE, ("%s\n", __FUNCTION__));
 
@@ -591,17 +574,8 @@ static VOID SendGASCBRsp(
 
 	GASFrame = (GAS_FRAME *)Buf;	
 
-	pEntry = MacTableLookup(pAd,GASPeerEntry->PeerMACAddr);
-	if(pEntry)
-	{
-		ActHeaderInit(pAd, &GASFrame->Hdr, Event->PeerMACAddr ,pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid,
+	ActHeaderInit(pAd, &GASFrame->Hdr, Event->PeerMACAddr ,pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid,
 					   pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid);
-	}
-	else  /* peer is not associated, follow 802.11-2012 , fill Addr3 BSSID with wildcard bssid */
-	{
-		ActHeaderInit(pAd, &GASFrame->Hdr, Event->PeerMACAddr ,pAd->ApCfg.MBSSID[Event->ControlIndex].wdev.bssid,
-					   WildcardBssid);
-	}
 
 	FrameLen += sizeof(HEADER_802_11);
 
@@ -619,7 +593,7 @@ static VOID SendGASCBRsp(
 		GASFrame->u.GAS_CB_RSP.StatusCode = cpu2le16(Event->u.GAS_CB_REQ_DATA.StatusCode); 
 		FrameLen += 2;
 
-		if (bGASQueryRspFragFound)
+		if (bGASQueryRspFragFound && GASQueryRspFrag)
 			GASFrame->u.GAS_CB_RSP.GASRspFragID = (GASQueryRspFrag->GASRspFragID & 0x7F);
 		else
 			GASFrame->u.GAS_CB_RSP.GASRspFragID = 0;
@@ -638,7 +612,7 @@ static VOID SendGASCBRsp(
 		
 		*Pos++ = Event->u.GAS_CB_REQ_DATA.AdvertisementProID; /* Advertisement Protocol ID field */
 
-		if (Event->u.GAS_CB_REQ_DATA.StatusCode == 0)
+		if ((Event->u.GAS_CB_REQ_DATA.StatusCode == 0) && GASQueryRspFrag)
 		{
 
 			tmpLen = cpu2le16(GASQueryRspFrag->FragQueryRspLen);
@@ -703,7 +677,8 @@ static VOID SendGASCBRsp(
 		GASFrame->u.GAS_CB_RSP.StatusCode = cpu2le16(Event->u.GAS_CB_REQ_MORE_DATA.StatusCode); 
 		FrameLen += 2;
 
-		GASFrame->u.GAS_CB_RSP.GASRspFragID = (0x80 | (GASQueryRspFrag->GASRspFragID & 0x7F));
+        if(GASQueryRspFrag)
+		    GASFrame->u.GAS_CB_RSP.GASRspFragID = (0x80 | (GASQueryRspFrag->GASRspFragID & 0x7F));
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_OFF, ("GASRspFragID = %d\n", GASFrame->u.GAS_CB_RSP.GASRspFragID));
 		FrameLen += 1;
 		
@@ -716,17 +691,19 @@ static VOID SendGASCBRsp(
 		*Pos++ = 0; /* Query response info field */
 		
 		*Pos++ = Event->u.GAS_CB_REQ_MORE_DATA.AdvertisementProID; /* Advertisement Protocol ID field */
-
-		tmpLen = cpu2le16(GASQueryRspFrag->FragQueryRspLen);
+        if(GASQueryRspFrag)
+        {
+            tmpLen = cpu2le16(GASQueryRspFrag->FragQueryRspLen);
 			
-		NdisMoveMemory(Pos, &tmpLen, 2);
-		Pos += 2;
-		FrameLen +=	6;
+    		NdisMoveMemory(Pos, &tmpLen, 2);
+    		Pos += 2;
+    		FrameLen +=	6;
 
-		NdisMoveMemory(Pos, GASQueryRspFrag->FragQueryRsp,
-							GASQueryRspFrag->FragQueryRspLen);
+    		NdisMoveMemory(Pos, GASQueryRspFrag->FragQueryRsp,
+    							GASQueryRspFrag->FragQueryRspLen);
 
-		FrameLen += GASQueryRspFrag->FragQueryRspLen;	
+    		FrameLen += GASQueryRspFrag->FragQueryRspLen;	 
+        }
 		
 		//GASSetPeerCurrentState(pAd, Elem, WAIT_GAS_CB_REQ); 
 		GASSetPeerCurrentState(pAd, Event, WAIT_GAS_CB_REQ); 
@@ -755,7 +732,7 @@ VOID ReceiveGASCBReq(
 
 	for (APIndex = 0; APIndex < MAX_MBSSID_NUM(pAd); APIndex++)
 	{
-		if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr1, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
+		if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr3, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
 		{
 			pGASCtrl = &pAd->ApCfg.MBSSID[APIndex].GASCtrl;
 			break;
@@ -764,8 +741,7 @@ VOID ReceiveGASCBReq(
 
 	if (!pGASCtrl)
 	{
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-			("%s Can not find Peer Control DA=%02X:%02X:%02X:%02X:%02X:%02X\n", __FUNCTION__,PRINT_MAC(GASFrame->Hdr.Addr1)));
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_ERROR, ("%s Can not find Peer Control\n", __FUNCTION__));
 		return;
 	}
 
@@ -1361,11 +1337,7 @@ BOOLEAN GasEnable(IN PRTMP_ADAPTER pAd,	IN MLME_QUEUE_ELEM *Elem)
 
 	for (APIndex = 0; APIndex < MAX_MBSSID_NUM(pAd); APIndex++)
 	{
-		/* 
-		according to 802.11-2012, public action frame may have Wildcard BSSID in addr3, 
-		use addr1(DA) for searching instead.
-		*/
-		if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr1, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
+		if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr3, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
 		{
 			pGASCtrl = &pAd->ApCfg.MBSSID[APIndex].GASCtrl;
 			break;
@@ -1374,8 +1346,7 @@ BOOLEAN GasEnable(IN PRTMP_ADAPTER pAd,	IN MLME_QUEUE_ELEM *Elem)
 
 	if (!pGASCtrl)
 	{
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-			("%s Can not find Peer Control DA=%02X:%02X:%02X:%02X:%02X:%02X\n", __FUNCTION__,PRINT_MAC(GASFrame->Hdr.Addr1)));
+		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s Can not find Peer Control\n", __FUNCTION__));
 			return FALSE;
 	}
 

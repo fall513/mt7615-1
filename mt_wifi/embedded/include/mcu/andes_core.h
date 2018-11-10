@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __ANDES_CORE_H__
 #define __ANDES_CORE_H__
 
@@ -109,9 +110,6 @@ struct MCU_CTRL {
 	UINT8 SemStatus;
 #endif
 	struct _RTMP_ADAPTER *ad;
-#ifdef FWDL_IN_PROBE
-	BOOLEAN fwdl_in_probe;
-#endif
 };
 
 

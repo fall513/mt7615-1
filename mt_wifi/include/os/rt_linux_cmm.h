@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -23,7 +24,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
  */
- 
+#endif /* MTK_LICENSE */
 
 #ifndef __RT_LINUX_CMM_H__
 #define __RT_LINUX_CMM_H__
@@ -458,12 +459,12 @@ extern RTMP_USB_CONFIG *pRtmpUsbConfig;
 #define TX_RING_SIZE            256
 #endif
 #ifdef CONFIG_FPGA_MODE
-#define RX_RING_SIZE            512
+#define RX_RING_SIZE            256
 #else
 #ifdef MT7615
-#define RX_RING_SIZE           	1024
+#define RX_RING_SIZE           	512
 #else
-#define RX_RING_SIZE            1024
+#define RX_RING_SIZE            128
 #endif
 #endif
 
@@ -478,9 +479,9 @@ extern RTMP_USB_CONFIG *pRtmpUsbConfig;
 #define TX_RING_SIZE            64 /*64 */
 #endif
 #ifdef BB_SOC
-#define RX_RING_SIZE            512 
+#define RX_RING_SIZE            64 
 #else
-#define RX_RING_SIZE            512
+#define RX_RING_SIZE            128
 #endif
 #endif /* DOT11_VHT_AC */
 #ifdef BB_SOC
@@ -492,13 +493,12 @@ extern RTMP_USB_CONFIG *pRtmpUsbConfig;
 #define CTL_RING_SIZE		128
 #if defined(MT7615) || defined(MT7622)
 #ifdef CONFIG_FPGA_MODE
-#define RX1_RING_SIZE          512
+#define RX1_RING_SIZE           64
 #else
 #define RX1_RING_SIZE		512
 #endif
 #else
-#define RX1_RING_SIZE          512
-
+#define RX1_RING_SIZE		64
 #endif
 #endif
 

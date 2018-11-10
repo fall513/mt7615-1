@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -14,7 +15,7 @@
  * way altering	the	source code	is stricitly prohibited, unless	the	prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 /****************************************************************************
 	Abstract:
 
@@ -122,20 +123,50 @@ VOID RRM_InsertRRMEnCapIE(
 	ULONG TempLen;
 	UINT8 Len = 5;
 	UINT8 ElementID = IE_RRM_EN_CAP;
-	PRRM_EN_CAP_IE pRrmEnCap;
-
+	RRM_EN_CAP_IE RrmEnCap;
 	BSS_STRUCT *pMBss = NULL;
 
 	if (BssIdx < MAX_MBSSID_NUM(pAd))
 		pMBss = &pAd->ApCfg.MBSSID[BssIdx];
 	else
 		return;
-	pRrmEnCap = (PRRM_EN_CAP_IE)&pMBss->RrmCfg.rrm_capabilities;
-	
+
+	RrmEnCap.word = 0;
+	RrmEnCap.field.LinkMeasureCap = 1;
+	RrmEnCap.field.NeighborRepCap = 1;
+	RrmEnCap.field.ParallelMeasureCap = 0;
+	RrmEnCap.field.RepeatMeasureCap = 0;
+	RrmEnCap.field.BeaconPassiveMeasureCap = 1;
+	RrmEnCap.field.BeaconActiveMeasureCap = 1;
+	RrmEnCap.field.BeaconTabMeasureCap = 1;
+	RrmEnCap.field.BeaconMeasureReportCndCap = 1;
+	RrmEnCap.field.FrameMeasureCap = 0;
+	RrmEnCap.field.ChannelLoadMeasureCap = 0;
+	RrmEnCap.field.NoiseHistogramMeasureCap = 0;
+	RrmEnCap.field.StatisticMeasureCap = 0;
+	RrmEnCap.field.LCIAzimuthCap = 0;
+	RrmEnCap.field.TransmitStreamCap = 1;
+	RrmEnCap.field.TriggeredTransmitStreamCap = 1;
+	RrmEnCap.field.APChannelReportCap = 1;
+	RrmEnCap.field.RRMMibCap = 0;
+	RrmEnCap.field.OperatingChMaxMeasureDuration = 0;
+	RrmEnCap.field.NotOperatingChMaxMeasureDuration = 0;
+	RrmEnCap.field.MeasurePilotCap = 0;
+	RrmEnCap.field.MeasurePilotTxInfoCap = 0;
+	RrmEnCap.field.NeighReportTSFOffsetCap =
+		(pMBss->RrmCfg.bDot11kRRMNeighborRepTSFEnable) ? 1 : 0;
+	RrmEnCap.field.RCPIMeasureCap = 0;
+	RrmEnCap.field.RSNIMeasureCap = 0;
+	RrmEnCap.field.BssAvgAccessDelayCap = 0;
+	RrmEnCap.field.BssAvaiableAcmCap = 
+		0;
+	RrmEnCap.field.AntennaInfoCap = 0;
+
+
 	MakeOutgoingFrame(pFrameBuf,					&TempLen,
 						1,							&ElementID,
 						1,							&Len,
-						Len,						(PUCHAR)&pRrmEnCap->word,
+						Len,						(PUCHAR)&RrmEnCap.word,
 						END_OF_ARGS);
 
 	*pFrameLen = *pFrameLen + TempLen;
@@ -442,8 +473,8 @@ VOID RRM_EnqueueBcnReq(
 			InsertChannelRepIE(pAd, (pOutBuffer+FrameLen), &FrameLen,
 								(RTMP_STRING *)pAd->CommonCfg.CountryCode,
 								pMlmeBcnReq->ChRepRegulatoryClass[idx],
-								&pMlmeBcnReq->ChRepList[0],
-								pAd->ApCfg.MBSSID[IfIdx].wdev.PhyMode);
+								&pMlmeBcnReq->ChRepList[0]
+								);
 			TotalLen += (FrameLen - FramelenTmp);
 			idx ++;
 		}
@@ -491,84 +522,6 @@ VOID RRM_EnqueueBcnReq(
 		MlmeFreeMemory( pOutBuffer);
 
 	return;
-}
-
-void RRM_measurement_report_to_host(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem);
-
-int RRM_EnqueueBcnReqAction(
-	IN PRTMP_ADAPTER pAd,
-	IN UINT8 IfIdx,
-	IN p_bcn_req_data_t p_bcn_req_data)
-{
-	
-	HEADER_802_11 ActHdr;
-	PUCHAR pOutBuffer = NULL;
-	NDIS_STATUS NStatus;
-	ULONG FrameLen;
-	UINT unicast_peer = 0, count = 0;
-	MAC_TABLE_ENTRY *pEntry;
-	UINT8 mode;
-	mode = p_bcn_req_data->bcn_req[12];
-	if (mode > 0x2)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Incorrect mode\n"));
-		return NDIS_STATUS_FAILURE;
-	}
-	while (count < MAC_ADDR_LEN)
-	{
-		if (p_bcn_req_data->peer_address[count++] != 0xff)
-		{	
-			unicast_peer = 1;
-			break;
-		}
-	}
-
-	if (unicast_peer)
-	{
-		pEntry = MacTableLookup(pAd, p_bcn_req_data->peer_address);
-		if (!pEntry || (pEntry->Sst != SST_ASSOC)){
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Peer Not connected\n"));
-			return NDIS_STATUS_FAILURE;
-		}
-		
-		if ((pEntry->func_tb_idx == IfIdx)
-			&& IS_RRM_ENABLE(pAd, pEntry->func_tb_idx) 
-			&& ((pEntry->RrmEnCap.word >> 0x4) & (1 << mode)))
-		{
-			
-		} else {
-			MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_OFF, ("Peer does not support this request\n"));
-			return NDIS_STATUS_FAILURE;	
-		}
-		
-	}
-
-	NStatus = MlmeAllocateMemory(pAd, (PVOID)&pOutBuffer);  /*Get an unused nonpaged memory */
-	if(NStatus != NDIS_STATUS_SUCCESS)
-	{
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_RRM, DBG_LVL_TRACE, ("%s() allocate memory failed \n", __FUNCTION__));
-		return NDIS_STATUS_FAILURE;
-	}
-
-	/* build action frame header. */
-	MgtMacHeaderInit(pAd, &ActHdr, SUBTYPE_ACTION, 0, p_bcn_req_data->peer_address,
-		pAd->ApCfg.MBSSID[IfIdx].wdev.if_addr,
-		pAd->ApCfg.MBSSID[IfIdx].wdev.bssid);
-
-	NdisMoveMemory(pOutBuffer, (PCHAR)&ActHdr, sizeof(HEADER_802_11));
-	FrameLen = sizeof(HEADER_802_11);
-
-	InsertActField(pAd, (pOutBuffer + FrameLen), &FrameLen, MT2_PEER_RM_CATE, RRM_MEASURE_REQ);
-
-	/* fill Dialog Token*/
-	InsertDialogToken(pAd, (pOutBuffer + FrameLen), &FrameLen, p_bcn_req_data->dialog_token);
-	RTMP_INSERT_IE(pOutBuffer + FrameLen, &FrameLen, p_bcn_req_data->bcn_req_len, p_bcn_req_data->bcn_req);
-	NStatus = MiniportMMRequest(pAd, MGMT_USE_PS_FLAG | QID_AC_BE, pOutBuffer, FrameLen);
-
-	if (pOutBuffer)
-		MlmeFreeMemory( pOutBuffer);
-
-	return NStatus;
 }
 
 

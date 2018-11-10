@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,6 +14,7 @@
 	Module Name:
 	meminfo_list.h
 */
+#endif /* MTK_LICENSE */
 #ifndef __MEMINFO_LIST_H__
 #define __MEMINFO_LIST_H__
 

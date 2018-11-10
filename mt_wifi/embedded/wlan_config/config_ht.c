@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
  /***************************************************************************
  * MediaTek Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -15,7 +16,7 @@
  ***************************************************************************
 
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "wlan_config/config_internal.h"
 
@@ -29,6 +30,8 @@ VOID ht_cfg_init(struct ht_cfg * obj)
 	obj->ext_cha = EXTCHA_NOASSIGN;
 	obj->ht_ldpc = TRUE;
 	obj->ht_stbc = STBC_USE;
+	obj->ht_gi = GI_400;
+	obj->ht_protect_en = TRUE;
 	obj->frag_thld = DEFAULT_FRAG_THLD;
 	obj->len_thld = DEFAULT_RTS_LEN_THLD;
 	obj->pkt_thld = DEFAULT_RTS_PKT_THLD;
@@ -99,6 +102,20 @@ VOID wlan_config_set_ht_ldpc(struct wifi_dev *wdev, UCHAR ht_ldpc)
 	cfg->ht_conf.ht_ldpc = ht_ldpc;
 }
 
+VOID wlan_config_set_ht_gi(struct wifi_dev *wdev, UCHAR ht_gi)
+{
+	struct wlan_config *cfg = (struct wlan_config*)wdev->wpf_cfg;
+	if (cfg)
+		cfg->ht_conf.ht_gi = ht_gi;
+}
+
+VOID wlan_config_set_ht_protect_en(struct wifi_dev *wdev, UCHAR ht_protect_en)
+{
+	struct wlan_config *cfg = (struct wlan_config *)wdev->wpf_cfg;
+	if (cfg)
+		cfg->ht_conf.ht_protect_en = ht_protect_en;
+}
+
 VOID wlan_config_set_edca_valid(struct wifi_dev *wdev, BOOLEAN bValid)
 {
 	struct wlan_config *cfg = (struct wlan_config*)wdev->wpf_cfg;
@@ -120,19 +137,22 @@ VOID wlan_config_set_edca_valid_all(struct wpf_ctrl *ctrl, BOOLEAN bValid)
 VOID wlan_config_set_frag_thld(struct wifi_dev *wdev, UINT32 frag_thld)
 {
 	struct wlan_config *cfg = (struct wlan_config *)wdev->wpf_cfg;
-	cfg->ht_conf.frag_thld = frag_thld;
+	if (cfg)
+		cfg->ht_conf.frag_thld = frag_thld;
 }
 
 VOID wlan_config_set_rts_len_thld(struct wifi_dev *wdev, UINT32 len_thld)
 {
 	struct wlan_config *cfg = (struct wlan_config*)wdev->wpf_cfg;
-	cfg->ht_conf.len_thld = len_thld;
+	if (cfg)
+		cfg->ht_conf.len_thld = len_thld;
 }
 
 VOID wlan_config_set_rts_pkt_thld(struct wifi_dev *wdev, UCHAR pkt_thld)
 {
 	struct wlan_config *cfg = (struct wlan_config*)wdev->wpf_cfg;
-	cfg->ht_conf.pkt_thld = pkt_thld;
+	if (cfg)
+		cfg->ht_conf.pkt_thld = pkt_thld;
 }
 
 /*
@@ -160,6 +180,18 @@ UCHAR wlan_config_get_ht_ldpc(struct wifi_dev *wdev)
 {
 	struct wlan_config *cfg = (struct wlan_config*)wdev->wpf_cfg;
 	return cfg->ht_conf.ht_ldpc;
+}
+
+UCHAR wlan_config_get_ht_gi(struct wifi_dev *wdev)
+{
+	struct wlan_config *cfg = (struct wlan_config*)wdev->wpf_cfg;
+	return cfg->ht_conf.ht_gi;
+}
+
+UCHAR wlan_config_get_ht_protect_en(struct wifi_dev *wdev)
+{
+	struct wlan_config *cfg = (struct wlan_config *)wdev->wpf_cfg;
+	return cfg->ht_conf.ht_protect_en;
 }
 
 BOOLEAN wlan_config_get_edca_valid(struct wifi_dev *wdev)

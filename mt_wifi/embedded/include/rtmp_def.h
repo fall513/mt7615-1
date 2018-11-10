@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,10 +28,14 @@
     Paul Lin    08-01-2002    created
     John Chang  08-05-2003    add definition for 11g & other drafts
 */
+#endif /* MTK_LICENSE */
 #ifndef __RTMP_DEF_H__
 #define __RTMP_DEF_H__
 
 #include "oid.h"
+#ifndef MTK_LICENSE
+#define MTK_LICENSE
+#endif /* MTK_LICENSE */
 
 #undef AP_WSC_INCLUDED
 #undef STA_WSC_INCLUDED
@@ -71,6 +76,17 @@
 #define PCI_VIRT_TO_PHYS(__Addr)	(((UINT32)(__Addr)) & 0x0FFFFFFF)
 
 
+#ifdef RTMP_MAC_SDIO
+#define TX_RING_SIZE            8	/* 1 */
+#define PRIO_RING_SIZE          8
+#define MGMT_RING_SIZE       	32	/* PRIO_RING_SIZE */
+#ifdef MT_MAC
+#define BCN_RING_SIZE           16
+#endif
+#define RX_RING_SIZE            8
+#define MAX_TX_PROCESS          4
+#define LOCAL_TXBUF_SIZE        2048
+#endif /* RTMP_MAC_SDIO */
 
 #ifdef MULTIPLE_CARD_SUPPORT
 /* MC: Multple Cards */
@@ -780,12 +796,7 @@ enum {
 #define MLME_ASSOC_REJ_TEMPORARILY		  30
 #define MLME_ROBUST_MGMT_POLICY_VIOLATION 31
 #endif /* DOT11W_PMF_SUPPORT */
-#ifdef WH_EZ_SETUP
-#ifdef NEW_CONNECTION_ALGO
-#undef MLME_ASSOC_REJ_TEMPORARILY
-#define MLME_ASSOC_REJ_TEMPORARILY		  30
-#endif
-#endif
+
 #define MLME_QOS_UNSPECIFY                32
 #define MLME_REQUEST_DECLINED             37
 #define MLME_REQUEST_WITH_INVALID_PARAM   38
@@ -804,11 +815,6 @@ enum {
 #define MLME_FAIL_NO_RESOURCE           0x52
 #define MLME_STATE_MACHINE_REJECT       0x53
 #define MLME_MAC_TABLE_FAIL             0x54
-
-#ifdef WH_EZ_SETUP
-#define MLME_EZ_CONNECTION_LOOP			110
-#define MLME_EZ_DISCONNECT_NON_EZ		111
-#endif
 
 /* IE code */
 #define IE_SSID                         0
@@ -969,16 +975,6 @@ enum {
 #define AUTO_CH_SEL_STATE_MACHINE   46
 #endif/* CONFIG_AP_SUPPORT */
 
-
-#ifdef WH_EZ_SETUP
-#ifdef EZ_MOD_SUPPORT
-#define EZ_STATE_MACHINE		98
-#else
-//! Levarage from MP1.0 CL#170063
-#define EZ_ROAM_STATE_MACHINE		98
-#define AP_TRIBAND_STATE_MACHINE	99
-#endif
-#endif
 /*
 	STA's CONTROL/CONNECT state machine: states, events, total function #
 */
@@ -1311,45 +1307,6 @@ enum {
 	AP's SYNC state machine: states, events, total function #
 */
 #define AP_SYNC_IDLE                    0
-
-#ifdef WH_EZ_SETUP
-
-#ifdef EZ_MOD_SUPPORT
-
-#define EZ_IDLE                  							0
-#define EZ_MAX_STATE            							1
-#define EZ_MAX_MSG              							4
-#define EZ_MACHINE_BASE										0
-
-#define EZ_ROAM_REQ											0
-#define EZ_TRIBAND_RESTART_NON_EZ_REQ 						1
-#define EZ_PERIODIC_EXEC_REQ									2
-#define EZ_UPDATE_SSID_PSK_REQ									3
-
-#define EZ_FUNC_SIZE               							(EZ_MAX_STATE * EZ_MAX_MSG)
-
-#else
-//! Levarage from MP1.0 CL#170063
-#define EZ_ROAM_IDLE                    0
-#define EZ_ROAM_MAX_STATE            1
-#define EZ_ROAM_MAX_MSG              1
-#define EZ_ROAM_MACHINE_BASE		0
-
-#define EZ_ROAM_REQ		0
-#define EZ_ROAM_FUNC_SIZE               (EZ_ROAM_MAX_STATE * EZ_ROAM_MAX_MSG)
-
-
-#define AP_TRIBAND_IDLE                    0
-#define AP_MAX_TRIBAND_STATE            1
-#define AP_MAX_TRIBAND_MSG              2
-#define AP_TRIBAND_MACHINE_BASE		0
-
-#define AP_TRIBAND_UPDATE_CHANNEL_REQ		0
-#define AP_TRIBAND_RESTART_NON_EZ_REQ		1
-#define AP_TRIBAND_FUNC_SIZE               (AP_MAX_TRIBAND_STATE * AP_MAX_TRIBAND_MSG)
-#endif
-#endif
-
 #ifdef AP_SCAN_SUPPORT
 #define AP_SCAN_LISTEN					1
 #define AP_MAX_SYNC_STATE               2
@@ -1370,9 +1327,19 @@ enum {
 #define APMT2_MLME_SCAN_CNCL		6
 #ifdef CON_WPS
 #define APMT2_MLME_SCAN_COMPLETE        7
+#ifdef CUSTOMER_DCC_FEATURE
+#define APMT2_CHANNEL_SWITCH 8
+#define AP_MAX_SYNC_MSG		 9
+#else
 #define AP_MAX_SYNC_MSG                 8
+#endif
+#else
+#ifdef CUSTOMER_DCC_FEATURE
+#define APMT2_CHANNEL_SWITCH 7
+#define AP_MAX_SYNC_MSG		 8
 #else
 #define AP_MAX_SYNC_MSG                 7
+#endif
 #endif /* CON_WPS */
 #else
 #define AP_MAX_SYNC_MSG			4
@@ -1384,9 +1351,19 @@ enum {
 #define APMT2_MLME_SCAN_CNCL		5
 #ifdef CON_WPS
 #define APMT2_MLME_SCAN_COMPLETE        6
+#ifdef CUSTOMER_DCC_FEATURE
+#define APMT2_CHANNEL_SWITCH 7
+#define AP_MAX_SYNC_MSG		 8
+#else
 #define AP_MAX_SYNC_MSG                 7
+#endif
+#else
+#ifdef CUSTOMER_DCC_FEATURE
+#define APMT2_CHANNEL_SWITCH 6
+#define AP_MAX_SYNC_MSG		 7
 #else
 #define AP_MAX_SYNC_MSG                 6
+#endif
 #endif /* CON_WPS */
 #else
 #define AP_MAX_SYNC_MSG			3
@@ -1474,11 +1451,6 @@ enum {
 #define APCLI_MIC_FAILURE_REPORT_FRAME	  13
 #ifndef APCLI_CONNECTION_TRIAL
 #define APCLI_MAX_CTRL_MSG                14
-#ifdef WH_EZ_SETUP
-#undef APCLI_MAX_CTRL_MSG
-#define APCLI_CTRL_JOIN_FAIL	          14
-#define APCLI_MAX_CTRL_MSG			      15
-#endif /* WH_EZ_SETUP */
 #else
 #undef APCLI_MAX_CTRL_MSG
 #define	APCLI_CTRL_TRIAL_CONNECT		  14
@@ -1486,8 +1458,7 @@ enum {
 #define APCLI_CTRL_TRIAL_PHASE2_TIMEOUT	  16
 #define APCLI_CTRL_TRIAL_RETRY_TIMEOUT	  17
 #define APCLI_MAX_CTRL_MSG				  18
-#endif /* APCLI_CONNECTION_TRIAL */
-
+#endif
 #define APCLI_CTRL_FUNC_SIZE              (APCLI_MAX_CTRL_STATE * APCLI_MAX_CTRL_MSG)
 
 /*ApCli,Repeater Link Down reason */
@@ -1509,11 +1480,7 @@ enum {
 #define APCLI_DISCONNECT_SUB_REASON_APCFG_DEL_MAC_ENTRY     8
 #define APCLI_DISCONNECT_SUB_REASON_CHANGE_APCLI_IF      	9
 #define APCLI_DISCONNECT_SUB_REASON_APCLI_TRIGGER_TOO_LONG	10
-#ifdef WH_EZ_SETUP
-#ifdef NEW_CONNECTION_ALGO
-#define APCLI_DISCONNECT_SUB_REASON_APCLI_EZ_CONNECTION_LOOP	11
-#endif
-#endif
+
 
 #endif /* APCLI_SUPPORT */
 
@@ -1887,6 +1854,7 @@ enum {
 #define RD_SILENCE_MODE				2	/* After channel switch, need to be silence a while to ensure radar not found */
 #define RD_MAX_STATE  RD_SILENCE_MODE
 
+
 /*Driver defined cid for mapping status and command. */
 #define  SLEEPCID	0x11
 #define  WAKECID	0x22
@@ -1943,9 +1911,6 @@ enum {
 #define ENTRY_CAT_AP			0x002
 #define ENTRY_CAT_WDS			0x004
 #define ENTRY_CAT_MESH			0x008
-#ifdef AIR_MONITOR
-#define ENTRY_CAT_MONITOR		0x010
-#endif
 #define ENTRY_CAT_MCAST		0x400
 #define ENTRY_CAT_WDEV			0x800
 #define ENTRY_CAT_MASK			0xfff
@@ -1974,10 +1939,6 @@ typedef struct _WIFI_NODE_TYPE {
 #define ENTRY_WDS			ENTRY_CAT_WDS
 #define ENTRY_MESH			ENTRY_CAT_MESH
 
-#ifdef AIR_MONITOR
-#define ENTRY_MONITOR		ENTRY_CAT_MONITOR
-#endif
-
 #define ENTRY_NONE			ENTRY_CAT_NONE
 
 enum _ENTRY_STATE
@@ -1990,9 +1951,6 @@ enum _ENTRY_STATE
 #define IS_ENTRY_NONE(_x)		((_x)->EntryType == ENTRY_CAT_NONE)
 #define IS_ENTRY_CLIENT(_x)		((_x)->EntryType == ENTRY_CLIENT)
 #define IS_ENTRY_WDS(_x)		((_x)->EntryType & ENTRY_CAT_WDS)
-#ifdef AIR_MONITOR
-#define IS_ENTRY_MONITOR(_x)    ((_x)->EntryType == ENTRY_CAT_MONITOR)
-#endif /* AIR_MONITOR */
 #define IS_ENTRY_APCLI(_x)		((_x)->EntryType == ENTRY_APCLI)
 #define IS_ENTRY_REPEATER(_x)   ((_x)->EntryType == ENTRY_REPEATER)
 #define IS_ENTRY_ADHOC(_x)		((_x)->EntryType & ENTRY_ADHOC)
@@ -2017,9 +1975,6 @@ enum _ENTRY_STATE
 #define SET_ENTRY_WDS(_x)		((_x)->EntryType = ENTRY_WDS)
 #define SET_ENTRY_APCLI(_x)		((_x)->EntryType = ENTRY_APCLI)
 #define SET_ENTRY_AP(_x)		((_x)->EntryType = ENTRY_AP)
-#ifdef AIR_MONITOR
-#define SET_ENTRY_MONITOR(_x)   ((_x)->EntryType = ENTRY_MONITOR)
-#endif /* AIR_MONITOR */
 #define SET_ENTRY_ADHOC(_x)                ((_x)->EntryType = ENTRY_ADHOC)
 #define SET_ENTRY_MESH(_x)		((_x)->EntryType = ENTRY_MESH)
 #define SET_ENTRY_DLS(_x)		((_x)->EntryType = ENTRY_DLS)
@@ -2057,13 +2012,8 @@ enum _ENTRY_STATE
 #define INF_MAIN_DEV_NAME		"rai"
 #define INF_MBSSID_DEV_NAME		"rai"
 #else
-#if defined(BB_SOC) && !defined(MULTI_INF_SUPPORT)
-#define INF_MAIN_DEV_NAME		"rai"
-#define INF_MBSSID_DEV_NAME		"rai"
-#else
 #define INF_MAIN_DEV_NAME		"ra"
 #define INF_MBSSID_DEV_NAME		"ra"
-#endif
 #endif
 #endif /* ANDROID_SUPPORT */
 
@@ -2077,13 +2027,8 @@ enum _ENTRY_STATE
 #define INF_P2P_DEV_NAME		"p2pi"
 #define INF_MONITOR_DEV_NAME	"moni"
 #else
-#if defined(BB_SOC) && !defined(MULTI_INF_SUPPORT)
-#define INF_WDS_DEV_NAME		"wdsi"
-#define INF_APCLI_DEV_NAME		"apclii"
-#else
 #define INF_WDS_DEV_NAME		"wds"
 #define INF_APCLI_DEV_NAME		"apcli"
-#endif
 #define INF_MESH_DEV_NAME		"mesh"
 #define INF_P2P_DEV_NAME		"p2p"
 #define INF_MONITOR_DEV_NAME	"mon"
@@ -2211,24 +2156,6 @@ enum _ENTRY_STATE
 #endif /* WSC_INCLUDED */
 /* End - WIRELESS EVENTS definition */
 
-
-#ifdef WH_EZ_SETUP
-// For whole home coverage - easy setup wireless event - start
-#define	IW_WH_EZ_EVENT_FLAG_START                  	0x0700
-#define	IW_WH_EZ_PROVIDER_SEARCHING                 0x0700
-#define	IW_WH_EZ_PROVIDER_FOUND       				0x0701
-#define	IW_WH_EZ_PROVIDER_STOP_SEARCHING            0x0702
-#define	IW_WH_EZ_CONFIGURED_AP_SEARCHING            0x0703
-#define	IW_WH_EZ_CONFIGURED_AP_FOUND                0x0704
-#define	IW_WH_EZ_MY_APCLI_CONNECTED                 0x0705
-#define	IW_WH_EZ_MY_APCLI_DISCONNECTED              0x0706
-#define	IW_WH_EZ_MY_AP_HAS_APCLI                    0x0707
-#define	IW_WH_EZ_MY_AP_DOES_NOT_HAS_APCLI           0x0708
-#define	IW_WH_EZ_BECOME_CONFIGURED                  0x0709
-#define	IW_WH_EZ_EVENT_FLAG_END                     0x0709
-#define	IW_WH_EZ_EVENT_TYPE_NUM						(IW_WH_EZ_EVENT_FLAG_END - IW_WH_EZ_EVENT_FLAG_START + 1)
-/* For whole home coverage - easy setup wireless event - end */
-#endif /* WH_EZ_SETUP */
 
 #ifdef MCAST_RATE_SPECIFIC
 #define MCAST_DISABLE	0

@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -23,7 +24,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #include "dot11ac_vht.h"
 
 
@@ -41,9 +42,7 @@ VOID dump_vht_op(struct _RTMP_ADAPTER *pAd, VHT_OP_IE *vht_ie);
 
 INT build_vht_txpwr_envelope(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev,UCHAR *buf);
 INT build_vht_ies(struct _RTMP_ADAPTER *pAd, struct _build_ie_info *info);
-VOID modify_vht_ies(RTMP_ADAPTER *pAd, struct _build_ie_info *info, struct wifi_dev *wdev);
 INT build_vht_cap_ie(struct _RTMP_ADAPTER *pAd, UCHAR *buf, struct wifi_dev *wdev);
-VOID modify_vht_cap_ie(RTMP_ADAPTER *pAd, UCHAR *buf, struct wifi_dev *wdev);
 void update_vht_op_info(UINT8 cap_bw, VHT_OP_INFO *vht_op_info, struct _op_info *op_info);
 UCHAR check_vht_op_bw (VHT_OP_INFO *vht_op_info);
 

@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -22,7 +23,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
  */
- 
+#endif /* MTK_LICENSE */
 
 #ifndef __RTMP_IGMP_SNOOP_H__
 #define __RTMP_IGMP_SNOOP_H__
@@ -30,13 +31,11 @@
 #include "common/link_list.h"
 
 #define IGMP_PROTOCOL_DESCRIPTOR	0x02
-#define IGMP_MEMBERSHIP_QUERY		0x11	//same for IGMP v1, v2 & v3
 #define IGMP_V1_MEMBERSHIP_REPORT	0x12
 #define IGMP_V2_MEMBERSHIP_REPORT	0x16
 #define IGMP_LEAVE_GROUP			0x17
 #define IGMP_V3_MEMBERSHIP_REPORT	0x22
 
-#define MLD_LISTENER_QUERY			130		//same for MLD v1 & v2
 #define MLD_V1_LISTENER_REPORT		131
 #define MLD_V1_LISTENER_DONE		132
 #define MLD_V2_LISTERNER_REPORT		143
@@ -50,7 +49,11 @@
 #define IGMP_NONE		0
 #define IGMP_PKT		1
 #define IGMP_IN_GROUP	2
-
+#ifdef VENDOR_FEATURE6_SUPPORT
+#ifndef ETH_TYPE_VLAN
+#define ETH_TYPE_VLAN   0X8100
+#endif
+#endif
 #define IGMP_CFG_BAND0		(1 << 0)
 #define IGMP_CFG_BAND1		(1 << 1)
 
@@ -95,16 +98,8 @@ VOID IGMPSnooping(
 	IN PUCHAR pDstMacAddr,
 	IN PUCHAR pSrcMacAddr,
 	IN PUCHAR pIpHeader,
-	IN MAC_TABLE_ENTRY *pEntry,
+	IN struct wifi_dev *wdev,
 	UINT8 Wcid);
-
-#ifdef MWDS
-/* Indicate if Specific Pkt is an IGMP query message*/
-BOOLEAN isIGMPquery(
-	IN PRTMP_ADAPTER pAd,
-	IN PUCHAR pDstMacAddr,
-	IN PUCHAR pIpHeader);
-#endif
 
 BOOLEAN isMldPkt(
 	IN PUCHAR pDstMacAddr,
@@ -121,16 +116,8 @@ VOID MLDSnooping(
 	IN PUCHAR pDstMacAddr,
 	IN PUCHAR pSrcMacAddr,
 	IN PUCHAR pIpHeader,
-	IN MAC_TABLE_ENTRY *pEntry,
+	IN struct wifi_dev *wdev,
 	UINT8 Wcid);
-
-#ifdef MWDS
-/* Indicate if Specific Pkt is an MLD query message*/
-BOOLEAN isMLDquery(
-	IN PRTMP_ADAPTER pAd,
-	IN PUCHAR pDstMacAddr,
-	IN PUCHAR pIpHeader);
-#endif
 
 UCHAR IgmpMemberCnt(
 	IN PLIST_HEADER pList);
@@ -171,25 +158,5 @@ NDIS_STATUS IgmpPktClone(
 	IN UINT8 UserPriority,
 	IN PNET_DEV pNetDev);
 
-#ifdef MWDS
-
-#define QUERY_SEND_PERIOD 6 // 60 seconds
-#define QUERY_HOLD_PERIOD 15 // 150 seconds
-
-/* Send an IGMP query message on particular AP interface*/
-void send_igmpv3_gen_query_pkt(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  PMAC_TABLE_ENTRY pMacEntry);
-
-/* Send a MLD query message on particular AP interface*/
-void send_mldv2_gen_query_pkt(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  PMAC_TABLE_ENTRY pMacEntry);
-
-/* For specifed MBSS, compute & store IPv6 format checksum for MLD query message to be sent on that interface*/
-void calc_mldv2_gen_query_chksum(
-	IN	PRTMP_ADAPTER	pAd,
-	IN  BSS_STRUCT *pMbss);
-#endif
 #endif /* __RTMP_IGMP_SNOOP_H__ */
 

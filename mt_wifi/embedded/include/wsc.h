@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +27,7 @@
 	Name		Date			Modification logs
 	Paul Lin	06-08-08		Initial
 */
-
+#endif /* MTK_LICENSE */
 #ifndef	__WSC_H__
 #define	__WSC_H__
 
@@ -144,7 +145,11 @@ static inline BOOLEAN WscCheckWSCHeader(UCHAR *pData)
 /* WSC HDR PSH BTN FUNC */
 /* WSC hardware push button function 0811 */
 #define WSC_HDR_BTN_CHECK_PERIOD	MLME_TASK_EXEC_INTV /* unit: ms, check pin every 100ms */
+#ifdef VENDOR_FEATURE6_SUPPORT
+#define WSC_HDR_BTN_PRESS_TIME		3000	/* unit: ms, press button for 3s */
+#else
 #define WSC_HDR_BTN_PRESS_TIME		2000	/* unit: ms, press button for 2s */
+#endif
 #define WSC_HDR_BTN_CONT_TIMES		(WSC_HDR_BTN_PRESS_TIME/WSC_HDR_BTN_CHECK_PERIOD)
 #define WSC_HDR_BTN_GPIO_0			((UINT32)0x00000001) /* bit 0 for RT2860/RT2870 */
 #define WSC_HDR_BTN_GPIO_3			((UINT32)0x00000008) /* bit 3 for RT2860/RT2870 */
@@ -380,6 +385,11 @@ static inline BOOLEAN WscCheckWSCHeader(UCHAR *pData)
 #ifdef CONFIG_AP_SUPPORT
 #define	AP_WSC_MODEL_NAME		"Ralink Wireless Access Point"
 #define	AP_WSC_DEVICE_NAME		"RalinkAPS"
+#ifdef VENDOR_FEATURE6_SUPPORT
+#define AP_WSC_DEVICE_NAME_5G	"ARRIS_5GAP"
+#define AP_WSC_DEVICE_NAME_2G	"ARRIS_24GAP"
+#define AP_WSC_DEVICE_NAME_OOB	"un-configured"
+#endif
 #endif /* CONFIG_AP_SUPPORT */
 #define	WSC_MODEL_NUMBER	"RT2860"
 #define	WSC_MODEL_SERIAL	"12345678"
@@ -705,7 +715,7 @@ typedef	struct	_WSC_CTRL
 	/* if the NIC cannot find any WPS PBC-enabled APs in the last scanning result. */
 	BOOLEAN 				bWPSWalkTimeExpiration;
 #endif /* WSC_LED_SUPPORT */
-    UCHAR               WpaPsk[LEN_PSK];
+    UCHAR               WpaPsk[64];
     INT                 WpaPskLen;
     BOOLEAN             bWscTrigger;        /* TRUE: AP-Enrollee & AP-Registrar work, FALSE: AP-Enrollee & AP-Registrar stop working */
     PVOID               pAd;
@@ -789,19 +799,16 @@ typedef struct GNU_PACKED _WSC_CONFIGURED_VALUE {
 	UCHAR	WscWPAKey[64 + 1];
 } WSC_CONFIGURED_VALUE;
 
-#ifdef VENDOR_FEATURE6_SUPPORT
 typedef struct GNU_PACKED _WSC_CONFIGURED_VALUE_2 {
 	USHORT WscConfigured; /* 1 un-configured; 2 configured */
 	UCHAR	WscSsid[32];
-	UCHAR	WscSsidLen;
+	UCHAR	WscSsidLen;	
 	USHORT WscAuthMode;	/* mandatory, 0x01: open, 0x02: wpa-psk, 0x04: shared, 0x08:wpa, 0x10: wpa2, 0x20: wpa2-psk */
 	USHORT	WscEncrypType;	/* 0x01: none, 0x02: wep, 0x04: tkip, 0x08: aes */
 	UCHAR	DefaultKeyIdx;
 	UCHAR	WscWPAKey[64];
-	UCHAR	WscWPAKeyLen;
+	UCHAR	WscWPAKeyLen;	
 } WSC_CONFIGURED_VALUE_2;
-#endif /* VENDOR_FEATURE6_SUPPORT */
-
 /* 
 	Following definitions are used for UPnP module to communicate msg.
 */

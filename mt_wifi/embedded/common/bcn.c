@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
  /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -25,7 +26,7 @@
     Carter      2014-1121     created for all interface could send bcn.
 
  */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 UCHAR PowerConstraintIE[3] = {IE_POWER_CONSTRAINT, 1, 3};
@@ -729,8 +730,20 @@ VOID MakeChSwitchAnnounceIEandExtend(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, U
     *ptr = IE_CHANNEL_SWITCH_ANNOUNCEMENT;
     *(ptr + 1) = 3;
     *(ptr + 2) = 1;
+#ifdef CUSTOMER_DCC_FEATURE
+	if(pAd->Dot11_H.RDMode != RD_SWITCHING_MODE)
+	{
+		*(ptr + 3) =  pComCfg->Channel;
+		*(ptr + 4) = (pComCfg->channelSwitch.CHSWPeriod - pComCfg->channelSwitch.CHSWCount - 1);
+	}
+	else
+	{
+#endif
     *(ptr + 3) = wdev->channel;
     *(ptr + 4) = (pAd->Dot11_H.CSPeriod - pAd->Dot11_H.CSCount - 1);
+#ifdef CUSTOMER_DCC_FEATURE
+	}
+#endif
     ptr += 5;
     FrameLen += 5;
 
@@ -739,6 +752,11 @@ VOID MakeChSwitchAnnounceIEandExtend(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, U
     if (pComCfg->bExtChannelSwitchAnnouncement)
     {
         HT_EXT_CHANNEL_SWITCH_ANNOUNCEMENT_IE HtExtChannelSwitchIe;
+#ifdef CUSTOMER_DCC_FEATURE
+		if(pAd->Dot11_H.RDMode != RD_SWITCHING_MODE)
+			build_ext_channel_switch_ie(pAd, &HtExtChannelSwitchIe,pComCfg->Channel, wdev->PhyMode, wdev);
+		else
+#endif
         build_ext_channel_switch_ie(pAd, &HtExtChannelSwitchIe, wdev->channel, wdev->PhyMode,wdev);
         NdisMoveMemory(ptr, &HtExtChannelSwitchIe, sizeof(HT_EXT_CHANNEL_SWITCH_ANNOUNCEMENT_IE));
         ptr += sizeof(HT_EXT_CHANNEL_SWITCH_ANNOUNCEMENT_IE);
@@ -1052,15 +1070,15 @@ VOID MakeExtCapIE(RTMP_ADAPTER *pAd, BSS_STRUCT *pMbss, ULONG *pFrameLen, UCHAR 
     if (pMbss->WNMCtrl.ProxyARPEnable)
         extCapInfo.proxy_arp = 1;
 
-	if (pMbss->WNMCtrl.WNMBTMEnable)
-		extCapInfo.BssTransitionManmt = 1;
-
 #ifdef CONFIG_HOTSPOT_R2
     if (pMbss->WNMCtrl.WNMNotifyEnable)
         extCapInfo.wnm_notification = 1;
 
     if (pMbss->HotSpotCtrl.QosMapEnable)
         extCapInfo.qosmap= 1;
+
+	if (pMbss->WNMCtrl.WNMBTMEnable)
+		extCapInfo.BssTransitionManmt = 1;	
 #endif /* CONFIG_HOTSPOT_R2 */
 #endif /* CONFIG_DOT11V_WNM */
 
@@ -1230,12 +1248,12 @@ VOID MakeCountryIe(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, ULONG *pFrameLen, U
 #endif /* EXT_BUILD_CHANNEL_LIST */
 
 #ifdef DOT11K_RRM_SUPPORT
-            if (IS_RRM_ENABLE(pAd, apidx))
+            if (IS_RRM_ENABLE(pAd, apidx) && 
+				(pAd->CommonCfg.RegulatoryClass[0] != 0))
             {
-            	UCHAR reg_class = get_regulatory_class(pAd,wdev->channel,wdev->PhyMode,wdev);
                 TmpLen2 = 0;
                 NdisZeroMemory(TmpFrame, 256);
-                RguClass_BuildBcnChList(pAd, TmpFrame, &TmpLen2, wdev->PhyMode, reg_class);
+                RguClass_BuildBcnChList(pAd, TmpFrame, &TmpLen2);
             }
 #endif /* DOT11K_RRM_SUPPORT */
 
@@ -1285,19 +1303,26 @@ VOID MakeCountryIe(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, ULONG *pFrameLen, U
 VOID MakeChReportIe(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, ULONG *pFrameLen, UCHAR *pBeaconFrame)
 {
     ULONG FrameLen = *pFrameLen;
-	UCHAR PhyMode = wdev->PhyMode;
 #ifdef DOT11K_RRM_SUPPORT
-    //UCHAR i;
+    UCHAR i;
 #else
     UCHAR APChannelReportIe = IE_AP_CHANNEL_REPORT;
     ULONG TmpLen;
+    UCHAR PhyMode = wdev->PhyMode;
 #endif
 
 #ifdef DOT11K_RRM_SUPPORT
-    InsertChannelRepIE(pAd, pBeaconFrame+FrameLen, &FrameLen,
-                      (RTMP_STRING *)pAd->CommonCfg.CountryCode,
-                      get_regulatory_class(pAd,wdev->channel,wdev->PhyMode,wdev),
-                      NULL,PhyMode);
+    for (i=0; i<MAX_NUM_OF_REGULATORY_CLASS; i++)
+    {
+        if (pAd->CommonCfg.RegulatoryClass[i] == 0)
+            break;
+
+        InsertChannelRepIE(pAd, pBeaconFrame+FrameLen, &FrameLen,
+                            (RTMP_STRING *)pAd->CommonCfg.CountryCode,
+                            pAd->CommonCfg.RegulatoryClass[i],
+                            NULL);
+
+    }
 #else
     {
         /*
@@ -1460,6 +1485,11 @@ VOID ComposeBcnPktTail(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, ULONG *pFrameLe
         MakeChSwitchAnnounceIEandExtend(pAd, wdev, &FrameLen, pBeaconFrame);
     }
 #endif /* A_BAND_SUPPORT */
+#ifdef CUSTOMER_DCC_FEATURE
+	else if((pComCfg->channelSwitch.CHSWMode == CHANNEL_SWITCHING_MODE) && (pAd->Dot11_H.RDMode != RD_SWITCHING_MODE))
+			MakeChSwitchAnnounceIEandExtend(pAd, wdev, &FrameLen, pBeaconFrame);
+
+#endif
 #endif /* CONFIG_AP_SUPPORT */
 
 #ifdef CONFIG_AP_SUPPORT
@@ -1500,17 +1530,11 @@ VOID ComposeBcnPktTail(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, ULONG *pFrameLe
     ComposeWPSIE(pAd, wdev, &FrameLen, pBeaconFrame);
 
 #ifdef AP_QLOAD_SUPPORT
-	if(pAd->CommonCfg.dbdc_mode == 0)
-	{
+	if(pAd->CommonCfg.dbdc_mode == 0)	
 		pQloadCtrl = HcGetQloadCtrl(pAd);
-	}
 	else
-	{
-		if(wdev->channel > 14)
-			pQloadCtrl = HcGetQloadCtrlByRf(pAd,RFIC_5GHZ);
-		else
-			pQloadCtrl = HcGetQloadCtrlByRf(pAd,RFIC_24GHZ);
-	}
+		pQloadCtrl = (wdev->channel > 14)? HcGetQloadCtrlByRf(pAd,RFIC_5GHZ) : HcGetQloadCtrlByRf(pAd,RFIC_24GHZ);
+
 
     if (pQloadCtrl && pQloadCtrl->FlgQloadEnable != 0)
     {
@@ -1519,7 +1543,7 @@ VOID ComposeBcnPktTail(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, ULONG *pFrameLe
             FrameLen += QBSS_LoadElementAppend_HSTEST(pAd, pBeaconFrame+FrameLen, apidx);
         else if (pMbss->HotSpotCtrl.QLoadTestEnable == 0)
 #endif
-        FrameLen += QBSS_LoadElementAppend(pAd, pBeaconFrame+FrameLen);
+        FrameLen += QBSS_LoadElementAppend(pAd, pBeaconFrame+FrameLen, pQloadCtrl);
     }
 #endif /* AP_QLOAD_SUPPORT */
 #if defined(CONFIG_HOTSPOT) || defined(FTM_SUPPORT)
@@ -1619,11 +1643,7 @@ VOID ComposeBcnPktTail(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, ULONG *pFrameLe
 
 #ifdef CONFIG_AP_SUPPORT
     /* add Ralink-specific IE here - Byte0.b0=1 for aggregation, Byte0.b1=1 for piggy-back */
-    FrameLen += build_vendor_ie(pAd, wdev, (pBeaconFrame + FrameLen)
-#ifdef WH_EZ_SETUP
-								, SUBTYPE_BEACON
-#endif
-								);
+    FrameLen += build_vendor_ie(pAd, wdev, (pBeaconFrame + FrameLen));
 {
 }
 #endif /*CONFIG_AP_SUPPORT*/
@@ -1679,27 +1699,11 @@ VOID updateBeaconRoutineCase(RTMP_ADAPTER *pAd, BOOLEAN UpdateAfterTim)
         {
             wlan_operate_set_ht_bw(wdev,HT_BW_20);
 			wlan_operate_set_ext_cha(wdev,EXTCHA_NONE);
-
-#if (defined(WH_EZ_SETUP) && defined(EZ_NETWORK_MERGE_SUPPORT))
-			if (IS_EZ_SETUP_ENABLED(wdev)){
-				EZ_DEBUG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("\nupdateBeaconRoutineCase: Fallback thru updateBeaconRoutineCase ****\n"));
-				ez_set_ap_fallback_context(wdev,TRUE,wdev->channel);
-			}
-#endif /* WH_EZ_SETUP */
-
         }
         else
         {
             wlan_operate_set_ht_bw(wdev,cfg_ht_bw);
 			wlan_operate_set_ext_cha(wdev,cfg_ext_cha);
-
-#if (defined(WH_EZ_SETUP) && defined(EZ_NETWORK_MERGE_SUPPORT))
-			if (IS_EZ_SETUP_ENABLED(wdev)){
-				EZ_DEBUG(DBG_CAT_MLME, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("\nupdateBeaconRoutineCase: Recover BW setting thru updateBeaconRoutineCase ****\n"));
-				ez_set_ap_fallback_context(wdev,FALSE,0);
-			}
-#endif /* WH_EZ_SETUP */
-
         }
         MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
                 ("\tNow RecomWidth=%d, ExtChanOffset=%d, prevBW=%d, prevExtOffset=%d\n",
@@ -1727,19 +1731,7 @@ VOID UpdateBeaconHandler(
     UCHAR NumOfBcns;
     BOOLEAN UpdateAfterTim = FALSE;
     BCN_BUF_STRUC *pbcn_buf = NULL;
-#ifdef WH_EZ_SETUP
-#ifdef DUAL_CHIP
-	if(!IS_SINGLE_CHIP_DBDC(pAd)) {
-		if ((wdev !=NULL) && IS_EZ_SETUP_ENABLED(wdev)) {
-#ifdef EZ_MOD_SUPPORT			
-			ez_acquire_lock(pAd, NULL, BEACON_UPDATE_LOCK);
-#else
-			RTMP_SEM_LOCK(&pAd->ez_beacon_update_lock);
-#endif
-		}
-	}
-#endif
-#endif
+
     switch (BCN_UPDATE_REASON)
     {
         case INTERFACE_STATE_CHANGE:
@@ -1839,19 +1831,6 @@ VOID UpdateBeaconHandler(
                         __FUNCTION__, BCN_UPDATE_REASON));
             break;
     }
-#ifdef WH_EZ_SETUP
-#ifdef DUAL_CHIP
-	if(!IS_SINGLE_CHIP_DBDC(pAd)) {
-		if ((wdev !=NULL) && IS_EZ_SETUP_ENABLED(wdev)) {
-#ifdef EZ_MOD_SUPPORT
-			ez_release_lock(pAd, NULL, BEACON_UPDATE_LOCK);
-#else
-			RTMP_SEM_UNLOCK(&pAd->ez_beacon_update_lock);
-#endif
-	}	
-	}	
-#endif
-#endif
     return;
 }
 
@@ -2234,10 +2213,13 @@ VOID BcnCheck(RTMP_ADAPTER *pAd, UCHAR bandidx)
 	UINT32 *nobcncnt;
 	UINT32 *prebcncnt;
 	UINT32 *totalbcncnt;
+#ifndef CUSTOMER_RSG_FEATURE
 	UINT32 band_offset = 0x200 * bandidx;
-	
+#endif
 	if ((pAd->Mlme.PeriodicRound % PRE_BCN_CHECK_PERIOD) == 0) {
+#ifndef CUSTOMER_RSG_FEATURE
 		UINT32 mac_val;
+#endif		
 		UINT32 bcn_cnt = 0;
 		UINT32 recoverext = 0;
 		UINT32 Index;
@@ -2307,8 +2289,13 @@ VOID BcnCheck(RTMP_ADAPTER *pAd, UCHAR bandidx)
 			totalbcncnt = &BcnCheckInfo->totalbcncnt1;
 		}
 
+#ifdef CUSTOMER_RSG_FEATURE	
+		bcn_cnt = pAd->beacon_cnt;
+		pAd->beacon_cnt = 0;
+#else
 		MAC_IO_READ32(pAd, MIB_M0SDR0 + band_offset, &mac_val);
 		bcn_cnt = (mac_val & 0xffff);
+#endif		
 		*totalbcncnt += bcn_cnt;	// Save total bcn count for MibInfo query
 			
 		if (bcn_cnt == 0) {

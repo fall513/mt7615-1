@@ -5,6 +5,7 @@
     \brief
 */
 
+#ifdef MTK_LICENSE
 /*******************************************************************************
 * Copyright (c) 2014 MediaTek Inc.
 *
@@ -46,11 +47,12 @@
 * (ICC).
 ********************************************************************************
 */
+#endif /* MTK_LICENSE */
 
 /*
 ** $Log: ra_wrapper_embedded.c $
 **
-** 08 19 2016 by.huang
+** 08 18 2016 by.huang
 ** [WCNCR00128952] There are some limitation by current SKU algorithm in MT7615 power
 ** 	
 ** 	1) Purpose:
@@ -64,11 +66,14 @@
 ** 	2. EventTxPowerShowInfo
 ** 	3. EventTxPowerCompTable
 ** 	4. MtSingleSkuLoadParam
+** 	5. SetMUTxPower
+** 	6. SetBFNDPATxDCtrl
 ** 	
 ** 	3) Code change description brief:
 ** 	
 ** 	1. revise SKU compensation look table mechanism for Nss spatial extension combine gain backoff
 ** 	2. add compensation info command
+** 	3. add command for config MU Tx Power and NDPA Power
 ** 	
 ** 	4) Unit Test Result:
 ** 	
@@ -491,12 +496,6 @@ QuickResponeForRateAdaptMT(/* actually for both up and down */
 
     raSelectTxRateTable(pRaEntry, &RaCfg, pRaInternal, &pRaInternal->pucTable, &TableSize, &InitTxRateIdx);
 
-#ifdef NEW_RATE_ADAPT_SUPPORT
-    if (RaCfg.ucRateAlg == RATE_ALG_GRP) 
-    {
-        QuickResponeForRateAdaptMTCore(pAd, pRaEntry, &RaCfg, pRaInternal);
-    }
-#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #if defined(RATE_ADAPT_AGBS_SUPPORT) && (!defined(RACTRL_FW_OFFLOAD_SUPPORT) || defined(WIFI_BUILD_RAM))
     if (RaCfg.ucRateAlg == RATE_ALG_AGBS) 
@@ -545,12 +544,6 @@ DynamicTxRateSwitchingAdaptMT(
 
     raSelectTxRateTable(pRaEntry, &RaCfg, pRaInternal, &pRaInternal->pucTable, &TableSize, &InitTxRateIdx);
 
-#ifdef NEW_RATE_ADAPT_SUPPORT
-    if (RaCfg.ucRateAlg == RATE_ALG_GRP) 
-    {
-        DynamicTxRateSwitchingAdaptMtCore(pAd, pRaEntry, &RaCfg, pRaInternal);
-    }
-#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #if defined(RATE_ADAPT_AGBS_SUPPORT) && (!defined(RACTRL_FW_OFFLOAD_SUPPORT) || defined(WIFI_BUILD_RAM))
     if (RaCfg.ucRateAlg == RATE_ALG_AGBS) 
@@ -647,41 +640,6 @@ APMlmeDynamicTxRateSwitching(
         {
             DynamicTxRateSwitchingAdaptMT(pAd, (UINT_8)i);
 
-#ifdef NEW_RATE_ADAPT_SUPPORT
-            if (pAd->rateAlg == RATE_ALG_GRP) 
-            {
-		    UCHAR pkt_num = wlan_operate_get_rts_pkt_thld(pEntry->wdev);
-		    UINT32 length = wlan_oeprate_get_rts_len_thld(pEntry->wdev);
-                if ( pAd->MacTab.Size == 1 )
-                {
-                    if ( ((pEntry->RaInternal.pucTable == RateSwitchTableAdapt11N2S) && pEntry->HTPhyMode.field.MCS >= 14 ) ||
-                            ((pEntry->RaInternal.pucTable == RateSwitchTableAdapt11N1S) && pEntry->HTPhyMode.field.MCS >= 6 ) )
-                    {
-                        if (pAd->bDisableRtsProtect != TRUE)
-                        {
-			    pkt_num = MAX_RTS_PKT_THRESHOLD;
-			    length = MAX_RTS_THRESHOLD;
-                            pAd->bDisableRtsProtect = TRUE;
-                        }
-                    }
-                    else
-                    {
-                        if (pAd->bDisableRtsProtect != FALSE)
-                        {
-                            pAd->bDisableRtsProtect = FALSE;
-                        }
-                    }
-                }
-                else
-                {
-                    if (pAd->bDisableRtsProtect != FALSE)
-                    {
-			    pAd->bDisableRtsProtect = FALSE;
-                    }
-                }
-		HW_SET_RTS_THLD(pAd, pEntry->wdev, pkt_num, length);
-            }
-#endif /* NEW_RATE_ADAPT_SUPPORT */
 
             continue;
         }
@@ -693,16 +651,6 @@ APMlmeDynamicTxRateSwitching(
         MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
         pEntry->pTable = pTable;
 
-#ifdef NEW_RATE_ADAPT_SUPPORT
-        if (ADAPT_RATE_TABLE(pTable))
-        {
-            if ((pAd->chipCap.hif_type == HIF_RTMP) || (pAd->chipCap.hif_type == HIF_RLT))
-            {
-                APMlmeDynamicTxRateSwitchingAdapt(pAd, i);
-            }
-
-        }
-#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef AGS_SUPPORT
         if (SUPPORT_AGS(pAd) && AGS_IS_USING(pAd, pTable))
@@ -817,17 +765,6 @@ APQuickResponeForRateUpExec(
         MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
         pEntry->pTable = pTable;
 
-#ifdef NEW_RATE_ADAPT_SUPPORT
-        if (ADAPT_RATE_TABLE(pTable))
-        {
-            if ((pAd->chipCap.hif_type == HIF_RTMP) || (pAd->chipCap.hif_type == HIF_RLT))
-            {
-                APQuickResponeForRateUpExecAdapt(pAd, i);
-            }
-
-            continue;
-		}
-#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef AGS_SUPPORT
         if (SUPPORT_AGS(pAd) && AGS_IS_USING(pAd, pTable))
@@ -1000,14 +937,16 @@ VOID RTMPSetSupportMCS(
 #ifdef WDS_SUPPORT
             if (IS_ENTRY_WDS(pEntry))
             {
-                pDesired_ht_phy = &pAd->WdsTab.WdsEntry[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
+                if (pEntry->func_tb_idx < MAX_WDS_ENTRY)
+                    pDesired_ht_phy = &pAd->WdsTab.WdsEntry[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
             }
             else
 #endif /* WDS_SUPPORT */
 #ifdef APCLI_SUPPORT
             if (IS_ENTRY_APCLI(pEntry)|| IS_ENTRY_REPEATER(pEntry))
             {
-                pDesired_ht_phy = &pAd->ApCfg.ApCliTab[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
+                if (pEntry->func_tb_idx < MAX_APCLI_NUM)
+                    pDesired_ht_phy = &pAd->ApCfg.ApCliTab[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
             }
             else
 #endif /* APCLI_SUPPORT */

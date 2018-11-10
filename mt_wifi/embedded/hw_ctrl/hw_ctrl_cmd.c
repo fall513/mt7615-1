@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,6 +14,7 @@
 	Module Name:
 	hw_ctrl.c
 */
+#endif /* MTK_LICENSE */
 #include	"rt_config.h"
 
 extern NDIS_STATUS HwCtrlEnqueueCmd(
@@ -37,6 +39,10 @@ static INT32 HW_CTRL_BASIC_ENQ(RTMP_ADAPTER *pAd,INT32 CmdType,INT32 CmdId,UINT3
 	HwCtrlTxd.CallbackFun = NULL;
 	HwCtrlTxd.CallbackArgs = NULL;
 	ret = HwCtrlEnqueueCmd(pAd,HwCtrlTxd);
+
+	if (ret != NDIS_STATUS_SUCCESS)
+		MTWF_LOG(DBG_CAT_PS, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s::Failed Ret(%d) CmdId(%d)\n", __FUNCTION__, ret, CmdId));
+
 	return ret;
 }
 
@@ -406,18 +412,29 @@ VOID RTMP_SET_THERMAL_RADIO_OFF(PRTMP_ADAPTER pAd)
 }
 #endif /* THERMAL_PROTECT_SUPPORT */
 
-#ifdef LINK_TEST_SUPPORT
-VOID RTMP_AUTO_LINK_TEST(PRTMP_ADAPTER pAd)
+#ifdef NR_PD_DETECTION
+VOID RTMP_NR_PD_DETECTION(PRTMP_ADAPTER pAd)
 {
     UINT32 ret;
 	HW_CTRL_TXD HwCtrlTxd;
 
 	os_zero_mem(&HwCtrlTxd,sizeof(HW_CTRL_TXD));
 
-	HW_CTRL_TXD_BASIC(pAd, HWCMD_TYPE_RADIO, HWCMD_ID_AUTO_LINK_TEST, 0, NULL, HwCtrlTxd);
+	HW_CTRL_TXD_BASIC(pAd, HWCMD_TYPE_RADIO, HWCMD_ID_NR_PD_DETECTION, 0, NULL, HwCtrlTxd);
 	ret = HwCtrlEnqueueCmd(pAd, HwCtrlTxd);
 }
-#endif /* LINK_TEST_SUPPORT */
+
+VOID RTMP_CMW_LINK_CTRL(PRTMP_ADAPTER pAd)
+{
+    UINT32 ret;
+	HW_CTRL_TXD HwCtrlTxd;
+
+	os_zero_mem(&HwCtrlTxd,sizeof(HW_CTRL_TXD));
+
+	HW_CTRL_TXD_BASIC(pAd, HWCMD_TYPE_RADIO, HWCMD_ID_CMW_LINK_CTRL, 0, NULL, HwCtrlTxd);
+	ret = HwCtrlEnqueueCmd(pAd, HwCtrlTxd);
+}
+#endif /* NR_PD_DETECTION */
 
 VOID RTMP_SET_UPDATE_RSSI(PRTMP_ADAPTER pAd)
 {
@@ -755,7 +772,7 @@ VOID HW_AP_TXBF_TX_APPLY(struct _RTMP_ADAPTER *pAd,UCHAR enable)
 */
 VOID HW_WIFISYS_OPEN(
     RTMP_ADAPTER *pAd,
-    WIFI_SYS_CTRL wifi_sys_ctrl)
+    WIFI_SYS_CTRL *wifi_sys_ctrl)
 {
     UINT32 ret;
 	UINT32 wait_time = 2000;
@@ -765,7 +782,7 @@ VOID HW_WIFISYS_OPEN(
 		HWCMD_TYPE_WIFISYS,
 		HWCMD_ID_WIFISYS_OPEN,
 		sizeof(WIFI_SYS_CTRL),
-		&wifi_sys_ctrl,
+		wifi_sys_ctrl,
 		HwCtrlTxd
 	);
 	HW_CTRL_TXD_RSP(pAd,0,NULL,wait_time,HwCtrlTxd);	
@@ -778,7 +795,7 @@ VOID HW_WIFISYS_OPEN(
 */
 VOID HW_WIFISYS_CLOSE(
     RTMP_ADAPTER *pAd,
-    WIFI_SYS_CTRL wifi_sys_ctrl)
+    WIFI_SYS_CTRL *wifi_sys_ctrl)
 {
     UINT32 ret;
 	UINT32 wait_time = 2000;
@@ -788,7 +805,8 @@ VOID HW_WIFISYS_CLOSE(
 		HWCMD_TYPE_WIFISYS,
 		HWCMD_ID_WIFISYS_CLOSE,
 		sizeof(WIFI_SYS_CTRL),
-		&wifi_sys_ctrl,HwCtrlTxd
+		wifi_sys_ctrl,
+		HwCtrlTxd
 	);
 	HW_CTRL_TXD_RSP(pAd,0,NULL,wait_time,HwCtrlTxd);	
 	ret = HwCtrlEnqueueCmd(pAd,HwCtrlTxd);
@@ -800,14 +818,14 @@ VOID HW_WIFISYS_CLOSE(
 */
 VOID HW_WIFISYS_LINKDOWN(
     RTMP_ADAPTER *pAd,
-    WIFI_SYS_CTRL wifi_sys_ctrl)
+    WIFI_SYS_CTRL *wifi_sys_ctrl)
 {
     UINT32 ret;
     ret = HW_CTRL_BASIC_ENQ(pAd,
         HWCMD_TYPE_WIFISYS,
         HWCMD_ID_WIFISYS_LINKDOWN,
         sizeof(WIFI_SYS_CTRL),
-        &wifi_sys_ctrl);
+        wifi_sys_ctrl);
 }
 
 
@@ -816,14 +834,14 @@ VOID HW_WIFISYS_LINKDOWN(
 */
 VOID HW_WIFISYS_LINKUP(
     RTMP_ADAPTER *pAd,
-    WIFI_SYS_CTRL wifi_sys_ctrl)
+    WIFI_SYS_CTRL *wifi_sys_ctrl)
 {
     UINT32 ret;
     ret = HW_CTRL_BASIC_ENQ(pAd,
         HWCMD_TYPE_WIFISYS,
         HWCMD_ID_WIFISYS_LINKUP,
         sizeof(WIFI_SYS_CTRL),
-        &wifi_sys_ctrl);
+        wifi_sys_ctrl);
 }
 
 
@@ -832,14 +850,14 @@ VOID HW_WIFISYS_LINKUP(
 */
 VOID HW_WIFISYS_PEER_LINKUP(
     RTMP_ADAPTER *pAd,
-    WIFI_SYS_CTRL wifi_sys_ctrl)
+    WIFI_SYS_CTRL *wifi_sys_ctrl)
 {
     UINT32 ret;
     ret = HW_CTRL_BASIC_ENQ(pAd,
         HWCMD_TYPE_WIFISYS,
         HWCMD_ID_WIFISYS_PEER_LINKUP,
         sizeof(WIFI_SYS_CTRL),
-        &wifi_sys_ctrl);
+        wifi_sys_ctrl);
 }
 
 
@@ -848,14 +866,14 @@ VOID HW_WIFISYS_PEER_LINKUP(
 */
 VOID HW_WIFISYS_PEER_LINKDOWN(
     RTMP_ADAPTER *pAd,
-    WIFI_SYS_CTRL wifi_sys_ctrl)
+    WIFI_SYS_CTRL *wifi_sys_ctrl)
 {
     UINT32 ret;
     ret = HW_CTRL_BASIC_ENQ(pAd,
         HWCMD_TYPE_WIFISYS,
         HWCMD_ID_WIFISYS_PEER_LINKDOWN,
         sizeof(WIFI_SYS_CTRL),
-        &wifi_sys_ctrl);
+        wifi_sys_ctrl);
 }
 
 
@@ -864,7 +882,7 @@ VOID HW_WIFISYS_PEER_LINKDOWN(
 */
 VOID HW_WIFISYS_PEER_UPDATE(
     RTMP_ADAPTER *pAd,
-    WIFI_SYS_CTRL wifi_sys_ctrl)
+    WIFI_SYS_CTRL *wifi_sys_ctrl)
 {
 	UINT32 ret;
 
@@ -879,7 +897,7 @@ VOID HW_WIFISYS_PEER_UPDATE(
 		HWCMD_TYPE_WIFISYS,
 		HWCMD_ID_WIFISYS_PEER_UPDATE,
 		sizeof(WIFI_SYS_CTRL),
-		&wifi_sys_ctrl,
+		wifi_sys_ctrl,
 		HwCtrlTxd);
 
 	HW_CTRL_TXD_RSP(pAd,0,NULL,wait_time,HwCtrlTxd);
@@ -889,7 +907,7 @@ VOID HW_WIFISYS_PEER_UPDATE(
 		HWCMD_TYPE_WIFISYS,
 		HWCMD_ID_WIFISYS_PEER_UPDATE,
 		sizeof(WIFI_SYS_CTRL),
-		&wifi_sys_ctrl);
+		wifi_sys_ctrl);
 #endif /* !FAST_EAPOL_WAR */
 
 }

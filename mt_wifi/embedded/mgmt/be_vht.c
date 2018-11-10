@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
  /***************************************************************************
  * MediaTek Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -15,7 +16,7 @@
  ***************************************************************************
 
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "mgmt/be_internal.h"
 
@@ -38,17 +39,7 @@ VOID vht_oper_exit(struct vht_op *obj)
 */
 VOID config_loader_vht_bw(struct wifi_dev *wdev,struct wlan_config *cfg)
 {
-#ifdef WH_EZ_SETUP	// Fix made to use VHT BW itself for configuration
-	if(IS_EZ_SETUP_ENABLED(wdev)){
-		wlan_operate_set_vht_bw(wdev,cfg->vht_conf.vht_bw);
-	}
-	else{
-#endif
-		wlan_operate_set_vht_bw(wdev,cfg->ht_conf.ht_bw);
-#ifdef WH_EZ_SETUP
-	}
-#endif
-
+	wlan_operate_set_vht_bw(wdev,cfg->ht_conf.ht_bw);
 }
 
 VOID operate_loader_vht_bw(struct wlan_operate *op)

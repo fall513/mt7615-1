@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -17,15 +18,11 @@
 
 
  */
-
+#endif /* MTK_LICENSE */
 #include "bgnd_scan_cmm.h"
 
 #ifndef __BGND_SCAN_H__
 #define __BGND_SCAN_H__
-
-
-#define GET_BGND_STATE(_pAd, _state) \
-    ((_pAd->BgndScanCtrl.BgndScanStatMachine.CurrState == _state))
 
 VOID BackgroundScanCancelAction(	RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem);
 VOID BackgroundScanStartAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem);
@@ -55,16 +52,6 @@ VOID ChannelQualityDetection(IN PRTMP_ADAPTER pAd);
 VOID DfsZeroWaitStartAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem);
 VOID DfsZeroWaitStopAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem);
 VOID DfsZeroWaitStart(IN PRTMP_ADAPTER pAd, IN BOOLEAN DfsZeroWaitEnable);
-#ifdef MT_DFS_SUPPORT
-VOID DedicatedZeroWaitStartAction(
-		IN RTMP_ADAPTER *pAd,
-		IN MLME_QUEUE_ELEM *Elem);
-VOID DedicatedZeroWaitRunningAction(
-		IN RTMP_ADAPTER *pAd,
-		IN MLME_QUEUE_ELEM *Elem);
-VOID DedicatedZeroWaitStop(
-		IN RTMP_ADAPTER *pAd);
-#endif
 VOID BfSwitch(IN PRTMP_ADAPTER pAd, IN UCHAR enabled);
 VOID MuSwitch(IN PRTMP_ADAPTER pAd, IN UCHAR enabled);
 #endif /* __BGND_SCAN_H__ */

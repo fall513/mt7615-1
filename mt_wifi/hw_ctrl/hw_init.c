@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,7 +14,7 @@
 	Module Name:
 	hw_init.c
 */
-
+#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)
@@ -28,6 +29,343 @@
 
 
 /*Local function*/
+#ifdef RTMP_MAC_SDIO
+#if CFG_SDIO_BIST
+static INT mt_sdio_bist(RTMP_ADAPTER *pAd)
+{
+	INT32 bistlen = 1536*20;
+	INT32 u4Ret = 0;
+	INT32 u4idx = 0;
+	INT32 u4bist = 0;
+	INT32 bistlimit = 50;
+	INT32 prbslimit = 100;
+	UCHAR *pBuf;
+	os_alloc_mem(NULL, (UCHAR **)&pBuf, 1536*21);
+
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n\n\n============ BIST Start ============\n"));
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): PRBS pattern seed=37\n", __FUNCTION__));
+	HIF_IO_WRITE32(pAd, WTMCR, 0x00370002);
+
+	//u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+	//for(u4idx=0;u4idx<200;u4idx++){
+	//	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" %x", *(pBuf+u4idx)));
+	//}
+	for(u4bist=0;u4bist<prbslimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	for(u4bist=0;u4bist<prbslimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	for(u4bist=0;u4bist<prbslimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	//-----------------------------------------------------------------------------
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): PRBS pattern seed=ec\n", __FUNCTION__));
+	HIF_IO_WRITE32(pAd, WTMCR, 0x00ec0002);
+
+	//u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+	//for(u4idx=0;u4idx<200;u4idx++){
+	//	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" %x", *(pBuf+u4idx)));
+	//}
+	for(u4bist=0;u4bist<prbslimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	for(u4bist=0;u4bist<prbslimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	for(u4bist=0;u4bist<prbslimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+
+	//-----------------------------------------------------------------------------
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): 0x5a 0x5a 0x5a 0x5a pattern\n", __FUNCTION__));
+	HIF_IO_WRITE32(pAd, WTMCR, 0x00000000);
+	HIF_IO_WRITE32(pAd, WTMDPCR0, 0x5A5A5A5A);
+
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+	u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+	if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+
+	for(u4idx=0;u4idx<bistlen;u4idx++){
+		if(*(pBuf+u4idx)!=0x5A){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error ====> %x\n", *(pBuf+u4idx)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+	}
+	}
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n"));
+	//-----------------------------------------------------------------------------
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): 0xf0 0xf0 0xf0 0xf0 pattern\n", __FUNCTION__));
+	HIF_IO_WRITE32(pAd, WTMDPCR0, 0xF0F0F0F0);
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+	u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+	if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+
+	for(u4idx=0;u4idx<bistlen;u4idx++){
+		if(*(pBuf+u4idx)!=0xf0){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error ====> %x\n", *(pBuf+u4idx)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+	}
+	}
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n"));
+	//-----------------------------------------------------------------------------
+
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): 21 43 65 87 pattern\n", __FUNCTION__));
+	HIF_IO_WRITE32(pAd, WTMDPCR0, 0x87654321);
+
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+	u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+	if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+
+	for(u4idx=0;u4idx<bistlen;u4idx=u4idx+4){
+		if(*(pBuf+u4idx+0)!=0x21){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=21 read= %x\n", *(pBuf+u4idx+0)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+		if(*(pBuf+u4idx+1)!=0x43){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=43 read= %x\n", *(pBuf+u4idx+1)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+		if(*(pBuf+u4idx+2)!=0x65){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=65 read= %x\n", *(pBuf+u4idx+2)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+		if(*(pBuf+u4idx+3)!=0x87){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=87 read= %x\n", *(pBuf+u4idx+3)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+	}
+	}
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n"));
+	//-----------------------------------------------------------------------------
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): 36 76 10 00 pattern\n", __FUNCTION__));
+	HIF_IO_WRITE32(pAd, WTMDPCR0, 0x00107636);
+
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+	u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+	if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+
+	for(u4idx=0;u4idx<bistlen;u4idx=u4idx+4){
+		if(*(pBuf+u4idx+0)!=0x36){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=36 read= %x\n", *(pBuf+u4idx+0)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+		if(*(pBuf+u4idx+1)!=0x76){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=76 read= %x\n", *(pBuf+u4idx+1)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+		if(*(pBuf+u4idx+2)!=0x10){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=10 read= %x\n", *(pBuf+u4idx+2)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+		if(*(pBuf+u4idx+3)!=0x00){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error exp=00 read= %x\n", *(pBuf+u4idx+3)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+	}
+	}
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n"));
+	//-----------------------------------------------------------------------------
+
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): 0x01 0x01 0x01 0x01 pattern\n", __FUNCTION__));
+	HIF_IO_WRITE32(pAd, WTMDPCR0, 0x01010101);
+
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+	u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+	if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+
+	for(u4idx=0;u4idx<bistlen;u4idx++){
+		if(*(pBuf+u4idx)!=0x1){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" error ====> %x\n", *(pBuf+u4idx)));
+			u4idx=bistlen;
+			u4bist=bistlimit;
+		}
+	}
+	}
+	for(u4bist=0;u4bist<bistlimit;u4bist++){
+		u4Ret = MTSDIOMultiRead(pAd, WTMDR, pBuf, bistlen);
+		if (u4Ret != 0){MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): error MTSDIOMultiRead u4Ret=%x\n", __FUNCTION__, u4Ret));}
+	}
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n"));
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("============ BIST End ============\n\n\n"));
+	os_free_mem(pBuf);
+	return NDIS_STATUS_SUCCESS;
+}
+#endif
+
+#if CFG_SDIO_DRIVING_TUNE
+static INT mt_sdio_driving_tune(RTMP_ADAPTER *pAd)
+{
+	UINT32 Value;
+
+            //===== driving
+	HIF_IO_READ32(pAd, CMDIOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): CMDIOCR 1: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_WRITE32(pAd, CMDIOCR, 0x00000022);
+	HIF_IO_READ32(pAd, CMDIOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): CMDIOCR 2: Value:%x\n", __FUNCTION__, Value));
+
+	HIF_IO_READ32(pAd, DAT0IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT0IOCR 1: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_WRITE32(pAd, DAT0IOCR, 0x00000022);
+	HIF_IO_READ32(pAd, DAT0IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT0IOCR 2: Value:%x\n", __FUNCTION__, Value));
+
+	HIF_IO_READ32(pAd, DAT1IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT1IOCR 1: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_WRITE32(pAd, DAT1IOCR, 0x00000022);
+	HIF_IO_READ32(pAd, DAT1IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT1IOCR 2: Value:%x\n", __FUNCTION__, Value));
+
+	HIF_IO_READ32(pAd, DAT2IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT2IOCR 1: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_WRITE32(pAd, DAT2IOCR, 0x00000022);
+	HIF_IO_READ32(pAd, DAT2IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT2IOCR 2: Value:%x\n", __FUNCTION__, Value));
+
+	HIF_IO_READ32(pAd, DAT3IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT3IOCR 1: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_WRITE32(pAd, DAT3IOCR, 0x0000002a);
+	HIF_IO_READ32(pAd, DAT3IOCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): DAT3IOCR 2: Value:%x\n", __FUNCTION__, Value));
+
+	//===== DAT output delay
+	HIF_IO_READ32(pAd, ODATDLYCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): ODATDLYCR 1: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_WRITE32(pAd, ODATDLYCR, 0x00000000);
+	HIF_IO_READ32(pAd, ODATDLYCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): ODATDLYCR 2: Value:%x\n", __FUNCTION__, Value));
+
+	//===== cmdR output delay
+	HIF_IO_READ32(pAd, CMDDLYCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): CMDDLYCR 1: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_WRITE32(pAd, CMDDLYCR, 0x00ff0000);
+	HIF_IO_READ32(pAd, CMDDLYCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): CMDDLYCR 2: Value:%x\n", __FUNCTION__, Value));
+}
+#endif
+
+
+static INT mt_hif_sys_sdio_init(RTMP_ADAPTER *pAd)
+{
+	UINT32 Value;
+	UINT32 counter=0;
+
+	HIF_IO_WRITE32(pAd, WHLPCR, W_INT_EN_CLR);
+	HIF_IO_READ32(pAd, WHLPCR, &Value);
+
+	HIF_IO_READ32(pAd, WCIR, &Value);
+
+	if(GET_POR_INDICATOR(Value)) {// POR
+		HIF_IO_WRITE32(pAd, WCIR, POR_INDICATOR);
+		HIF_IO_READ32(pAd, WCIR, &Value);
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): MCR_WCIR: Value:%x\n", __FUNCTION__, Value));
+	}
+	os_msec_delay(100);
+
+	//		HIF_IO_WRITE32(pAd, WHIER, 0x0);
+	HIF_IO_WRITE32(pAd, WHLPCR, W_INT_EN_CLR);
+
+	//Poll W_FUNC for FW own back
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): Request FW-Own back\n",__FUNCTION__));
+
+	HIF_IO_READ32(pAd, WHLPCR, &Value);
+	HIF_IO_WRITE32(pAd, WHLPCR, W_FW_OWN_REQ_CLR);
+	while(!GET_W_FW_OWN_REQ_SET(Value)) {
+		HIF_IO_READ32(pAd, WHLPCR, &Value);
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): Request FW-Own processing: %x\n",__FUNCTION__,Value));
+		counter++;
+		os_msec_delay(50);
+		if(counter >100){
+			MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s:  FW-Own back Faiure\n",__FUNCTION__));
+			break;
+		}
+	}
+
+	HIF_IO_WRITE32(pAd, WHLPCR, W_INT_EN_CLR);
+	HIF_IO_READ32(pAd, WHLPCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): MCR_WHLPCR: Value:%x\n", __FUNCTION__, Value));
+
+	HIF_IO_WRITE32(pAd, WHIER, 0x46);
+	HIF_IO_READ32(pAd, WASR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): WASR: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_READ32(pAd, WHIER, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): MCR_WHIER: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_READ32(pAd, WHISR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): MCR_WHISR: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_READ32(pAd, WASR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): WASR: Value:%x\n", __FUNCTION__, Value));
+	HIF_IO_READ32(pAd, WCIR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(): MCR_WCIR: Value:%x\n", __FUNCTION__, Value));
+
+	HIF_IO_READ32(pAd, WHCR, &Value);
+
+#if CFG_SDIO_RX_ENHANCE
+	Value |= RX_ENHANCE_MODE;
+#else
+	Value &= ~RX_ENHANCE_MODE;
+#endif /* CFG_SDIO_RX_AGG */
+
+	HIF_IO_WRITE32(pAd, WHCR, Value);
+	HIF_IO_READ32(pAd, WHCR, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("%s(): ==================>WHCR= %x\n", __FUNCTION__,Value));
+	HIF_IO_READ32(pAd, WHIER, &Value);
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("%s(): ==================>WHIER= %x\n", __FUNCTION__,Value));
+
+#if(CFG_SDIO_RX_AGG == 0) && (CFG_SDIO_INTR_ENHANCE == 0)
+	SDIO_CFG_MAX_HIF_RX_LEN_NUM(pAd, 1);
+
+#elif(CFG_SDIO_RX_AGG == 0) && (CFG_SDIO_INTR_ENHANCE == 1)
+	SDIO_CFG_MAX_HIF_RX_LEN_NUM(pAd, 16);
+
+#elif (CFG_SDIO_RX_AGG == 1) && (CFG_SDIO_INTR_ENHANCE == 1)
+	SDIO_CFG_MAX_HIF_RX_LEN_NUM(pAd, 16);
+#endif
+
+#if CFG_SDIO_DRIVING_TUNE
+	mt_sdio_driving_tune(pAd);
+#endif
+
+#if CFG_SDIO_BIST
+	mt_sdio_bist(pAd);
+#endif
+
+    return 0;
+}
+#endif /*RTMP_MAC_SDIO*/
 
 
 
@@ -109,6 +447,12 @@ static INT mt_hif_sys_init(RTMP_ADAPTER *pAd, HIF_INFO_T *pHifInfo)
 #endif /* RTMP_MAC_PCI */
 
 
+#ifdef RTMP_MAC_SDIO
+	if (IS_SDIO_INF(pAd))
+	{
+		mt_hif_sys_sdio_init(pAd);
+	}
+#endif
 
 	return NDIS_STATUS_SUCCESS;
 }
@@ -413,31 +757,20 @@ INT32 WfInit(RTMP_ADAPTER *pAd)
 	}
 	
 	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Top Init Done!\n"));
-
-#ifdef FWDL_IN_PROBE
-	/* bypass these steps if the FW DL is done in probe */
-	if (pAd->MCUCtrl.fwdl_in_probe == TRUE) {
-		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("FW DL in probe, bypass Hif and MCU Init!\n"));
-		RTMP_ASIC_INTERRUPT_ENABLE(pAd);
-	} 
-	else
-#endif
+	
+	if((ret = WfHifInit(pAd))!=NDIS_STATUS_SUCCESS)
 	{
-
-		if((ret = WfHifInit(pAd))!=NDIS_STATUS_SUCCESS)
-		{
-			goto err0;
-		}
-
-		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Hif Init Done!\n"));
-
-		if((ret = WfMcuInit(pAd))!=NDIS_STATUS_SUCCESS)
-		{
-			goto err1;
-		}
-
-		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("MCU Init Done!\n"));
+		goto err0;
 	}
+
+	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Hif Init Done!\n"));
+
+	if((ret = WfMcuInit(pAd))!=NDIS_STATUS_SUCCESS)
+	{
+		goto err1;
+	}
+
+	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("MCU Init Done!\n"));
 	
 #ifdef RLM_CAL_CACHE_SUPPORT
 	rlmCalCacheApply(pAd, pAd->rlmCalCache);

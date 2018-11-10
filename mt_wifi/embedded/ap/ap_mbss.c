@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -11,7 +12,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-
+#endif /* MTK_LICENSE */
 /****************************************************************************
 
     Abstract:
@@ -42,6 +43,12 @@
 
 
 #include "rt_config.h"
+
+#ifdef VENDOR_FEATURE6_SUPPORT
+#ifndef ARRIS_MODULE_PRESENT
+void (*f)(int, int, int, char*, int)  = arris_event_send_hook_fn;
+#endif /* !ARRIS_MODULE_PRESENT */
+#endif
 
 #ifdef MULTI_PROFILE
 INT	multi_profile_devname_req(struct _RTMP_ADAPTER *ad, UCHAR *final_name, UCHAR *ifidx);
@@ -79,8 +86,17 @@ VOID MBSS_Init(RTMP_ADAPTER *pAd, RTMP_OS_NETDEV_OP_HOOK *pNetDevOps)
 	if (pAd->FlgMbssInit != FALSE)
 		return;
 
-
+#ifdef VENDOR1_INITIALIZE_ALL_INTERFACE_AT_INIT
+	/* Create and initialize all 8 MBSS interfaces duirng driver insmod.
+	as part of customer requirement */
+	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Set 8 Max BSS\n"));
+	pAd->ApCfg.BssidNum = MAX_MBSS_NUM;
+#endif
 	MaxNumBss = pAd->ApCfg.BssidNum;
+#ifdef INTELP6_SUPPORT
+	if (MaxNumBss > MAX_MBSS_NUM)
+		MaxNumBss = MAX_MBSS_NUM;
+#endif
 	if (MaxNumBss > HW_BEACON_MAX_NUM)
 		MaxNumBss = HW_BEACON_MAX_NUM;
 
@@ -99,14 +115,14 @@ VOID MBSS_Init(RTMP_ADAPTER *pAd, RTMP_OS_NETDEV_OP_HOOK *pNetDevOps)
 		char *dev_name = NULL;
 		INT32 Ret;
 		UCHAR ifidx = IdBss;
+		BSS_STRUCT *pMbss = NULL;
+		UCHAR final_name[32]="";
 #ifdef MULTIPLE_CARD_SUPPORT
 		MC_RowID = pAd->MC_RowID;
 #endif /* MULTIPLE_CARD_SUPPORT */
 #ifdef HOSTAPD_SUPPORT
 		IoctlIF = pAd->IoctlIF;
 #endif /* HOSTAPD_SUPPORT */
-        BSS_STRUCT *pMbss = NULL;
-		UCHAR final_name[32]="";
 
 		dev_name = get_dev_name_prefix(pAd, INT_MBSSID);
 
@@ -119,6 +135,13 @@ VOID MBSS_Init(RTMP_ADAPTER *pAd, RTMP_OS_NETDEV_OP_HOOK *pNetDevOps)
 #ifdef MULTI_PROFILE
 		multi_profile_devname_req(pAd,final_name,&ifidx);
 #endif /*MULTI_PROFILE*/
+#ifdef INTELP6_SUPPORT		
+#ifdef MT_SECOND_CARD
+		if (pAd->dev_idx == 1)
+			pDevNew = RtmpOSNetDevCreate(MC_RowID, &IoctlIF, INT_MBSSID, IdBss + MAX_MBSS_NUM, sizeof(struct mt_dev_priv), dev_name);
+		else
+#endif
+#endif
 		pDevNew = RtmpOSNetDevCreate(MC_RowID, &IoctlIF, INT_MBSSID, ifidx, sizeof(struct mt_dev_priv), final_name);
 #ifdef HOSTAPD_SUPPORT
 		pAd->IoctlIF = IoctlIF;
@@ -154,7 +177,11 @@ VOID MBSS_Init(RTMP_ADAPTER *pAd, RTMP_OS_NETDEV_OP_HOOK *pNetDevOps)
 		NdisCopyMemory(&netDevHook, pNetDevOps, sizeof(netDevHook));
 
 		netDevHook.priv_flags = INT_MBSSID;
+#ifdef VENDOR1_INITIALIZE_ALL_INTERFACE_AT_INIT
+		netDevHook.needProtcted = FALSE;
+#else
 		netDevHook.needProtcted = TRUE;
+#endif
 		netDevHook.wdev = wdev;
 
 		/* Init MAC address of virtual network interface */
@@ -398,27 +425,8 @@ INT MBSS_Close(PNET_DEV pDev)
 	RTMP_OS_NETDEV_STOP_QUEUE(pDev);
 	wdev = &pAd->ApCfg.MBSSID[BssId].wdev;
 	wdev->bAllowBeaconing = FALSE;
-
-#ifdef RADIO_LINK_SELECTION
-	if (pAd->ApCfg.RadioLinkSelection)
-		Rls_SetInfInfo(pAd, FALSE, wdev);
-#endif /* RADIO_LINK_SELECTION */	
-
 	WifiSysApLinkDown(pAd,wdev);
 	WifiSysClose(pAd,wdev);
-
-#ifdef BAND_STEERING
-    if(pAd->ApCfg.BandSteering)
-    {
-        PBND_STRG_CLI_TABLE table;
-        table = Get_BndStrgTable(pAd, BssId);
-        if(table)
-        {
-            /* Inform daemon interface down */
-            BndStrg_SetInfFlags(pAd, wdev, table, FALSE);
-        }
-    }
-#endif /* BAND_STEERING */
 
 	return 0;
 }

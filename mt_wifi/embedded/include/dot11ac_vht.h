@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,7 +25,7 @@
     ---------  ----------    ----------------------------------------------
     Shiang Tu  01-11-2012    created for 11ac
  */
-
+#endif /* MTK_LICENSE */
 #ifdef DOT11_VHT_AC
 
 
@@ -381,7 +382,6 @@ typedef struct GNU_PACKED _VHT_CAP_IE{
 	VHT_CAP_INFO vht_cap;
 	VHT_MCS_SET mcs_set;
 }VHT_CAP_IE;
-#define SIZE_OF_VHT_CAP_IE 		12
 
 
 /*

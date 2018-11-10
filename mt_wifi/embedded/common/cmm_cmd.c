@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +28,7 @@
 	Name		Date	    Modification logs
 	Paul Lin    06-25-2004  created
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 
@@ -220,27 +221,7 @@ static NTSTATUS ApCliSetChannel(IN PRTMP_ADAPTER pAd, IN PCmdQElmt CMDQelmt)
 	channel = pApCliTab->MlmeAux.Channel;
 
 	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("cmd> channel=%d CMDTHREAD_APCLI_PBC_TIMEOUT! \n",channel));
-#ifdef WH_EZ_SETUP
-	if(IS_EZ_SETUP_ENABLED(&pApCliTab->wdev))
-	{
-#ifdef EZ_MOD_SUPPORT	
-		pApCliTab->wdev.ez_driver_params.do_not_restart_interfaces = TRUE;
-#else
-		pApCliTab->wdev.ez_security.do_not_restart_interfaces = TRUE;
-#endif
-	}
-#endif
 	rtmp_set_channel(pAd, &pApCliTab->wdev, channel);
-#ifdef WH_EZ_SETUP
-	if(IS_EZ_SETUP_ENABLED(&pApCliTab->wdev))
-	{
-#ifdef EZ_MOD_SUPPORT	
-		pApCliTab->wdev.ez_driver_params.do_not_restart_interfaces = FALSE;
-#else
-		pApCliTab->wdev.ez_security.do_not_restart_interfaces = FALSE;
-#endif
-	}
-#endif
 
 	return NDIS_STATUS_SUCCESS;	
 }
@@ -415,17 +396,17 @@ static MT_CMD_TABL_T CMDHdlrTable[] = {
 #endif
 #ifdef INTERNAL_CAPTURE_SUPPORT
     {CMDTHRED_WIFISPECTRUM_RAWDATA_DUMP, WifiSpectrumRawDataDumpHandler},
+#endif/*INTERNAL_CAPTURE_SUPPORT*/    
 #if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
-	{CMDTHRED_PRECAL_TXLPF, PreCalTxLPFStoreProcHandler},
-	{CMDTHRED_PRECAL_TXIQ, PreCalTxIQStoreProcHandler},
-	{CMDTHRED_PRECAL_TXDC, PreCalTxDCStoreProcHandler},
-	{CMDTHRED_PRECAL_RXFI, PreCalRxFIStoreProcHandler},
-	{CMDTHRED_PRECAL_RXFD, PreCalRxFDStoreProcHandler},
-#endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */ 	    
-#endif/*INTERNAL_CAPTURE_SUPPORT*/
+    {CMDTHRED_PRECAL_TXLPF, PreCalTxLPFStoreProcHandler},
+    {CMDTHRED_PRECAL_TXIQ, PreCalTxIQStoreProcHandler},
+    {CMDTHRED_PRECAL_TXDC, PreCalTxDCStoreProcHandler},
+    {CMDTHRED_PRECAL_RXFI, PreCalRxFIStoreProcHandler},
+    {CMDTHRED_PRECAL_RXFD, PreCalRxFDStoreProcHandler},
+#endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */    
 #ifdef CONFIG_AP_SUPPORT
 	{CMDTHRED_DOT11H_SWITCH_CHANNEL, Dot11HCntDownTimeoutAction},
-#endif	
+#endif /* CONFIG_AP_SUPPORT */
 	{CMDTHREAD_END_CMD_ID,NULL}
 };
 

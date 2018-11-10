@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -16,7 +17,7 @@
  ***************************************************************************
 
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "hdev/hdev.h"
 
@@ -90,13 +91,11 @@ static UCHAR rcGetDefaultPhyMode(UCHAR Channel)
 	if(Channel <=14)
 	{
 		return WMODE_B;
-	}else
-	if(Channel > 14)
+	}
+	else
 	{
 		return WMODE_A;
 	}
-
-	return WMODE_B;
 }
 
 
@@ -700,8 +699,8 @@ VOID RcRadioInit(HD_CFG *pHdCfg,UCHAR RfIC, UCHAR DbdcMode)
                 pRadioCtrl->bGreenAPActive = FALSE;
 #endif /* GREENAP_SUPPORT */
 
-		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s(): pRadioCtrl=%p,Band=%d,rfcap=%d,channel=%d,PhyMode=%d extCha=0x%x\n",
-			__FUNCTION__,pRadioCtrl,i,pPhyCtrl->rf_band_cap,pRadioCtrl->Channel,pRadioCtrl->PhyMode,pRadioCtrl->ExtCha));
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s(): pRadioCtrl=%p,Band=%d,rfcap=%d,channel=%d,PhyMode=%d\n",
+			__FUNCTION__,pRadioCtrl,i,pPhyCtrl->rf_band_cap,pRadioCtrl->Channel,pRadioCtrl->PhyMode));
 
 		HdevInit(pHdCfg,i,pRadioCtrl);
 	}
@@ -842,7 +841,6 @@ HD_DEV* RcGetHdevByPhyMode(HD_CFG *pHdCfg, UCHAR PhyMode)
 	UCHAR i;
 	HD_DEV *pHdev = NULL;
 	HD_RESOURCE_CFG *pHwResourceCfg =&pHdCfg->HwResourceCfg;
-	CHAR *str = NULL;
 
 	RTMP_PHY_CTRL *pPhyCtrl = NULL;
 
@@ -866,10 +864,9 @@ HD_DEV* RcGetHdevByPhyMode(HD_CFG *pHdCfg, UCHAR PhyMode)
 
 	if(!pHdev)
 	{
-		str = wmode_2_str(PhyMode);
-		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("%s():Err! chip not support this PhyMode:%s !\n",__FUNCTION__, str));
-		if (str)
-			os_free_mem(str);
+		UCHAR *str = wmode_2_str(PhyMode);
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("%s():Err! chip not support this PhyMode:%s !\n",__FUNCTION__,str));
+		os_free_mem(str);
 	}
 
 	return pHdev;

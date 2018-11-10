@@ -2,8 +2,8 @@
 /* AUTO GEN PLEASE DO NOT MODIFY IT */ 
 
 
-UCHAR SKUvalue_19[] = "!! Single SKU Max Power Table                                                      	"
-"!! 2.4G Channel CCK    OFDM        VHT20          VHT40          Txstream_Delta                     	"
+UCHAR SKUvalue_19[] = "! Single SKU Max Power Table                                                      	"
+"! 2.4G Channel CCK    OFDM        VHT20          VHT40          Txstream_Delta                     	"
 "Band: 2.4G CCK_1M CCK_2M CCK_5.5M CCK_11M OFDM_6M OFDM_9M OFDM_12M OFDM_18M OFDM_24M OFDM_36M OFDM_48M OFDM_54M VHT20_MCS0 VHT20_MCS1 VHT20_MCS2 VHT20_MCS3 VHT20_MCS4 VHT20_MCS5 VHT20_MCS6 VHT20_MCS7 VHT20_MCS8 VHT20_MCS9 VHT40_MCS0 VHT40_MCS1 VHT40_MCS2 VHT40_MCS3 VHT40_MCS4 VHT40_MCS5 VHT40_MCS6 VHT40_MCS7 VHT40_MCS8 VHT40_MCS9 Txstream_3T Txstream_2T Txstream_1T                   	"
 "Ch1 30  30  30  30  30  30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 0 0 0                   	"
 "Ch2 30  30  30  30  30  30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 0 0 0                   	"
@@ -20,7 +20,7 @@ UCHAR SKUvalue_19[] = "!! Single SKU Max Power Table                            
 "Ch13 30  30  30  30  30  30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 0 0 0                   	"
 "Ch14 30  30  30  30  30  30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 0 0 0                   	"
 "                                                      	"
-"!! 5G Channel OFDM        VHT20          VHT40          VHT80          VHT160          Txstream_Delta     	"
+"! 5G Channel OFDM        VHT20          VHT40          VHT80          VHT160          Txstream_Delta     	"
 "Band: 5G OFDM_6M OFDM_9M OFDM_12M OFDM_18M OFDM_24M OFDM_36M OFDM_48M OFDM_54M VHT20_MCS0 VHT20_MCS1 VHT20_MCS2 VHT20_MCS3 VHT20_MCS4 VHT20_MCS5 VHT20_MCS6 VHT20_MCS7 VHT20_MCS8 VHT20_MCS9 VHT40_MCS0 VHT40_MCS1 VHT40_MCS2 VHT40_MCS3 VHT40_MCS4 VHT40_MCS5 VHT40_MCS6 VHT40_MCS7 VHT40_MCS8 VHT40_MCS9 VHT80_MCS0 VHT80_MCS1 VHT80_MCS2 VHT80_MCS3 VHT80_MCS4 VHT80_MCS5 VHT80_MCS6 VHT80_MCS7 VHT80_MCS8 VHT80_MCS9 VHT160_MCS0 VHT160_MCS1 VHT160_MCS2 VHT160_MCS3 VHT160_MCS4 VHT160_MCS5 VHT160_MCS6 VHT160_MCS7 VHT160_MCS8 VHT160_MCS9 Txstream_3T Txstream_2T Txstream_1T   	"
 "Ch184 30  30  30  30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 0 0 0   	"
 "Ch188 30  30  30  30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 30 30  30  30  30 30 30 0 0 0   	"

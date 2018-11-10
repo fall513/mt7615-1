@@ -158,8 +158,8 @@ INT32 MT_ATETxControl(struct _RTMP_ADAPTER *pAd, UINT32 band_idx, PNDIS_PACKET p
 VOID MT_ATEUpdateRxStatistic(struct _RTMP_ADAPTER *pAd, TESTMODE_STAT_TYPE type, VOID *data);
 INT Mt_TestModeInsertPeer(struct _RTMP_ADAPTER *pAd, UINT32 band_ext, CHAR *da, CHAR *sa, CHAR *bss);
 INT32 MT_ATETxPkt(struct _RTMP_ADAPTER *pAd, UINT32 band_idx);	//Export for Loopback
-UINT8 MT_ATEGetBandIdxByIf(struct _RTMP_ADAPTER *pAd);
-UINT8 MT_ATEGetWDevIdxByBand(struct _RTMP_ADAPTER *pAd, UINT32 band_idx);
+INT8 MT_ATEGetBandIdxByIf(struct _RTMP_ADAPTER *pAd);
+INT8 MT_ATEGetWDevIdxByBand(struct _RTMP_ADAPTER *pAd, UINT32 band_idx);
 INT MtATESetMacTxRx(struct _RTMP_ADAPTER *pAd, INT32 TxRx, BOOLEAN Enable,UCHAR BandIdx);
 INT MtATESetTxStream(struct _RTMP_ADAPTER *pAd, UINT32 StreamNums, UCHAR BandIdx);
 INT MtATESetRxPath(struct _RTMP_ADAPTER *pAd, UINT32 RxPathSel, UCHAR BandIdx);

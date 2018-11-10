@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
 	Who			When			What
 	--------	----------		----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)
@@ -235,12 +237,7 @@ VOID MtAsicUpdateRxWCIDTableByFw(
 
 	rWtblRx.ucRv   = WtblInfo.rv;
 	rWtblRx.ucRca2 = WtblInfo.rca2;
-	if (WtblInfo.WcidType == MT_WCID_TYPE_APCLI_MCAST) {
-		//prevent BMC ICV message dumped during GTK rekey
-		if (HcGetWcidLinkType(pAd,WtblInfo.Wcid)== WDEV_TYPE_APCLI) {
-			rWtblRx.ucRcid = 1;
-		}
-	}
+
 	/* Manipulate TLV msg */
 	if(WtblInfo.WcidType == MT_WCID_TYPE_BMCAST)
 	{
@@ -250,6 +247,7 @@ VOID MtAsicUpdateRxWCIDTableByFw(
 		/* Tag = 1 */
 		rWtblRx.ucRv = 1;
 		rWtblRx.ucRca1 = 1;
+		rWtblRx.ucRcid = 1;
 		//if (pAd->OpMode == OPMODE_AP)
 		{
 			rWtblRx.ucRca2 = 1;
@@ -284,6 +282,9 @@ VOID MtAsicUpdateRxWCIDTableByFw(
 			rWtblRx.ucRca1 = 1;
 		}
 
+		if (WtblInfo.WcidType == MT_WCID_TYPE_APCLI_MCAST)
+			rWtblRx.ucRcid = 1;
+
 		rWtblRx.ucRv = 1;
 		rWtblRx.ucRca2 = 1;
 
@@ -302,27 +303,11 @@ VOID MtAsicUpdateRxWCIDTableByFw(
 			case MT_WCID_TYPE_CLI:
 				rWtblHdrTrans.ucFd = 1;
 				rWtblHdrTrans.ucTd = 0;
-#ifdef MWDS
-				if (WtblInfo.fgMwdsEnable)
-				{
-					rWtblHdrTrans.ucFd = 1;
-					rWtblHdrTrans.ucTd = 1;
-					//MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("MtAsicUpdateRxWCIDTableByFw MT_WCID_TYPE_CLI: do FdTd settings in rWtblHdrTrans\n"));
-				}
-#endif /* MWDS */
 				break;
 			case MT_WCID_TYPE_APCLI:
 			case MT_WCID_TYPE_REPEATER:
 				rWtblHdrTrans.ucFd = 0;
 				rWtblHdrTrans.ucTd = 1;
-#ifdef MWDS
-				if (WtblInfo.fgMwdsEnable)
-				{
-					rWtblHdrTrans.ucFd = 1;
-					rWtblHdrTrans.ucTd = 1;
-					//MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("MtAsicUpdateRxWCIDTableByFw MT_WCID_TYPE_APCLI/MT_WCID_TYPE_REPEATER do FdTd settings in rWtblHdrTrans\n"));
-				}
-#endif /* MWDS */
 				break;
 			case MT_WCID_TYPE_WDS:
 				rWtblHdrTrans.ucFd = 1;
@@ -691,6 +676,24 @@ UINT16 MtAsicGetTidSnByFw(
     return ssn;
 }
 
+void update_wtbl_vht_info(struct _RTMP_ADAPTER *pAd, UCHAR wcid,
+                                struct _wtbl_vht_info *vht_info)
+{
+        CMD_WTBL_VHT_T wtbl_vht={0};
+
+        wtbl_vht.u2Tag = WTBL_VHT;
+        wtbl_vht.u2Length = sizeof(CMD_WTBL_VHT_T);
+
+        if (vht_info == NULL)
+                return;
+
+        wtbl_vht.ucLdpcVht = vht_info->ldpc;
+        wtbl_vht.ucDynBw = vht_info->dyn_bw;
+        wtbl_vht.ucVht = vht_info->vht;
+        wtbl_vht.ucTxopPsCap = vht_info->txop_ps;
+
+        CmdExtWtblUpdate(pAd, wcid, SET_WTBL, &wtbl_vht, sizeof(CMD_WTBL_VHT_T));
+}
 
 VOID MtAsicAddRemoveKeyTabByFw (
 	IN struct _RTMP_ADAPTER *pAd,

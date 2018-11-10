@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +27,7 @@
 	--------	----------		----------------------------------------------
 	Fonchi		2006-6-23		modified for rt61-APClinent
 */
-
+#endif /* MTK_LICENSE */
 #ifdef APCLI_SUPPORT
 
 #include "rt_config.h"
@@ -310,11 +311,6 @@ static VOID ApCliMlmeAssocReqAction(
     UCHAR ucETxBfCap;
 #endif /* TXBF_SUPPORT && VHT_TXBF_SUPPORT */
 
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("ApCliMlmeAssocReqAction()\n"));
-#endif
-
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
 		&& (ifIndex < REPT_MLME_START_IDX)
@@ -511,7 +507,8 @@ static VOID ApCliMlmeAssocReqAction(
             vht_ie_info.frame_subtype = SUBTYPE_ASSOC_REQ;
             vht_ie_info.channel = apcli_entry->wdev.channel;
             vht_ie_info.phy_mode = apcli_entry->wdev.PhyMode;
-	        vht_ie_info.wdev = &apcli_entry->wdev;	
+	    vht_ie_info.wdev = &apcli_entry->wdev;
+
 #if defined(TXBF_SUPPORT) && defined(VHT_TXBF_SUPPORT)
             ucETxBfCap = pAd->CommonCfg.ETxBfEnCond;
             if (HcIsBfCapSupport(wdev) == FALSE)
@@ -596,27 +593,6 @@ static VOID ApCliMlmeAssocReqAction(
 
 #endif /* DOT11_N_SUPPORT */
 
-#ifdef WH_EZ_SETUP
-		/*
-			To prevent old device has trouble to parse MTK vendor IE,
-			insert easy setup IE first.
-		*/
-		if (IS_EZ_SETUP_ENABLED(wdev)
-#ifdef MAC_REPEATER_SUPPORT
-			&& (CliIdx == 0xFF)
-#endif /* MAC_REPEATER_SUPPORT */
-			&& apcli_entry->MlmeAux.support_easy_setup) {
-#ifndef EZ_MOD_SUPPORT			
-#ifdef NEW_CONNECTION_ALGO
-			/*If the corresponding AP interface has easy setup devices connected, then update the APCLI capability*/
-			if (pAd->ApCfg.MBSSID[wdev->func_idx].wdev.ez_security.ez_apcli_list.size != 0)
-				EZ_SET_CAP_AP_CONFIGURED(wdev->ez_security.capability);
-#endif
-#endif
-			FrameLen += ez_build_assoc_request_ie(pAd,wdev, ApAddr, pOutBuffer+FrameLen, FrameLen);
-		}
-#endif /* WH_EZ_SETUP */
-
 		/*
 			add Ralink proprietary IE to inform AP this STA is going to use AGGREGATION or PIGGY-BACK+AGGREGATION
 			Case I: (Aggregation + Piggy-Back)
@@ -627,11 +603,7 @@ static VOID ApCliMlmeAssocReqAction(
 				1. user enable aggregation, AND
 				2. AP annouces it's AGGREGATION-capable in BEACON
 		*/
-        FrameLen += build_vendor_ie(pAd, wdev, pOutBuffer+FrameLen
-#ifdef WH_EZ_SETUP
-		, SUBTYPE_ASSOC_REQ
-#endif
-		);
+        FrameLen += build_vendor_ie(pAd, wdev, pOutBuffer+FrameLen);
 
 		if (apcli_entry->MlmeAux.APEdcaParm.bValid)
 		{
@@ -812,15 +784,8 @@ static VOID ApCliMlmeAssocReqAction(
 	else 
 #endif /* RTMP_MAC || RLT_MAC  */
 		if ((pAd->ApCfg.bMACRepeaterEn) &&
-				/*(pAd->chipCap.hif_type == HIF_MT) &&*/
-				(CliIdx != 0xFF)
-#ifdef MWDS	// Include such checks as FAST_EAPOL_WAR now enabled
-				&& (pApCliEntry != NULL)
-				&& ((pApCliEntry->wdev.bSupportMWDS == FALSE) ||
-					(pApCliEntry->MlmeAux.bSupportMWDS == FALSE))
-#endif /* MWDS */
-				)
-
+				(pAd->chipCap.hif_type == HIF_MT) &&
+				(CliIdx != 0xFF))
 		{
 			if (pReptEntry->pre_entry_alloc == TRUE) {
 				ApCliAssocDeleteMacEntry(pAd,ifIndex,CliIdx);
@@ -839,6 +804,7 @@ static VOID ApCliMlmeAssocReqAction(
 					pReptEntry->pre_entry_alloc = TRUE;
 				} else {
 					MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_ERROR, ("repeater pEntry insert fail"));
+					MlmeFreeMemory(pOutBuffer);
 					return;
 				}
 			}
@@ -862,6 +828,7 @@ static VOID ApCliMlmeAssocReqAction(
 					pApCliEntry->MacTabWCID = pMacEntry->wcid;
 				} else {
 					MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_ERROR, ("apcli pEntry insert fail"));
+					MlmeFreeMemory(pOutBuffer);
 					return;
 				}
 			}
@@ -920,11 +887,6 @@ static VOID ApCliMlmeDisassocReqAction(
 	REPEATER_CLIENT_ENTRY *pReptEntry = NULL;
 	UCHAR CliIdx = 0xFF;
 #endif /* MAC_REPEATER_SUPPORT */
-
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("ApCliMlmeDisassocReqAction() \n"));
-#endif
 
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
@@ -1046,11 +1008,6 @@ static VOID ApCliPeerAssocRspAction(
 
 	IE_LISTS *ie_list = NULL;
 
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("%s()\n", __FUNCTION__));
-#endif
-
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
 			&& (ifIndex < REPT_MLME_START_IDX)
@@ -1103,10 +1060,29 @@ static VOID ApCliPeerAssocRspAction(
 
 			MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("APCLI_ASSOC - receive ASSOC_RSP to me (status=%d)\n", Status));
 
-#ifdef LINK_TEST_SUPPORT
-			/* Apclient Link up Flag */
-			pAd->fgApclientLinkUp = TRUE;
-#endif /* LINK_TEST_SUPPORT */
+#ifdef NR_PD_DETECTION
+            /* Enable Ap-clinet link to RootAp Flag */
+            pAd->fgApclientLink = TRUE;
+
+            if (pAd->CommonCfg.dbdc_mode)
+            {
+                /* Back to 4T mode */
+                MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_2G);
+                MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_5G);
+            
+                /* Restore Tx Power */
+                MtCmdLinkTestTxPwrCtrl(pAd, FALSE, BAND0, CHANNEL_BAND_2G);
+                MtCmdLinkTestTxPwrCtrl(pAd, FALSE, BAND0, CHANNEL_BAND_5G);
+            }
+            else
+            {
+                /* Back to 4T mode */
+                MtCmdLinkTestTxCtrl(pAd, FALSE, pAd->ucCmwChannelBand);
+            
+                /* Restore Tx Power */
+                MtCmdLinkTestTxPwrCtrl(pAd, FALSE, BAND0, pAd->ucCmwChannelBand);
+            }
+#endif /* NR_PD_DETECTION */
 
 #ifdef MAC_REPEATER_SUPPORT
 			if (CliIdx != 0xFF)
@@ -1114,25 +1090,6 @@ static VOID ApCliPeerAssocRspAction(
 			else
 #endif /* MAC_REPEATER_SUPPORT */
 			RTMPCancelTimer(&pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.ApCliAssocTimer, &Cancelled);
-
-#ifdef WH_EZ_SETUP
-			if ((Status == MLME_SUCCESS)
-				&& IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev) 
-#ifdef MAC_REPEATER_SUPPORT
-				&& (CliIdx == 0xFF)
-#endif /* MAC_REPEATER_SUPPORT */
-				&& pApCliEntry->MlmeAux.support_easy_setup) {
-				Status = ez_process_assoc_response(&pApCliEntry->wdev, Addr2, Elem->Msg, Elem->MsgLen);
-			} else if (Status == MLME_EZ_CONNECTION_LOOP)
-			{
-#ifndef EZ_MOD_SUPPORT			
-#ifdef DISCONNECT_ON_CONFIG_UPDATE			
-				NdisZeroMemory(pApCliEntry->wdev.ez_security.force_connect_bssid,MAC_ADDR_LEN);
-#endif
-#endif
-			}
-#endif /* WH_EZ_SETUP */
-
 			if(Status == MLME_SUCCESS)
 			{
 				/* go to procedure listed on page 376 */
@@ -1222,10 +1179,6 @@ static VOID ApCliPeerDisassocAction(
 	UCHAR CliIdx = 0xFF;
 #endif /* defined(FAST_EAPOL_WAR) || defined (MAC_REPEATER_SUPPORT) */
 
-#ifdef WH_EZ_SETUP
-	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
-		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("ApCliPeerDisassocAction()\n"));
-#endif
 
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
@@ -1294,7 +1247,7 @@ static VOID ApCliAssocTimeoutAction(
 	UCHAR CliIdx = 0xFF;
 #endif /* defined(FAST_EAPOL_WAR) || defined (MAC_REPEATER_SUPPORT) */
 
-	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_ERROR, ("APCLI_ASSOC - ApCliAssocTimeoutAction\n"));
+	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("APCLI_ASSOC - ApCliAssocTimeoutAction\n"));
 
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT

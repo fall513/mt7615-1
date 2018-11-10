@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /* *
  * (c) Copyright 1997-2012, MediaTek, Inc.
  *
@@ -10,7 +11,7 @@
  ***************************************************************************
 
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __CONFIG_EXPORT_H__
 #define __CONFIG_EXPORT_H__
 
@@ -38,6 +39,8 @@ struct ht_cfg {
 	UCHAR	ht_bw;
 	UCHAR	ht_stbc;
 	UCHAR	ht_ldpc;
+	UCHAR	ht_gi;
+	UCHAR	ht_protect_en;
 	UINT32	frag_thld;
 	/*rts threshold*/
 	UCHAR	pkt_thld;
@@ -71,6 +74,8 @@ UCHAR wlan_config_get_tx_stream(struct wifi_dev *wdev);
 UCHAR wlan_config_get_rx_stream(struct wifi_dev *wdev);
 UCHAR wlan_config_get_ht_stbc(struct wifi_dev *wdev);
 UCHAR wlan_config_get_ht_ldpc(struct wifi_dev *wdev);
+UCHAR wlan_config_get_ht_gi(struct wifi_dev *wdev);
+UCHAR wlan_config_get_ht_protect_en(struct wifi_dev *wdev);
 UCHAR wlan_config_get_vht_stbc(struct wifi_dev *wdev);
 UCHAR wlan_config_get_vht_ldpc(struct wifi_dev *wdev);
 UINT32 wlan_config_get_frag_thld(struct wifi_dev *wdev);
@@ -94,6 +99,8 @@ VOID wlan_config_set_tx_stream(struct wifi_dev *wdev,UCHAR tx_stream);
 VOID wlan_config_set_rx_stream(struct wifi_dev *wdev,UCHAR rx_stream);
 VOID wlan_config_set_ht_stbc(struct wifi_dev *wdev, UCHAR ht_stbc);
 VOID wlan_config_set_ht_ldpc(struct wifi_dev *wdev, UCHAR ht_ldpc);
+VOID wlan_config_set_ht_gi(struct wifi_dev *wdev, UCHAR ht_gi);
+VOID wlan_config_set_ht_protect_en(struct wifi_dev *wdev, UCHAR ht_protect);
 VOID wlan_config_set_vht_stbc(struct wifi_dev *wdev,UCHAR vht_stbc);
 VOID wlan_config_set_vht_ldpc(struct wifi_dev *wdev,UCHAR vht_ldpc);
 VOID wlan_config_set_rts_len_thld(struct wifi_dev *wdev, UINT32 len_thld);
@@ -101,6 +108,5 @@ VOID wlan_config_set_rts_pkt_thld(struct wifi_dev *wdev, UCHAR pkt_thld);
 VOID wlan_config_set_edca_valid(struct wifi_dev *wdev, BOOLEAN bValid);
 VOID wlan_config_set_edca_valid_all(struct wpf_ctrl *ctrl, BOOLEAN bValid);
 VOID wlan_config_set_frag_thld(struct wifi_dev *wdev, UINT32 frag_thld);
-
 
 #endif

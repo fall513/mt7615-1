@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
  /***************************************************************************
  * MediaTek Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,7 +25,7 @@
     --------------  ----------      ----------------------------------------------
     Hugo            2016-0505       created
 */
-
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 UINT16 nonerp_sta_num(struct _MAC_TABLE_ENTRY *peer, UCHAR peer_state)

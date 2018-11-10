@@ -324,7 +324,7 @@
 
 /* [CB_OFF + 34]: tag the packet received from which net device */
 #define RECV_FROM_CB			34
-#define H_CHANNEL_BIGGER_THAN   100
+#define H_CHANNEL_BIGGER_THAN   144
 #define RTMP_PACKET_RECV_FROM_2G_CLIENT 	0x1
 #define RTMP_PACKET_RECV_FROM_5G_CLIENT 	0x2
 #define RTMP_PACKET_RECV_FROM_2G_AP			0x4

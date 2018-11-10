@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
 	--------	----------		----------------------------------------------
 	Name		Date			Modification logs
 */
+#endif /* MTK_LICENSE */
 
 #ifndef	__SEC_H__
 #define	__SEC_H__
@@ -55,18 +57,6 @@ VOID SetWdevAuthMode (
 VOID SetWdevEncrypMode (
     IN struct _SECURITY_CONFIG *pSecConfig, 
     IN RTMP_STRING *arg);
-
-#ifdef WH_EZ_SETUP
-#ifndef EZ_MOD_SUPPORT
-VOID ez_setWdevAuthMode (
-    IN struct __ez_triband_sec_config *pSecConfig, 
-    IN	RTMP_STRING *arg);
-
-VOID ez_setWdevEncrypMode (
-    IN struct __ez_triband_sec_config *pSecConfig, 
-    IN RTMP_STRING *arg);
-#endif
-#endif
 
 INT Set_SecAuthMode_Proc (
     IN RTMP_ADAPTER *pAd, 

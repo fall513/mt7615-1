@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -21,7 +22,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __RT_ECOS_H__
 #define __RT_ECOS_H__
 

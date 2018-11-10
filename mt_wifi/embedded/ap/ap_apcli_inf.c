@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -43,6 +44,7 @@
     --------------  ----------      ----------------------------------------------
     Shiang, Fonchi  02-13-2007      created
 */
+#endif /* MTK_LICENSE */
 #define RTMP_MODULE_OS
 
 #ifdef APCLI_SUPPORT

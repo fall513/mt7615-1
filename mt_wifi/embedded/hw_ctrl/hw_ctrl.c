@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -13,10 +14,15 @@
 	Module Name:
 	hw_ctrl.c
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include  "hw_ctrl.h"
 #include "hw_ctrl_basic.h"
-
+#ifdef VENDOR_FEATURE6_SUPPORT
+#ifdef WSC_LED_SUPPORT
+#include "rt_led.h"
+#endif /* WSC_LED_SUPPORT */
+#endif
 
 
 static NTSTATUS HwCtrlUpdateRtsThreshold(struct _RTMP_ADAPTER *pAd, HwCmdQElmt *CMDQelmt)
@@ -139,38 +145,38 @@ static NTSTATUS HwCtrlUpdateProtect(RTMP_ADAPTER *pAd)
 #endif /* APCLI_SUPPORT */
 #endif /* CONFIG_AP_SUPPORT */
 
-			if (mode & SET_PROTECT(ERP)) {
-				protect.erp_mask = ERP_OMAC_ALL;
-			}
+        if (mode & SET_PROTECT(ERP)) {
+            protect.erp_mask = ERP_OMAC_ALL;
+        }
 
-			if (mode & SET_PROTECT(NO_PROTECTION)) {
-				/* no need to do any setting */
-			}
+        if (mode & SET_PROTECT(NO_PROTECTION)) {
+            /* no need to do any setting */
+        }
 
-			if (mode & SET_PROTECT(NON_MEMBER_PROTECT)) {
-				protect.mix_mode = 1;
-				protect.gf = 1;
-				protect.bw40 = 1;
-			}
+        if (mode & SET_PROTECT(NON_MEMBER_PROTECT)) {
+            protect.mix_mode = 1;
+            protect.gf = 1;
+            protect.bw40 = 1;
+        }
 
-			if (mode & SET_PROTECT(HT20_PROTECT)) {
-				protect.bw40 = 1;
-			}
+        if (mode & SET_PROTECT(HT20_PROTECT)) {
+            protect.bw40 = 1;
+        }
 
-			if (mode & SET_PROTECT(NON_HT_MIXMODE_PROTECT)) {
-				protect.mix_mode = 1;
-				protect.gf = 1;
-				protect.bw40 = 1;
-			}
+        if (mode & SET_PROTECT(NON_HT_MIXMODE_PROTECT)) {
+            protect.mix_mode = 1;
+            protect.gf = 1;
+            protect.bw40 = 1;
+        }
 
-			if (mode & SET_PROTECT(GREEN_FIELD_PROTECT)) {
-				protect.gf = 1;
-			}
+        if (mode & SET_PROTECT(GREEN_FIELD_PROTECT)) {
+            protect.gf = 1;
+        }
 
-			//if (mode & SET_PROTECT(RDG)) {
-			if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_RDG_ACTIVE)) {
-				protect.long_nav = 1;
-			}
+        //if (mode & SET_PROTECT(RDG)) {
+        if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_RDG_ACTIVE)) {
+            protect.long_nav = 1;
+        }
 
 			if (mode & SET_PROTECT(LONG_NAV_PROTECT)) {
 				protect.long_nav = 1;
@@ -185,14 +191,14 @@ static NTSTATUS HwCtrlUpdateProtect(RTMP_ADAPTER *pAd)
 				rts_thld.pkt_num_thld = 0;
 				rts_thld.pkt_len_thld = 1;
 
-				goto end;
-			}
-		}
+            goto end;
+        }
+    }
 
-	    if (mode & SET_PROTECT(_NOT_DEFINE_HT_PROTECT)) {
-	        MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
-	                ("[ERROR] NOT Defined HT Protection!\n"));
-	    }
+    if (mode & SET_PROTECT(_NOT_DEFINE_HT_PROTECT)) {
+        MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+                ("[ERROR] NOT Defined HT Protection!\n"));
+    }
 
         wdev_idx++;
     } while (wdev_idx < WDEV_NUM_MAX);
@@ -833,8 +839,12 @@ static void ErrRecoveryEndDriverRestore(RTMP_ADAPTER *pAd)
 	POS_COOKIE pObj;
 
 	pObj = (POS_COOKIE) pAd->OS_Cookie;
-
-	RTMP_OS_TASKLET_SCHE(&pObj->tr_done_task);
+#ifdef CONFIG_ANDES_SUPPORT
+	RTMP_OS_TASKLET_SCHE(&pObj->rx1_done_task);
+#endif /* CONFIG_ANDES_SUPPORT */
+#if defined(RTMP_MAC_PCI) || defined(RTMP_MAC_USB)
+	RTMP_OS_TASKLET_SCHE(&pObj->rx_done_task);
+#endif //defined(RTMP_MAC_PCI) || defined(RTMP_MAC_USB)
 }
 
 NTSTATUS HwRecoveryFromError(RTMP_ADAPTER *pAd)
@@ -862,7 +872,6 @@ NTSTATUS HwRecoveryFromError(RTMP_ADAPTER *pAd)
     Status = pAd->HwCtrl.ser_status;
     Stat = ErrRecoveryCurStat(pErrRecoveryCtrl);
     pSerTimes = &pAd->HwCtrl.ser_times[0];
-
 
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Ser                       ,::E  R  , stat=0x%08X\n", Stat));
 
@@ -1147,16 +1156,16 @@ static NTSTATUS HwCtrlGetTxStatistic(RTMP_ADAPTER *pAd,HwCmdQElmt *CMDQelmt)
 	PMAC_TABLE_ENTRY pEntry = &pAd->MacTab.Content[pTxStat->Wcid];
 	EXT_EVENT_TX_STATISTIC_RESULT_T TxStatResult;
 
-	MtCmdGetTxStatistic(pAd, pTxStat->Field, pTxStat->Band, pTxStat->Wcid, &TxStatResult);
+	MtCmdGetTxStatistic(pAd, pTxStat->Field, pTxStat->Wcid, &TxStatResult);
 
 #ifdef RACTRL_FW_OFFLOAD_SUPPORT
-    if (((TxStatResult.u4Field & GET_TX_STAT_ENTRY_TX_CNT) != 0) && pEntry->TxStatRspCnt)
-        pEntry->TotalTxSuccessCnt += TxStatResult.u4EntryTxCount - TxStatResult.u4EntryTxFailCount;
+	if ((TxStatResult.u4TotalTxCount > TxStatResult.u4TotalTxFailCount) && pEntry->TxStatRspCnt)
+		pEntry->TotalTxSuccessCnt += (TxStatResult.u4TotalTxCount - TxStatResult.u4TotalTxFailCount);
 
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s(): wcid(%d), TotalTxCnt(%u) - TotalTxFail(%u) = %u (%s)\n", 
 		__FUNCTION__, pTxStat->Wcid, 
-		TxStatResult.u4EntryTxCount, 
-		TxStatResult.u4EntryTxFailCount, 
+		TxStatResult.u4TotalTxCount, 
+		TxStatResult.u4TotalTxFailCount, 
 		pEntry->TotalTxSuccessCnt, 
 		(pEntry->TxStatRspCnt)? "Vaild":"Invalid"));
 
@@ -1173,15 +1182,21 @@ static NTSTATUS HwCtrlRadioOnOff(RTMP_ADAPTER *pAd,HwCmdQElmt *CMDQelmt)
     return NDIS_STATUS_SUCCESS;
 }
 
-#ifdef LINK_TEST_SUPPORT
-static NTSTATUS HwCtrlAutoLinkTest(RTMP_ADAPTER *pAd,HwCmdQElmt *CMDQelmt)
+#ifdef NR_PD_DETECTION
+static NTSTATUS HwCtrlNRPDDetection(RTMP_ADAPTER *pAd,HwCmdQElmt *CMDQelmt)
 {
-	/* Link Test Time Slot Handler */
-	LinkTestTimeSlotHandler(pAd);
-	
+    NRPDDetectCtrl(pAd);
+    NRTxDetecCtrl(pAd);
+    NRPDACRCtrl(pAd);
     return NDIS_STATUS_SUCCESS;
 }
-#endif /* LINK_TEST_SUPPORT */
+
+static NTSTATUS HwCtrlCMWLinkCtrl(RTMP_ADAPTER *pAd,HwCmdQElmt *CMDQelmt)
+{
+    CMWLinkCtrl(pAd);
+    return NDIS_STATUS_SUCCESS;
+}
+#endif /* NR_PD_DETECTION */
 
 #ifdef GREENAP_SUPPORT
 static NTSTATUS HwCtrlGreenAPOnOff(RTMP_ADAPTER *pAd,HwCmdQElmt *CMDQelmt)
@@ -1398,13 +1413,10 @@ static NTSTATUS HwCtrlWifiSysPeerLinkUp(RTMP_ADAPTER *pAd, HwCmdQElmt *CMDQelmt)
 	if(wdev->wdev_type == WDEV_TYPE_AP)
 	{
 #ifdef DOT11_N_SUPPORT
-		if(lu_ctrl)
-		{
-		    if (lu_ctrl->bRdgCap)
-		    {
-		        AsicSetRDG(pAd, wcid, HcGetBandByWdev(wdev), 1, 1);
-		    }
-		}
+	    if (lu_ctrl->bRdgCap)
+	    {
+	        AsicSetRDG(pAd, wcid, HcGetBandByWdev(wdev), 1, 1);
+	    }
 #endif
 	}
 
@@ -1441,6 +1453,24 @@ static NTSTATUS HwCtrlWifiSysPeerUpdate(RTMP_ADAPTER *pAd, HwCmdQElmt *CMDQelmt)
 			os_free_mem(wifi_sys_ctrl->priv);
 		}
 		return NDIS_STATUS_SUCCESS;
+	}
+
+	/*update ra reldated setting, can't change the order*/
+	if(sta_rec_ctrl->EnableFeature & STA_REC_RA_COMMON_INFO_FEATURE)
+	{
+
+		featues = STA_REC_RA_COMMON_INFO_FEATURE;
+		AsicStaRecUpdate(pAd,
+			wifi_sys_ctrl->wdev,
+			sta_rec_ctrl->BssIndex,
+			sta_rec_ctrl->WlanIdx,
+			sta_rec_ctrl->ConnectionType,
+			sta_rec_ctrl->ConnectionState,
+			featues,
+			sta_rec_ctrl->IsNewSTARec
+		);
+
+		sta_rec_ctrl->EnableFeature &= (~STA_REC_RA_COMMON_INFO_FEATURE);
 	}
 
 	if(sta_rec_ctrl->EnableFeature & STA_REC_RA_FEATURE)
@@ -1522,9 +1552,10 @@ static HW_CMD_TABLE_T HwCmdRadioTable[] = {
     {HWCMD_ID_THERMAL_PROTECTION_RADIOOFF, HwCtrlThermalProtRadioOff,0},
 #endif /* THERMAL_PROTECT_SUPPORT */
 	{HWCMD_ID_RADIO_ON_OFF, HwCtrlRadioOnOff, 0}, 
-#ifdef LINK_TEST_SUPPORT
-	{HWCMD_ID_AUTO_LINK_TEST, HwCtrlAutoLinkTest, 0}, 
-#endif /* LINK_TEST_SUPPORT */ 	
+#ifdef NR_PD_DETECTION
+    {HWCMD_ID_NR_PD_DETECTION, HwCtrlNRPDDetection, 0}, 
+    {HWCMD_ID_CMW_LINK_CTRL, HwCtrlCMWLinkCtrl, 0}, 
+#endif /* NR_PD_DETECTION */ 	
 #ifdef GREENAP_SUPPORT	
 	{HWCMD_ID_GREENAP_ON_OFF, HwCtrlGreenAPOnOff, 0}, 
 #endif /* GREENAP_SUPPORT */	

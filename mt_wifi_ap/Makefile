@@ -1,6 +1,6 @@
-EXTRA_CFLAGS = -Idrivers/net/wireless/mt_wifi/include \
-				-Idrivers/net/wireless/mt_wifi/embedded/include \
-				-Idrivers/net/wireless/mt_wifi/ate/include
+EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt7615/mt_wifi/include \
+				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/embedded/include \
+				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/ate/include
 
 ifeq ($(CONFIG_SUPPORT_OPENWRT),y)
 EXTRA_CFLAGS = -I$(src)/../src/include \
@@ -10,12 +10,12 @@ DRV_NAME = mt7628
 SRC_DIR = ../src/embedded
 obj-m += $(DRV_NAME).o
 else
-EXTRA_CFLAGS = -Idrivers/net/wireless/mt_wifi/include \
-				-Idrivers/net/wireless/mt_wifi/embedded/include \
-				-Idrivers/net/wireless/mt_wifi/ate/include
-DRV_NAME = mt_wifi
-SRC_DIR = ../mt_wifi
-SRC_EMBEDDED_DIR = ../mt_wifi/embedded
+EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt7615/include \
+				-Idrivers/net/wireless/ralink/mt7615/embedded/include \
+				-Idrivers/net/wireless/ralink/mt7615/ate/include
+DRV_NAME = mt7615
+SRC_DIR = ../mt7615
+SRC_EMBEDDED_DIR = ../mt7615/embedded
 obj-$(CONFIG_MT_AP_SUPPORT) += $(DRV_NAME).o
 endif
 
@@ -149,10 +149,10 @@ asic_objs := $(SRC_DIR)/phy/phy.o
 ########################################################
 spec_objs += $(SRC_EMBEDDED_DIR)/common/ps.o
 
-ifeq ($(CONFIG_UAPSD),y)
+##ifeq ($(CONFIG_UAPSD),y)
     EXTRA_CFLAGS += -DUAPSD_SUPPORT -DUAPSD_DEBUG
     spec_objs += $(SRC_EMBEDDED_DIR)/common/uapsd.o
-endif
+##endif
 
 #ifeq ($(CONFIG_RLT_MAC),y)
 #	spec_objs += $(SRC_EMBEDDED_DIR)/common/ral_ps.o
@@ -162,11 +162,11 @@ endif
 #	spec_objs += $(SRC_EMBEDDED_DIR)/common/ral_ps.o
 #endif
 
-ifeq ($(CONFIG_MT_MAC),y)
+##ifeq ($(CONFIG_MT_MAC),y)
 	spec_objs += $(SRC_EMBEDDED_DIR)/common/mt_ps.o
 	spec_objs += $(SRC_EMBEDDED_DIR)/common/mt_io.o
 	spec_objs += $(SRC_EMBEDDED_DIR)/tx_rx/txs.o
-endif
+##endif
 
 # WSC
 ifeq ($(CONFIG_WSC_INCLUDED),y)
@@ -201,7 +201,7 @@ ifeq ($(CONFIG_WSC_INCLUDED),y)
 endif
 
 # VHT
-ifeq ($(CONFIG_DOT11_VHT_AC),y)
+##ifeq ($(CONFIG_DOT11_VHT_AC),y)
     EXTRA_CFLAGS += -DDOT11_VHT_AC
     EXTRA_CFLAGS += -DDOT11_VHT_R2
     spec_objs += $(SRC_EMBEDDED_DIR)/mgmt/mgmt_vht.o\
@@ -210,7 +210,7 @@ ifeq ($(CONFIG_DOT11_VHT_AC),y)
 	ifeq ($(CONFIG_WFA_VHT_R2_PF),y)
 		EXTRA_CFLAGS += -DWFA_VHT_R2_PF
 	endif
-endif
+##endif
 
 # WAPI
 ifeq ($(CONFIG_WAPI_SUPPORT),y)
@@ -286,13 +286,6 @@ ifeq ($(CONFIG_DSCP_QOS_MAP_SUPPORT),y)
 	EXTRA_CFLAGS += -DDSCP_QOS_MAP_SUPPORT
 endif
 
-ifeq ($(CONFIG_WNM_SUPPORT),y)
-        EXTRA_CFLAGS += -DCONFIG_DOT11V_WNM 
-
-        spec_objs += $(SRC_EMBEDDED_DIR)/common/wnm.o
-endif
-
-
 #ifeq ($(CONFIG_TRACE_IPARP),y)
 #	EXTRA_CFLAGS += -DTRACELOG_IPARP
 #	spec_objs +=  $(SRC_DIR)/debug/tracelog_iparp.o
@@ -312,11 +305,11 @@ ifeq ($(CONFIG_SMART_CARRIER_SENSE_SUPPORT),y)
     EXTRA_CFLAGS += -DSMART_CARRIER_SENSE_SUPPORT 
 endif
 
-ifeq ($(CONFIG_MT_DFS_SUPPORT),y)
+####ifeq ($(CONFIG_MT_DFS_SUPPORT),y)
     EXTRA_CFLAGS += -DMT_DFS_SUPPORT
 
        spec_objs += $(SRC_EMBEDDED_DIR)/common/cmm_rdm_mt.o
-endif
+####endif
 
 # FT
 ifeq ($(CONFIG_DOT11R_FT_SUPPORT),y)
@@ -469,12 +462,6 @@ ifeq ($(CONFIG_APCLI_SUPPORT),y)
 
         ap_objs += $(SRC_EMBEDDED_DIR)/ap/ap_repeater.o
     endif
-
-	ifeq ($(CONFIG_RADIO_LINK_SELECTION),y)
-	    EXTRA_CFLAGS += -DRADIO_LINK_SELECTION
-	    ap_objs +=  $(SRC_EMBEDDED_DIR)/ap/ap_rls.o
-	endif
-
 endif
 
 ifeq ($(CONFIG_IDS_SUPPORT),y)
@@ -501,10 +488,10 @@ ifeq ($(CONFIG_GREENAP_SUPPORT),y)
     ap_objs += $(SRC_DIR)/hw_ctrl/greenap.o
 endif
 
-ifeq ($(CONFIG_ATE_SUPPORT),y)
+##ifeq ($(CONFIG_ATE_SUPPORT),y)
     EXTRA_CFLAGS += -DCONFIG_ATE -DCONFIG_QA -DCONFIG_RT2880_ATE_CMD_NEW -DCONFIG_HW_HAL_OFFLOAD  #-DCSD_VERIFICATION 
     EXTRA_CFLAGS += -DINTERNAL_CAPTURE_SUPPORT  
-endif
+##endif
 
 ifeq ($(CONFIG_ICAP_SUPPORT),y)
 		EXTRA_CFLAGS += -DINTERNAL_CAPTURE_SUPPORT
@@ -578,29 +565,6 @@ endif
 ifeq ($(CONFIG_BAND_STEERING),y)
     EXTRA_CFLAGS += -DBAND_STEERING
     ap_objs +=  $(SRC_EMBEDDED_DIR)/ap/ap_band_steering.o
-endif
-
-ifeq ($(CONFIG_AIR_MONITOR),y)
-    EXTRA_CFLAGS += -DAIR_MONITOR
-endif
-
-ifeq ($(CONFIG_EASY_SETUP_SUPPORT),y)
-ifeq ($(CONFIG_EASY_MODULE_SUPPORT),y)
-$(DRV_NAME)-objs += $(SRC_EMBEDDED_DIR)/easy_setup/ez_hooks.o
-$(DRV_NAME)-objs += $(SRC_EMBEDDED_DIR)/easy_setup/mt7615_chip_ops.o
-$(DRV_NAME)-objs += $(SRC_EMBEDDED_DIR)/easy_setup/mt7615_chip_ops_api.o
-else
-$(DRV_NAME)-objs += $(SRC_EMBEDDED_DIR)/easy_setup/ez_cmm.o
-endif
-endif
-
-ifeq ($(CONFIG_MWDS),y)
-    ap_objs += $(SRC_EMBEDDED_DIR)/common/mwds.o
-    ap_objs += $(SRC_EMBEDDED_DIR)/common/routing_tab.o
-endif
-
-ifeq ($(CONFIG_EVENT_NOTIFIER_SUPPORT),y)
-    ap_objs += $(SRC_EMBEDDED_DIR)/common/event_notifier.o
 endif
 
 ifeq ($(CONFIG_VOW_SUPPORT),y)
@@ -715,7 +679,7 @@ ifeq ($(CONFIG_DBDC_MODE),y)
 EXTRA_CFLAGS += -DDBDC_MODE
 endif
 
-ifeq ($(CONFIG_CHIP_MT7615E),y)
+##ifeq ($(CONFIG_CHIP_MT7615E),y)
 EXTRA_CFLAGS += -DMT7615 -DMT_BBP -DMT_RF -DRTMP_RF_RW_SUPPORT -DMT_MAC -DRTMP_MAC_PCI -DRTMP_PCI_SUPPORT
 EXTRA_CFLAGS += -DMCS_LUT_SUPPORT -DA_BAND_SUPPORT
 EXTRA_CFLAGS += -DRTMP_EFUSE_SUPPORT
@@ -776,11 +740,6 @@ ifeq ($(CONFIG_LED_CONTROL_SUPPORT),y)
     func_objs += $(SRC_EMBEDDED_DIR)/common/rt_led.o
 endif
 
-ifeq ($(CONFIG_GPIO_CONTROL_SUPPORT),y)
-    EXTRA_CFLAGS += -DGPIO_CONTROL_SUPPORT
-    func_objs += $(SRC_EMBEDDED_DIR)/hw_ctrl/mt_gpio.o
-endif
-
 ifeq ($(CONFIG_RADIUS_ACCOUNTING_SUPPORT),y)
 	EXTRA_CFLAGS += -DRADIUS_ACCOUNTING_SUPPORT
 endif
@@ -800,10 +759,10 @@ ifneq ($(findstring 7615,$(CONFIG_RT_THIRD_CARD)),)
 	EXTRA_CFLAGS += -DMT_THIRD_IF_RF_OFFSET=$(CONFIG_RT_THIRD_IF_RF_OFFSET)
 endif
 
-ifeq ($(CONFIG_FDB_SUPPORT),y)
+#ifeq ($(CONFIG_FDB_SUPPORT),y)
     EXTRA_CFLAGS += -DMT_FDB
     chip_objs += $(SRC_DIR)/mcu/mt_fdb.o
-endif
+#endif
 
 chip_objs += $(SRC_DIR)/chips/mt7615.o\
 		$(SRC_DIR)/hw_ctrl/cmm_asic_mt_dmac.o\
@@ -830,7 +789,7 @@ chip_objs += $(SRC_DIR)/chips/mt7615.o\
 		$(SRC_DIR)/os/linux/rt_rbus_pci_drv.o\
                 $(SRC_EMBEDDED_DIR)/hif/hif_pci.o\
                 $(SRC_DIR)/os/linux/pci_main_dev.o
-endif
+##endif  ##CONFIG_FIRST_IF_MT7615
 
 ifeq ($(CONFIG_FIRST_IF_MT7622),y)
 EXTRA_CFLAGS += -DMT7622 -DMT_BBP -DMT_RF -DRTMP_RBUS_SUPPORT -DRTMP_RF_RW_SUPPORT -DMT_MAC -DRTMP_MAC_PCI
@@ -910,12 +869,12 @@ $(DRV_NAME)-objs += $(SRC_DIR)/os/linux/rt_pci_rbus.o\
                     $(SRC_DIR)/os/linux/rt_rbus_pci_util.o\
                     #$(SRC_DIR)/os/linux/rbus_main_dev.o
 
-ifeq ($(CONFIG_ATE_SUPPORT),y)
+##ifeq ($(CONFIG_ATE_SUPPORT),y)
 $(DRV_NAME)-objs += $(SRC_DIR)/ate/ate_agent.o\
                     $(SRC_DIR)/ate/testmode_ioctl.o\
 		    $(SRC_DIR)/ate/mt_mac/mt_testmode.o\
  		    $(SRC_DIR)/ate/LoopBack.o
-endif
+##endif
 
 
 ifeq ($(CONFIG_TCP_RACK_SUPPORT),y)
@@ -980,38 +939,6 @@ endif
 
 ifeq ($(CONFIG_RALINK_MT7621),y)
 EXTRA_CFLAGS += -DRACTRL_LIMIT_MAX_PHY_RATE=1300
-endif
-
-ifeq ($(CONFIG_ROAMING_ENHANCE_SUPPORT),y)
-    EXTRA_CFLAGS += -DROAMING_ENHANCE_SUPPORT
-endif
-
-ifeq ($(CONFIG_EASY_SETUP_SUPPORT),y)
-EXTRA_CFLAGS += -DWH_EZ_SETUP
-EXTRA_CFLAGS += -DNEW_CONNECTION_ALGO
-EXTRA_CFLAGS += -DEZ_NETWORK_MERGE_SUPPORT
-EXTRA_CFLAGS += -DEZ_DUAL_BAND_SUPPORT
-EXTRA_CFLAGS += -DEZ_ROAM_SUPPORT
-EXTRA_CFLAGS += -DDUAL_CHIP
-EXTRA_CFLAGS += -DEZ_API_SUPPORT
-EXTRA_CFLAGS += -DEZ_PUSH_BW_SUPPORT
-EXTRA_CFLAGS += -DEZ_REGROUP_SUPPORT
-ifeq ($(CONFIG_EASY_MODULE_SUPPORT),y)
-EXTRA_CFLAGS += -DEZ_MOD_SUPPORT
-EXTRA_CFLAGS += -Idrivers/net/wireless/easy_setup/ez_mod
-endif
-endif
-
-ifeq ($(CONFIG_MWDS),y)
-    EXTRA_CFLAGS += -DMWDS -DROUTING_TAB_SUPPORT
-endif
-
-ifeq ($(CONFIG_EVENT_NOTIFIER_SUPPORT),y)
-    EXTRA_CFLAGS += -DWH_EVENT_NOTIFIER
-endif
-
-ifeq ($(CONFIG_STA_FORCE_ROAM_SUPPORT),y)
-EXTRA_CFLAGS += -DSTA_FORCE_ROAM_SUPPORT
 endif
 
 EXTRA_CFLAGS += -DIP_ASSEMBLY

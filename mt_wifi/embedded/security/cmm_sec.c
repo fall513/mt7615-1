@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,6 +25,7 @@
 	Who			When			What
 	--------	----------		----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 VOID SetWdevAuthMode (
@@ -184,166 +186,6 @@ VOID SetWdevEncrypMode (
             __FUNCTION__, GET_PAIRWISE_CIPHER(pSecConfig)));
 }
 
-#ifdef WH_EZ_SETUP
-#ifndef EZ_MOD_SUPPORT
-VOID ez_setWdevAuthMode (
-    IN struct __ez_triband_sec_config *pSecConfig, 
-    IN RTMP_STRING *arg)
-{
-    UINT32 AKMMap = 0;
-		
-    CLEAR_SEC_AKM(AKMMap);
-
-    if (rtstrcasecmp(arg, "OPEN") == TRUE)
-    {
-        SET_AKM_OPEN(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "SHARED") == TRUE)
-    {
-        SET_AKM_SHARED(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WEPAUTO") == TRUE) 
-    {
-        SET_AKM_OPEN(AKMMap);
-	    SET_AKM_AUTOSWITCH(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WPA") == TRUE)
-    {
-        SET_AKM_WPA1(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WPAPSK") == TRUE)
-    {
-        SET_AKM_WPA1PSK(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WPANONE") == TRUE)
-    {
-        SET_AKM_WPANONE(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WPA2") == TRUE)
-    {
-        SET_AKM_WPA2(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WPA2PSK") == TRUE)
-    {
-        SET_AKM_WPA2PSK(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WPA1WPA2") == TRUE) 
-    {
-        SET_AKM_WPA1(AKMMap);
-        SET_AKM_WPA2(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WPAPSKWPA2PSK") == TRUE) 
-    {
-        SET_AKM_WPA1PSK(AKMMap);
-        SET_AKM_WPA2PSK(AKMMap);
-    }
-    else if ((rtstrcasecmp(arg, "WPA_AES_WPA2_TKIPAES") == TRUE) 
-                || (rtstrcasecmp(arg, "WPA_AES_WPA2_TKIP") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIP_WPA2_AES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIP_WPA2_TKIPAES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIPAES_WPA2_AES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIPAES_WPA2_TKIPAES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIPAES_WPA2_TKIP") == TRUE))
-    {
-        SET_AKM_WPA1PSK(AKMMap);
-        SET_AKM_WPA2PSK(AKMMap);
-    }
-#ifdef WAPI_SUPPORT
-    else if (rtstrcasecmp(arg, "WAICERT") == TRUE)
-    {
-        SET_AKM_WAICERT(AKMMap);
-    }
-    else if (rtstrcasecmp(arg, "WAIPSK") == TRUE)
-    {
-        SET_AKM_WPIPSK(AKMMap);
-    }
-#endif /* WAPI_SUPPORT */
-    else
-    {
-        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s:: Not support (AuthMode=%s, len=%d)\n",
-            __FUNCTION__, arg, (int) strlen(arg)));
-    }
-
-    if (AKMMap != 0x0)
-        pSecConfig->AKMMap = AKMMap;
-
-    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s::AuthMode=0x%x\n",
-            __FUNCTION__, pSecConfig->AKMMap));
-}
-
-VOID ez_setWdevEncrypMode (
-    IN struct __ez_triband_sec_config *pSecConfig, 
-    IN RTMP_STRING *arg)
-{
-    UINT Cipher = 0;
-	
-    if (rtstrcasecmp(arg, "NONE") == TRUE)
-    {
-        SET_CIPHER_NONE(Cipher);
-    }
-    else if (rtstrcasecmp(arg, "WEP") == TRUE)
-    {
-        SET_CIPHER_WEP(Cipher);
-    }
-    else if (rtstrcasecmp(arg, "TKIP") == TRUE) 
-    {
-        SET_CIPHER_TKIP(Cipher);
-    }
-    else if ((rtstrcasecmp(arg, "AES") == TRUE) || (rtstrcasecmp(arg, "CCMP128") == TRUE))
-    {
-        SET_CIPHER_CCMP128(Cipher);
-    }
-    else if (rtstrcasecmp(arg, "CCMP256") == TRUE)
-    {
-        SET_CIPHER_CCMP256(Cipher);
-    }
-    else if (rtstrcasecmp(arg, "GCMP128") == TRUE)
-    {
-        SET_CIPHER_GCMP128(Cipher);
-    }
-    else if (rtstrcasecmp(arg, "GCMP256") == TRUE)
-    {
-        SET_CIPHER_GCMP256(Cipher);
-    }
-    else if ((rtstrcasecmp(arg, "TKIPAES") == TRUE) || (rtstrcasecmp(arg, "TKIPCCMP128") == TRUE))
-    {
-        SET_CIPHER_TKIP(Cipher);
-        SET_CIPHER_CCMP128(Cipher);
-    }
-    else if ((rtstrcasecmp(arg, "WPA_AES_WPA2_TKIPAES") == TRUE) 
-                || (rtstrcasecmp(arg, "WPA_AES_WPA2_TKIP") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIP_WPA2_AES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIP_WPA2_TKIPAES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIPAES_WPA2_AES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIPAES_WPA2_TKIPAES") == TRUE)
-                || (rtstrcasecmp(arg, "WPA_TKIPAES_WPA2_TKIP") == TRUE))
-    {
-        SET_CIPHER_TKIP(Cipher);
-        SET_CIPHER_CCMP128(Cipher);
-    }
-#ifdef WAPI_SUPPORT
-    else if (rtstrcasecmp(arg, "SMS4") == TRUE)
-    {
-        SET_CIPHER_WPI_SMS4(Cipher);
-    }
-#endif /* WAPI_SUPPORT */
-    else
-    {
-        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s:: Not support (EncrypType=%s, len=%d)\n",
-                __FUNCTION__, arg, (int) strlen(arg)));
-    }
-
-    if (Cipher != 0x0)
-    {
-        pSecConfig->PairwiseCipher = Cipher;
-        CLEAR_GROUP_CIPHER(pSecConfig);
-    }
-
-    MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s::PairwiseCipher=0x%x\n",
-            __FUNCTION__, GET_PAIRWISE_CIPHER(pSecConfig)));
-}
-#endif
-#endif
 
 INT Set_SecAuthMode_Proc (
     IN RTMP_ADAPTER *pAd, 
@@ -351,19 +193,7 @@ INT Set_SecAuthMode_Proc (
 {
     POS_COOKIE pObj = (POS_COOKIE) pAd->OS_Cookie;
     struct _SECURITY_CONFIG *pSecConfig = pObj->pSecConfig;
-#ifdef WH_EZ_SETUP
-	if(IS_EZ_SETUP_ENABLED(&pAd->ApCfg.MBSSID[pObj->ioctl_if].wdev))
-	{
-		if (rtstrcasecmp(arg, "WPA2PSK") == TRUE)
-		{
-			 SetWdevAuthMode(pSecConfig, arg);
-			 return TRUE;
-		} else {
-			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Easy Setup is enabled on this interface AP, AuthMode Cannot be updated\n"));
-        	return FALSE;
-		}
-	}
-#endif		
+
     if (pSecConfig == NULL)
     {
         MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s:: pSecConfig == NULL, arg=%s\n",
@@ -383,17 +213,6 @@ INT Set_SecEncrypType_Proc (
     POS_COOKIE pObj = (POS_COOKIE) pAd->OS_Cookie;
     struct _SECURITY_CONFIG *pSecConfig = pObj->pSecConfig;
 
-#ifdef WH_EZ_SETUP
-	if(IS_EZ_SETUP_ENABLED(&pAd->ApCfg.MBSSID[pObj->ioctl_if].wdev))
-	{
-		if (rtstrcasecmp(arg, "AES") == TRUE){
-			SetWdevEncrypMode(pSecConfig, arg);
-		} else {
-			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Easy Setup is enabled on this interface AP, EncrypType Cannot be updated\n"));
-        	return FALSE;
-		}
-	}
-#endif
     if (pSecConfig == NULL)
     {
         MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s:: pSecConfig == NULL, arg=%s\n",
@@ -1454,13 +1273,6 @@ VOID Dot1xIoctlQueryRadiusConf (
 	pAcctBssInfo->acct_enable = pSecConfig->acct_enable;
 #endif /* RADIUS_ACCOUNTING_SUPPORT */
 
-#ifdef RADIUS_MAC_ACL_SUPPORT
-    /* Radius MAC Auth Config */
-    pConf->RadiusAclEnable[apidx_locate] = pSecConfig->RadiusMacAuthCache.Policy;
-	
-	/* Radius MAC Auth Cache Timeout in 1XDaemon */
-	pConf->AclCacheTimeout[apidx_locate] = pSecConfig->RadiusMacAuthCacheTimeout;
-#endif /* RADIUS_MAC_ACL_SUPPORT */
     }
 
     wrq->u.data.length = sizeof(DOT1X_CMM_CONF);

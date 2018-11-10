@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +26,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-
+#endif /* MTK_LICENSE */
 
 
 #ifndef __WF_RMAC_H__
@@ -164,10 +165,6 @@ enum ENUM_HW_TMR_VER {
 #define RMAC_PHY_DELAY				(WF_RMAC_BASE + 0x06c)
 #define RMAC_PHY_DELAY_BAND_1	(WF_RMAC_BASE + 0x016c)
 
-#ifdef AIR_MONITOR
-#define RMAC_SMESH		(WF_RMAC_BASE + 0x048)
-#define RMAC_SMESH_B1	(WF_RMAC_BASE + 0x148)
-#endif
 
 
 /*

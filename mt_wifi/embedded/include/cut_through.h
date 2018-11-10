@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +27,7 @@
     --------    ----------    ----------------------------------------------
 
 */
-
+#endif /* MTK_LICENSE */
 #include "rtmp_type.h"
 #include "rtmp_os.h"
 #include "mac/mac_mt/dmac/mt_dmac.h"

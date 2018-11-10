@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,6 +26,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
+#endif /* MTK_LICENSE */
 #include	"rt_config.h"
 
 #if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
@@ -222,10 +224,11 @@ NDIS_STATUS RTMPAllocAdapterBlock(VOID *handle, VOID **ppAdapter)
 
 	/*allocate wpf related memory*/
 	wpf_config_init(pAd);
-
+#ifndef INTELP6_SUPPORT
 #ifdef MULTI_INF_SUPPORT
 	Status = multi_inf_adapt_reg((VOID *) pAd);
 #endif /* MULTI_INF_SUPPORT */
+#endif
 
 	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("<-- RTMPAllocAdapterBlock, Status=%x\n", Status));
 
@@ -396,6 +399,10 @@ VOID NICInitAsicFromEEPROM(RTMP_ADAPTER *pAd)
 	RTMPCfgIntTxAlcFromEEPROM(pAd,NicConfig2);
 #endif /* RTMP_INTERNAL_TX_ALC */
 
+#ifdef CONFIG_ATE
+	RTMPCfgTssiGainFromEEPROM(pAd);
+#endif /* CONFIG_ATE */
+
 #ifndef MAC_INIT_OFFLOAD
 	AsicSetRxStream(pAd, pAd->Antenna.field.RxPath,0);
 #endif
@@ -523,6 +530,48 @@ extern RTMP_STRING *mac;
 	 NICReadEEPROMParameters(pAd, (RTMP_STRING *)mac);
 	 
 	 HcRadioInit(pAd,pAd->RfIcType,pAd->CommonCfg.dbdc_mode);
+
+#ifdef MT_MAC 
+#if defined(MT7603)||defined(MT7628)||defined(MT7636)||defined(MT7615)||defined(MT7637)||defined(MT7622)
+	/*Send EEprom parameter to FW*/
+	#ifdef CONFIG_ATE
+	if(!ATE_ON(pAd))
+	#endif
+
+#ifdef NR_PD_DETECTION
+        if (pAd->CommonCfg.LinkTestSupport)
+        {
+            /* Phy Init flag disable */
+            pAd->fgPhyInitDone = FALSE;
+    
+            /* Enable RF port TX1, TX2, TX3 */
+            if(pAd->CommonCfg.dbdc_mode)
+            {
+                MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_2G);
+                MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_5G);
+            }
+            else
+            {
+                MtCmdLinkTestTxCtrl(pAd, FALSE, pAd->ucCmwChannelBand);
+            }
+    
+            MTWF_LOG(DBG_CAT_CMW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("(Link Test) PHY Init ---> Enter 4T mode !!!\n"));
+        }
+#endif /* NR_PD_DETECTION */
+  
+		MtCmdEfusBufferModeSet(pAd,pAd->eeprom_type);
+
+#ifdef NR_PD_DETECTION
+    if (pAd->CommonCfg.LinkTestSupport)
+    {
+        /* Phy Init flag enable */
+        pAd->fgPhyInitDone = TRUE;
+    }
+#endif /* NR_PD_DETECTION */
+
+#endif /*#if defined(MT7603)||defined(MT7628)||defined(MT7636))||defined(MT7615)*/
+#endif /* MT_MAC */
+
 	 //+++Add by shiang for debug
 	 RfIC = HcGetRadioRfIC(pAd);
 	 MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
@@ -908,38 +957,11 @@ VOID UserCfgExit(RTMP_ADAPTER *pAd)
 	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
 	{
 #ifdef BAND_STEERING
-		if (pAd->ApCfg.BandSteering) {
+		if (pAd->ApCfg.BandSteering || 
+			pAd->ApCfg.BndStrgTable.bEnabled) {
 			BndStrg_Release(pAd);
 		}
 #endif /* BAND_STEERING */
-#ifdef RADIO_LINK_SELECTION
-		if (pAd->ApCfg.RadioLinkSelection &&
-			pAd->ApCfg.RlsTable.bInitialized)
-			Rls_Release(pAd);
-#endif /* RADIO_LINK_SELECTION */
-#ifdef RADIUS_MAC_ACL_SUPPORT
-		{
-			PLIST_HEADER pListHeader = NULL;
-			RT_LIST_ENTRY *pListEntry = NULL;
-			UCHAR apidx = 0;
-			
-			for (apidx=0; apidx < pAd->ApCfg.BssidNum; apidx++)
-			{
-				pListHeader = &pAd->ApCfg.MBSSID[apidx].wdev.SecConfig.RadiusMacAuthCache.cacheList;
-				if (pListHeader->size == 0)
-					continue;
-			
-				pListEntry = pListHeader->pHead;
-				while (pListEntry != NULL)
-				{
-                			removeHeadList(pListHeader);
-                			os_free_mem(pListEntry);
-                			pListEntry = pListHeader->pHead;
-				}
-				MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Clean [%d] Radius ACL Cache.\n", apidx));	
-			}
-		}
-#endif /* RADIUS_MAC_ACL_SUPPORT */
 	}
 #endif /* CONFIG_AP_SUPPORT */
 
@@ -982,35 +1004,29 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 	wpf_init(pAd);
 
 	pAd->IndicateMediaState = NdisMediaStateDisconnected;
+#ifdef CONFIG_AP_SUPPORT
+#ifdef CONFIG_INIT_RADIO_ONOFF
+	pAd->ApCfg.bRadioOn = TRUE;
+#endif /* CONFIG_INIT_RADIO_ONOFF */
+#endif /* CONFIG_AP_SUPPORT */
+#ifdef VENDOR_FEATURE6_SUPPORT
+	pAd->ApCfg.tx_retry_cnt = 0;
+	pAd->ApCfg.rts_retry_cnt = 0;
+#endif
 
 	/* part I. intialize common configuration */
 	pAd->CommonCfg.BasicRateBitmap = 0xF;
 	pAd->CommonCfg.BasicRateBitmapOld = 0xF;
 
-#ifdef TX_POWER_CONTROL_SUPPORT
-	os_zero_mem(pAd->CommonCfg.cPowerUpCckOfdm, sizeof(CHAR) * DBDC_BAND_NUM * POWER_UP_CATEGORY_RATE_NUM);
-	os_zero_mem(pAd->CommonCfg.cPowerUpHt20, sizeof(CHAR) * DBDC_BAND_NUM * POWER_UP_CATEGORY_RATE_NUM);
-	os_zero_mem(pAd->CommonCfg.cPowerUpHt40, sizeof(CHAR) * DBDC_BAND_NUM * POWER_UP_CATEGORY_RATE_NUM);
-	os_zero_mem(pAd->CommonCfg.cPowerUpVht20, sizeof(CHAR) * DBDC_BAND_NUM * POWER_UP_CATEGORY_RATE_NUM);
-	os_zero_mem(pAd->CommonCfg.cPowerUpVht40, sizeof(CHAR) * DBDC_BAND_NUM * POWER_UP_CATEGORY_RATE_NUM);
-	os_zero_mem(pAd->CommonCfg.cPowerUpVht80, sizeof(CHAR) * DBDC_BAND_NUM * POWER_UP_CATEGORY_RATE_NUM);
-	os_zero_mem(pAd->CommonCfg.cPowerUpVht160, sizeof(CHAR) * DBDC_BAND_NUM * POWER_UP_CATEGORY_RATE_NUM);
-#endif /* TX_POWER_CONTROL_SUPPORT */
-
-#ifdef LINK_TEST_SUPPORT
+#ifdef NR_PD_DETECTION
 
     /* state machine state flag */
-    pAd->ucLinkBwState           = TX_UNDEFINED_BW_STATE;
-    pAd->ucRxStreamState         = TX_UNDEFINED_RXSTREAM_STATE;
-    pAd->ucRxFilterstate         = TX_UNDEFINED_RXFILTER_STATE;
-	pAd->ucTxCsdState            = TX_UNDEFINED_CSD_STATE;
-	pAd->ucTxPwrBoostState       = TX_UNDEFINED_POWER_STATE;
-
-	/* BW Control Paramter */
-	pAd->fgBwInfoUpdate          = FALSE;
+    pAd->fgLinkBw20State         = FALSE;
+    pAd->fgLinkSingleRxState     = FALSE;
+    pAd->fgACRstate              = FALSE;
 
     /* Rx Control Parameter */
-    pAd->ucRxTestTimeoutCount    =     0;
+    pAd->ucTestTimeoutCount      =     0;
     pAd->u4TempRxCount           =     0;
     pAd->ucLinkRssiTh            =    20;
     pAd->ucRssiTh                =    10;
@@ -1024,8 +1040,9 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
     pAd->cChgTestPathTh          =   -30;
 
     /* ACR Control Parameter */
-    pAd->ucRxFilterConfidenceCnt =     0;
+    pAd->ucACRConfidenceCnt      =     0;
     pAd->ucACRConfidenceCntTh    =    10;
+    pAd->ucMaxInConfidenceCnt    =     0;
     pAd->ucMaxInConfidenceCntTh  =    10;
     pAd->cMaxInRssiTh            =   -40;
 
@@ -1038,35 +1055,36 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
     pAd->fgRssiBack4T            = FALSE;
     pAd->ucCableRssiTh           =    25;
     pAd->fgCmwLinkDone           = FALSE;
-	pAd->fgApclientLinkUp        = FALSE;
     pAd->ucLinkCount             =     0;
     pAd->ucLinkCountTh           =    30;
     pAd->fgLinkRSSICheck         = FALSE;
-    pAd->ucCmwChannelBand[BAND0] = CHANNEL_BAND_2G;
-	pAd->ucCmwChannelBand[BAND1] = CHANNEL_BAND_5G;
+    pAd->fgWifiInitDone          = FALSE;
+    pAd->fgChannelSwitchDone     = FALSE;
+    pAd->fgPhyInitDone           = FALSE;
+    pAd->ucCmwChannelBand        = CHANNEL_BAND_2G;
+    pAd->fgApclientLink          = FALSE;
 
-	/* Tx Power Control Paramter */
-	os_zero_mem(pAd->ucTxPwrUpTbl, sizeof(UINT8)*CMW_POWER_UP_RATE_NUM*4);
-	
+    /* Debug Log Parameter */
+    pAd->u4RoundCount            =     0;
+
     /* manual command control function enable/disable flag */
     pAd->fgTxSpurEn              =  TRUE;
-    pAd->fgNrFloatingEn          =  TRUE;
+    pAd->fgNrFloating            =  TRUE;
     pAd->fgACREn                 =  TRUE;
-#endif /* LINK_TEST_SUPPORT */
-
+#endif /* NR_PD_DETECTION */
 
     /* disable QA Effuse Write back status by default */
     pAd->fgQAEffuseWriteBack = FALSE;
-
-    /* Disable EPA flag */
-    pAd->fgEPA = FALSE;
 
 #ifdef RF_LOCKDOWN
     /* Apply Cal-Free Effuse value by default */
     pAd->fgCalFreeApply = TRUE;
     pAd->RFlockTempIdx  =    0;
     pAd->CalFreeTempIdx =    0;
+
+
 #endif /* RF_LOCKDOWN */
+
 
 
 
@@ -1226,7 +1244,6 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 	BATableInit(pAd, &pAd->BATable);
 
 	pAd->CommonCfg.bExtChannelSwitchAnnouncement = 1;
-	pAd->CommonCfg.bHTProtect = 1;
 	pAd->CommonCfg.bMIMOPSEnable = TRUE;
 	pAd->CommonCfg.bBADecline = FALSE;
 	pAd->CommonCfg.bDisableReordering = FALSE;
@@ -1357,11 +1374,6 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 			mbss->wdev.SecConfig.NasIdLen = 0;
 			mbss->wdev.SecConfig.IEEE8021X = FALSE;
 			mbss->wdev.SecConfig.PreAuth = FALSE;
-#ifdef RADIUS_MAC_ACL_SUPPORT
-			NdisZeroMemory(&mbss->wdev.SecConfig.RadiusMacAuthCache, sizeof(RT_802_11_RADIUS_ACL));
-			/* Default Timeout Value for 1xDaemon Radius ACL Cache */	
-			mbss->wdev.SecConfig.RadiusMacAuthCacheTimeout = 30;
-#endif /* RADIUS_MAC_ACL_SUPPORT */
 #endif /* DOT1X_SUPPORT */
 
 			/* VLAN related */
@@ -1457,19 +1469,16 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 #endif /* WSC_AP_SUPPORT */
 
 
+#ifdef DOT11U_INTERWORKING_IE_SUPPORT
+			pAd->ApCfg.MBSSID[j].bEnableInterworkingIe = FALSE;
+			pAd->ApCfg.MBSSID[j].InterWorkingIe.AccessNwType = 15;
+			pAd->ApCfg.MBSSID[j].InterWorkingIe.Internet = 0;
+			pAd->ApCfg.MBSSID[j].InterWorkingIe.ASRA = 0;
+			pAd->ApCfg.MBSSID[j].InterWorkingIe.ESR = 0;
+			pAd->ApCfg.MBSSID[j].InterWorkingIe.UESA = 0;
+#endif /* DOT11U_INTERWORKING_IE_SUPPORT */
 			for(i = 0; i < WLAN_MAX_NUM_OF_TIM; i++)
-			 mbss->wdev.bcn_buf.TimBitmaps[i] = 0;
-
-#if defined(MWDS) && defined(IGMP_SNOOP_SUPPORT)
-			mbss->IGMPPeriodicQuerySent = FALSE;
-			mbss->MLDPeriodicQuerySent = FALSE;
-			mbss->IgmpQueryHoldTick = 0;
-			mbss->IgmpQueryHoldTickChanged = FALSE;
-			mbss->MldQueryHoldTick = 0;
-			mbss->MldQueryHoldTickChanged = FALSE;
-			mbss->MldQryChkSum = 0x0;
-			NdisZeroMemory(&mbss->ipv6LinkLocalSrcAddr[0], 16);			
-#endif
+                mbss->wdev.bcn_buf.TimBitmaps[i] = 0;
 		}
 
 #ifdef DOT1X_SUPPORT
@@ -1540,12 +1549,6 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 		}
 #endif /* APCLI_SUPPORT */
 		pAd->ApCfg.EntryClientCount = 0;
-#if defined(MWDS) && defined(IGMP_SNOOP_SUPPORT)
-		pAd->bIGMPperiodicQuery = TRUE;
-		pAd->IgmpQuerySendTick = QUERY_SEND_PERIOD;
-		pAd->bMLDperiodicQuery = TRUE;
-		pAd->MldQuerySendTick = QUERY_SEND_PERIOD;
-#endif
 	}
 
 #ifdef DYNAMIC_VGA_SUPPORT
@@ -1574,6 +1577,11 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 	/* if not initial this value, the default value will be 0.*/
 	pAd->BbpTuning.R66CurrentValue = 0x38;
 
+#ifdef RTMP_BBP
+	pAd->Bbp94 = BBPR94_DEFAULT;
+#endif /* RTMP_BBP */
+	pAd->BbpForCCK = FALSE;
+
 	/* initialize MAC table and allocate spin lock*/
 	NdisZeroMemory(&pAd->MacTab, sizeof(MAC_TABLE));
 	InitializeQueueHeader(&pAd->MacTab.McastPsQueue);
@@ -1595,6 +1603,28 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 	FT_CfgInitial(pAd);
 #endif /* DOT11R_FT_SUPPORT */
 #endif /* CONFIG_AP_SUPPORT */
+
+
+	pAd->RxAnt.Pair1PrimaryRxAnt = 0;
+	pAd->RxAnt.Pair1SecondaryRxAnt = 1;
+
+		pAd->RxAnt.EvaluatePeriod = 0;
+		pAd->RxAnt.RcvPktNumWhenEvaluate = 0;
+
+#ifdef CONFIG_AP_SUPPORT
+		pAd->RxAnt.Pair1AvgRssiGroup1[0] = pAd->RxAnt.Pair1AvgRssiGroup1[1] = 0;
+		pAd->RxAnt.Pair1AvgRssiGroup2[0] = pAd->RxAnt.Pair1AvgRssiGroup2[1] = 0;
+#endif /* CONFIG_AP_SUPPORT */
+
+#ifdef ANT_DIVERSITY_SUPPORT
+	pAd->CommonCfg.RxAntDiversityCfg = ANT_DIVERSITY_DEFAULT;
+	pAd->CommonCfg.bSWRxAntDiversity = FALSE;
+	pAd->CommonCfg.bHWRxAntDiversity = FALSE;
+	pAd->CommonCfg.nAntEval_Threshold = -55; /* dBm */
+	pAd->CommonCfg.nAntMiss_Threshold = 7;	/* RX antenna mismatch threshold */
+	pAd->CommonCfg.nAntMiss_Cnt = 0;		/* RX antenna mismatch count */
+	pAd->CommonCfg.bAntEvalEnable = FALSE;
+#endif /* ANT_DIVERSITY_SUPPORT */
 
 #ifdef TXRX_SW_ANTDIV_SUPPORT
 		pAd->chipCap.bTxRxSwAntDiv = FALSE;
@@ -1652,15 +1682,12 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 	pAd->Dot11_H.CSCount = 0;
 	pAd->Dot11_H.CSPeriod = 10;
 
-	pAd->CommonCfg.ChGrpEn= 0;
-	NdisZeroMemory(pAd->CommonCfg.ChGrpChannelList,(MAX_NUM_OF_CHANNELS)*sizeof(UCHAR));
-	pAd->CommonCfg.ChGrpChannelNum= 0;
-	
 #ifdef MT_DFS_SUPPORT
 	DfsParamInit(pAd);//Jelly20150311
 #endif
 
 	pAd->CommonCfg.ThermalRecalMode = 1;
+
 
 #ifdef CONFIG_AP_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
@@ -1821,9 +1848,6 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
 
     pAd->vow_avg_num = 30; //20 packets
 
-	/* VoW bad node detection */
-	pAd->vow_badnode.bn_en = TRUE;
-
     /* group(BSS) configuration */
     for (i = 0; i < VOW_MAX_GROUP_NUM; i++)
     {
@@ -1909,11 +1933,6 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
     }
 
 #endif /* VOW_SUPPORT */
-#ifdef APCLI_SUPPORT
-#ifdef ROAMING_ENHANCE_SUPPORT
-    pAd->ApCfg.bRoamingEnhance= FALSE;
-#endif /* ROAMING_ENHANCE_SUPPORT */
-#endif /* APCLI_SUPPORT */
 #endif /* CONFIG_AP_SUPPORT */
 
 #ifdef RED_SUPPORT
@@ -1965,15 +1984,20 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
         pAd->g_mode_txop_wdev = NULL;
         pAd->G_MODE_INFRA_TXOP_RUNNING = FALSE;
 
+#ifdef CONFIG_AP_SUPPORT
+#ifdef VENDOR_FEATURE6_SUPPORT
+     pAd->ApCfg.BSSEnabled = 0; 
+#endif
+#endif
         pAd->MUMIMO_TxOP_Value = 0;
-
+#ifndef DISABLE_MULTICLIENT_DYNAMIC_TXOP
 	pAd->txop_ctl.multi_client_nums = 0;
 	pAd->txop_ctl.cur_wdev = NULL;
 	pAd->txop_ctl.multi_cli_txop_running = FALSE;
 	pAd->txop_ctl.multi_client_nums_2g = 0;
 	pAd->txop_ctl.cur_wdev_2g = NULL;
 	pAd->txop_ctl.multi_cli_txop_2g_running = FALSE;
-
+#endif	
 
 #ifdef PKT_BUDGET_CTRL_SUPPORT
 	pAd->pbc_bound[PBC_AC_BE] = PBC_WMM_UP_DEFAULT_BE;
@@ -1996,14 +2020,6 @@ VOID UserCfgInit(RTMP_ADAPTER *pAd)
     	{
     		pAd->CommonCfg.ucEDCCACtrl[i] = TRUE; //EDCCA default is ON.
 	}
-
-#ifdef AIR_MONITOR
-	pAd->MntRuleBitMap = DEFAULT_MNTR_RULE;
-#endif
-
-#ifdef STA_FORCE_ROAM_SUPPORT
-	load_froam_defaults(pAd);
-#endif
 
 	pAd->cn_cnt = 0xFF;
 
@@ -2291,7 +2307,7 @@ VOID RTMPInitTimer(
 */
 VOID RTMPSetTimer(RALINK_TIMER_STRUCT *pTimer, ULONG Value)
 {
-	if (!pTimer->timer_lock)
+	if(!pTimer->timer_lock)
 		return;
 
 	RTMP_SEM_LOCK(pTimer->timer_lock);
@@ -2353,7 +2369,7 @@ VOID RTMPModTimer(RALINK_TIMER_STRUCT *pTimer, ULONG Value)
 {
 	BOOLEAN	Cancel;
 
-	if (!pTimer->timer_lock)
+	if(!pTimer->timer_lock)
 		return;
 
 	RTMP_SEM_LOCK(pTimer->timer_lock);
@@ -2692,6 +2708,9 @@ extern UINT8  MC_CardUsed[MAX_NUM_OF_MULTIPLE_CARD];
 
     RTMP_SEM_EVENT_DESTORY(&(pAd->AutoRateLock));
 
+#ifdef RTMP_MAC_SDIO
+    RTMP_SEM_EVENT_DESTORY(&(pAd->PowerLock));
+#endif
 
 
 	/*
@@ -2762,9 +2781,101 @@ VOID RTMP_IO_WRITE32(
 
 VOID AntCfgInit(RTMP_ADAPTER *pAd)
 {
-	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(%d): Not support for HIF_MT yet!\n",
-						__FUNCTION__, __LINE__));
-	return;
+	// TODO: shiang-7603
+	if (pAd->chipCap.hif_type == HIF_MT) {
+		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s(%d): Not support for HIF_MT yet!\n",
+							__FUNCTION__, __LINE__));
+		return;
+	}
+
+
+
+#ifdef ANT_DIVERSITY_SUPPORT
+	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: RxAntDiversityCfg %d\n", __FUNCTION__, pAd->CommonCfg.RxAntDiversityCfg));
+
+	/* determine EEPORM Ant Diversity Bit */
+	if ((pAd->NicConfig2.word & 0x1800) == 0x800)
+	{
+		pAd->CommonCfg.bSWRxAntDiversity = TRUE;
+		if (pAd->chipCap.FlgIsHwAntennaDiversitySup)
+			pAd->CommonCfg.bHWRxAntDiversity = TRUE;
+	}
+#endif	/* ANT_DIVERSITY_SUPPORT */
+
+#ifdef TXRX_SW_ANTDIV_SUPPORT
+	/* EEPROM 0x34[15:12] = 0xF is invalid, 0x2~0x3 is TX/RX SW AntDiv */
+	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: bTxRxSwAntDiv %d\n", __FUNCTION__, pAd->chipCap.bTxRxSwAntDiv));
+	if (pAd->chipCap.bTxRxSwAntDiv)
+	{
+#ifdef ANT_DIVERSITY_SUPPORT
+		/* if PPAD and TXRX AntDiv are both on, only enable PPAD */
+		if ((pAd->CommonCfg.bHWRxAntDiversity) && (pAd->chipCap.FlgIsHwAntennaDiversitySup))
+			pAd->chipCap.bTxRxSwAntDiv = FALSE;		/* for GPIO switch */
+		else
+			pAd->CommonCfg.bSWRxAntDiversity = TRUE; /* for sw diversity capability */
+#endif /* ANT_DIVERSITY_SUPPORT */
+		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Antenna word %X/%d, AntDiv %d\n",
+					pAd->Antenna.word, pAd->Antenna.field.BoardType, pAd->NicConfig2.field.AntDiversity));
+	}
+#endif /* TXRX_SW_ANTDIV_SUPPORT */
+
+#ifdef ANT_DIVERSITY_SUPPORT
+	/* Because profile read before EEPROM, so profile can not determine what kind od diversity enable, */
+	/* so postpone to select SW/HW Diversity, HW has the higher priority */
+	if (pAd->CommonCfg.RxAntDiversityCfg == ANT_DIVERSITY_ENABLE)
+	{
+		if (pAd->CommonCfg.bHWRxAntDiversity)	/* EEPROM setting */
+			pAd->CommonCfg.RxAntDiversityCfg = ANT_HW_DIVERSITY_ENABLE;	/* profile, ioctl setting */
+		else if (pAd->CommonCfg.bSWRxAntDiversity)	/* EEPROM setting */
+			pAd->CommonCfg.RxAntDiversityCfg = ANT_SW_DIVERSITY_ENABLE;	/* profile, ioctl setting */
+		else
+			pAd->CommonCfg.RxAntDiversityCfg = ANT_DIVERSITY_DEFAULT; /* by EEPROM */
+	}
+
+
+	if (pAd->CommonCfg.RxAntDiversityCfg == ANT_DIVERSITY_DEFAULT)
+#endif
+	{
+		if (pAd->NicConfig2.field.AntOpt== 1) /* ant selected by efuse */
+		{
+			if (pAd->NicConfig2.field.AntDiversity == 0) /* main */
+			{
+				pAd->RxAnt.Pair1PrimaryRxAnt = 0;
+				pAd->RxAnt.Pair1SecondaryRxAnt = 1;
+			}
+			else/* aux */
+			{
+				pAd->RxAnt.Pair1PrimaryRxAnt = 1;
+				pAd->RxAnt.Pair1SecondaryRxAnt = 0;
+			}
+		}
+		else if (pAd->NicConfig2.field.AntDiversity == 0) /* Ant div off: default ant is main */
+		{
+			pAd->RxAnt.Pair1PrimaryRxAnt = 0;
+			pAd->RxAnt.Pair1SecondaryRxAnt = 1;
+		}
+		else if (pAd->NicConfig2.field.AntDiversity == 1)/* Ant div on */
+#ifdef ANT_DIVERSITY_SUPPORT
+			if (pAd->chipCap.FlgIsHwAntennaDiversitySup)
+				pAd->CommonCfg.RxAntDiversityCfg = ANT_HW_DIVERSITY_ENABLE;
+#else
+		{/* eeprom on, but sw ant div support is not enabled: default ant is main */
+			pAd->RxAnt.Pair1PrimaryRxAnt = 0;
+			pAd->RxAnt.Pair1SecondaryRxAnt = 1;
+		}
+#endif
+	}
+
+	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: primary/secondary ant %d/%d\n",
+					__FUNCTION__,
+					pAd->RxAnt.Pair1PrimaryRxAnt,
+					pAd->RxAnt.Pair1SecondaryRxAnt));
+#ifdef ANT_DIVERSITY_SUPPORT
+	MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s: RxAntDiv %d/%d\n",
+					__FUNCTION__,
+					pAd->CommonCfg.bSWRxAntDiversity,
+					pAd->CommonCfg.bHWRxAntDiversity));
+#endif
 }
 
 

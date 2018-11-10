@@ -1,3 +1,4 @@
+#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -13,7 +14,7 @@
 	Module Name:
 	mt_hif_pci.h
 */
-
+#endif /* MTK_LICENSE */
 #ifndef __MT_HIF_PCI_H__
 #define __MT_HIF_PCI_H__
 
@@ -878,7 +879,6 @@ typedef struct _RTMP_RX_RING {
 	UINT32 hw_cnt_addr;
 	UINT16 RxRingSize;
 	UINT16 RxBufferSize;
-	UINT16 sw_read_idx_inc;
 } RTMP_RX_RING;
 
 typedef struct _PCI_HIF_T
