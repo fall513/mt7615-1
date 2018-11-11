@@ -10,10 +10,10 @@ DRV_NAME = mt7628
 SRC_DIR = ../src/embedded
 obj-m += $(DRV_NAME).o
 else
-DRV_NAME = mt7615
+DRV_NAME = mt_wifi
 SRC_DIR = ../mt_wifi
 SRC_EMBEDDED_DIR = ../mt_wifi/embedded
-obj-$(CONFIG_MT_AP_SUPPORT) += $(DRV_NAME).o
+obj-m += $(DRV_NAME).o
 endif
 
 ########################################################
