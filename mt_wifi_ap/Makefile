@@ -10,12 +10,9 @@ DRV_NAME = mt7628
 SRC_DIR = ../src/embedded
 obj-m += $(DRV_NAME).o
 else
-EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt7615/include \
-				-Idrivers/net/wireless/ralink/mt7615/embedded/include \
-				-Idrivers/net/wireless/ralink/mt7615/ate/include
 DRV_NAME = mt7615
-SRC_DIR = ../mt7615
-SRC_EMBEDDED_DIR = ../mt7615/embedded
+SRC_DIR = ../mt_wifi
+SRC_EMBEDDED_DIR = ../mt_wifi/embedded
 obj-$(CONFIG_MT_AP_SUPPORT) += $(DRV_NAME).o
 endif
 
