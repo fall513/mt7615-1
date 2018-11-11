@@ -1,6 +1,6 @@
-EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt7615/mt_wifi/include \
-				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/embedded/include \
-				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/ate/include
+EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt_wifi/include \
+ 			    -Idrivers/net/wireless/ralink/mt_wifi/embedded/include \
+ 				-Idrivers/net/wireless/ralink/mt_wifi/ate/include
 
 ifeq ($(CONFIG_SUPPORT_OPENWRT),y)
 EXTRA_CFLAGS = -I$(src)/../src/include \
@@ -10,9 +10,6 @@ DRV_NAME = mt7628
 SRC_DIR = ../src/embedded
 obj-m += $(DRV_NAME).o
 else
-EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt7615/include \
-				-Idrivers/net/wireless/ralink/mt7615/embedded/include \
-				-Idrivers/net/wireless/ralink/mt7615/ate/include
 DRV_NAME = mt_wifi
 SRC_DIR = ../mt_wifi
 SRC_EMBEDDED_DIR = ../mt_wifi/embedded
