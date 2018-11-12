@@ -112,20 +112,20 @@ struct dev_type_name_map{
 #define THIRD_CHIP_ID	xdef_to_str(MT_THIRD_CARD)
 
 #else
-#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/RT2860/"
+#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/mt7615e.eeprom.bin"
 #ifdef INTELP6_SUPPORT
 #define FIRST_AP_PROFILE_PATH	"/tmp/mt76xx_24.dat"
 #else
-#define FIRST_AP_PROFILE_PATH		"/etc/Wireless/RT2860/RT2860.dat"
+#define FIRST_AP_PROFILE_PATH		"/etc_ro/Wireless/mt7615e.1.2G.dat"
 #endif
 #define FIRST_STA_PROFILE_PATH      "/etc/Wireless/RT2860/RT2860.dat"
 #define FIRST_CHIP_ID	xdef_to_str(MT_FIRST_CARD)
 
-#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/iNIC/"
+#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/mt7615e.eeprom.bin"
 #ifdef INTELP6_SUPPORT
 #define SECOND_AP_PROFILE_PATH	"/tmp/mt76xx_5.dat"
 #else
-#define SECOND_AP_PROFILE_PATH	"/etc/Wireless/iNIC/iNIC_ap.dat"
+#define SECOND_AP_PROFILE_PATH	"/etc_ro/Wireless/mt7615e.1.5G.dat"
 #endif
 #define SECOND_STA_PROFILE_PATH "/etc/Wireless/iNIC/iNIC_sta.dat"
 
