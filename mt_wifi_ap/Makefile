@@ -1,14 +1,45 @@
-EXTRA_CFLAGS = -Idrivers/net/wireless/mt_wifi/include \
-				-Idrivers/net/wireless/mt_wifi/embedded/include \
-				-Idrivers/net/wireless/mt_wifi/ate/include
+PWD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+
+EXTRA_CFLAGS = -I$(PWD)/../mt_wifi/include \
+		-I$(PWD)/../mt_wifi/embedded/include \
+		-I$(PWD)/../mt_wifi/ate/include
 
 ifeq ($(CONFIG_SUPPORT_OPENWRT),y)
-EXTRA_CFLAGS = -I$(src)/../src/include \
-				-I$(src)/../src/embedded/include \
-				-I$(src)/../src/ate/include
-DRV_NAME = mt7628
-SRC_DIR = ../src/embedded
+DRV_NAME = mt7615e
+SRC_DIR = ../mt_wifi/
+SRC_EMBEDDED_DIR = ../mt_wifi/embedded
 obj-m += $(DRV_NAME).o
+
+EXTRA_CFLAGS += -DCONFIG_RT_FIRST_CARD=$(CONFIG_RT_FIRST_CARD)
+EXTRA_CFLAGS += -DCONFIG_RT_SECOND_CARD=$(CONFIG_RT_SECOND_CARD)
+
+EXTRA_CFLAGS += -DCONFIG_RT_FIRST_IF_RF_OFFSET=$(CONFIG_RT_FIRST_IF_RF_OFFSET)
+EXTRA_CFLAGS += -DCONFIG_RT_SECOND_IF_RF_OFFSET=$(CONFIG_RT_SECOND_IF_RF_OFFSET)
+
+ifeq ($(CONFIG_FIRST_IF_EEPROM_PROM),y)
+EXTRA_CFLAGS += -DCONFIG_RT_FIRST_CARD_EEPROM="\"prom\""
+else
+ifeq ($(CONFIG_FIRST_IF_EEPROM_EFUSE),y)
+EXTRA_CFLAGS += -DCONFIG_RT_FIRST_CARD_EEPROM="\"efuse\""
+else
+ifeq ($(CONFIG_FIRST_IF_EEPROM_FLASH),y)
+EXTRA_CFLAGS += -DCONFIG_RT_FIRST_CARD_EEPROM="\"flash\""
+endif
+endif
+endif
+
+ifeq ($(CONFIG_SECOND_IF_EEPROM_PROM),y)
+EXTRA_CFLAGS += -DCONFIG_RT_SECOND_CARD_EEPROM="\"prom\""
+else
+ifeq ($(CONFIG_SECOND_IF_EEPROM_EFUSE),y)
+EXTRA_CFLAGS += -DCONFIG_RT_SECOND_CARD_EEPROM="\"efuse\""
+else
+ifeq ($(CONFIG_SECOND_IF_EEPROM_FLASH),y)
+EXTRA_CFLAGS += -DCONFIG_RT_SECOND_CARD_EEPROM="\"flash\""
+endif
+endif
+endif
+
 else
 EXTRA_CFLAGS = -Idrivers/net/wireless/mt_wifi/include \
 				-Idrivers/net/wireless/mt_wifi/embedded/include \

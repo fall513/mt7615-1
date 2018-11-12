@@ -170,7 +170,7 @@ static VOID HwCtrlCmdHandler(RTMP_ADAPTER *pAd)
 		if(cmdqelmt->NeedWait)
 		{
 			RTMP_OS_COMPLETE(&cmdqelmt->ack_done);
-		}
+		}else
 
 		if(!cmdqelmt->NeedWait || cmdqelmt->status == HWCTRL_STATUS_TIMEOUT)
 		{

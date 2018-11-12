@@ -43,8 +43,8 @@
 #endif /* MEM_ALLOC_INFO_SUPPORT */
 
 #if defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
-#include "../../../../../../net/nat/hw_nat/ra_nat.h"
-#include "../../../../../../net/nat/hw_nat/frame_engine.h"
+#include "../../../linux-kernel/net/nat/hw_nat/ra_nat.h"
+#include "../../../linux-kernel/net/nat/hw_nat/frame_engine.h"
 #endif
 
 /* TODO */

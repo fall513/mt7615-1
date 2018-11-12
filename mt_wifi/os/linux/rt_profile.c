@@ -34,8 +34,8 @@
 #endif
 
 #if defined (CONFIG_RA_HW_NAT)  || defined (CONFIG_RA_HW_NAT_MODULE)
-#include "../../../../../../net/nat/hw_nat/ra_nat.h"
-#include "../../../../../../net/nat/hw_nat/frame_engine.h"
+#include "../../../linux-kernel/net/nat/hw_nat/ra_nat.h"
+#include "../../../linux-kernel/net/nat/hw_nat/frame_engine.h"
 #endif
 
 #define BSSID_WCID_TO_REMOVE 1
@@ -87,13 +87,13 @@ struct dev_type_name_map{
 #define THIRD_CHIP_ID	xdef_to_str(CONFIG_RT_THIRD_CARD)
 
 #else
-#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/RT2860/"
-#define FIRST_AP_PROFILE_PATH		"/etc/Wireless/RT2860/RT2860.dat"
+#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/mt7615e.eeprom.bin"
+#define FIRST_AP_PROFILE_PATH		"/etc_ro/Wireless/mt7615e.1.2G.dat"
 #define FIRST_STA_PROFILE_PATH      "/etc/Wireless/RT2860/RT2860.dat"
 #define FIRST_CHIP_ID	xdef_to_str(CONFIG_RT_FIRST_CARD)
 
-#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/iNIC/"
-#define SECOND_AP_PROFILE_PATH	"/etc/Wireless/iNIC/iNIC_ap.dat"
+#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/mt7615e.eeprom.bin"
+#define SECOND_AP_PROFILE_PATH	"/etc_ro/Wireless/mt7615e.1.5G.dat"
 #define SECOND_STA_PROFILE_PATH "/etc/Wireless/iNIC/iNIC_sta.dat"
 
 #define SECOND_CHIP_ID	xdef_to_str(CONFIG_RT_SECOND_CARD)

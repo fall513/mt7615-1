@@ -81,7 +81,7 @@
 
 #ifdef MT7615
 #undef EEPROM_DEFAULT_FILE_PATH
-#define EEPROM_DEFAULT_FILE_PATH                     "/etc_ro/wlan/MT7615_EEPROM.bin"
+#define EEPROM_DEFAULT_FILE_PATH                     "/etc_ro/Wireless/mt7615e.eeprom.bin"
 #endif /* MT7615 */
 
 
