@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	mt_mac_sdio.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __MAC_SDIO_H__
 #define __MAC_SDIO_H__
 

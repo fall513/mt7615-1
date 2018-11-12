@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,7 @@
 	Module Name:
 	txs.c
 */
-#endif /* MTK_LICENSE */
+
 /**
  * @addtogroup tx_rx_path Wi-Fi
  * @{
@@ -526,16 +525,16 @@ INT32 TxSTypeCtlPerPktType(RTMP_ADAPTER *pAd, UINT8 PktType, UINT8 PktSubType, U
             /*indicate which widx might be used for send the kinw of type/subtype pkt.*/
 			if (WlanIdx < 64)
 			{
-				TxSCtl->TxSStatusPerWlanIdx[0] |= (1 << (UINT64)WlanIdx);
+				TxSCtl->TxSStatusPerWlanIdx[0] |= (1 << WlanIdx);
 			}
 			else if (WlanIdx >= 64 && WlanIdx < 128)
 			{
-				TxSCtl->TxSStatusPerWlanIdx[1] |= (1 << (UINT64)WlanIdx);
+				TxSCtl->TxSStatusPerWlanIdx[1] |= (1 << WlanIdx);
 			}
 			else
 			{
-				TxSCtl->TxSStatusPerWlanIdx[0] = -1;
-				TxSCtl->TxSStatusPerWlanIdx[1] = -1;
+				TxSCtl->TxSStatusPerWlanIdx[0] = 0xffffffffffffffff;
+				TxSCtl->TxSStatusPerWlanIdx[1] = 0xffffffffffffffff;
 			}
 
 			TxSType->DumpTxSReport = DumpTxSReport;
@@ -572,7 +571,6 @@ INT32 ParseTxSPacket(RTMP_ADAPTER *pAd, UINT32 Pid, UINT8 Format, CHAR *Data)
 
 	if (Format == TXS_FORMAT0)
 	{
-
 			if (TxSD0->ME || TxSD0->RE || TxSD0->LE || TxSD0->BE || TxSD0->TxOp || TxSD0->PSBit || TxSD0->BAFail)
 	{
 				DumpTxSFormat(pAd, Format, Data);

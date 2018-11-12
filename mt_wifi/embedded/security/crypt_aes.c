@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
     Module Name:
     AES
@@ -34,8 +33,6 @@
 ***************************************************************************/
 
 #include "security/crypt_aes.h"
-#include "rt_config.h"
-
 
 
 /* The value given by [x^(i-1),{00},{00},{00}], with x^(i-1) being powers of x in the field GF(2^8). */

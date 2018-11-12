@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifdef RTMP_FLASH_SUPPORT
 
 #include	"rt_config.h"
@@ -161,7 +160,6 @@ static NDIS_STATUS rtmp_ee_flash_reset(RTMP_ADAPTER *pAd, UCHAR *start)
 	RTMP_OS_FS_INFO osFsInfo;
 	RTMP_OS_FD srcf;
 	INT retval;
-	PEEPROM_CONTROL pE2pCtrl = &pAd->E2pCtrl;
 
 #ifdef RT_SOC_SUPPORT
 #ifdef MULTIPLE_CARD_SUPPORT
@@ -195,8 +193,6 @@ static NDIS_STATUS rtmp_ee_flash_reset(RTMP_ADAPTER *pAd, UCHAR *start)
 		}
 	}
 
-	pE2pCtrl->e2pSource = E2P_SRC_FROM_BIN;
-
 	RtmpOSFSInfoChange(&osFsInfo, TRUE);
 
 	if (src && *src)
@@ -212,13 +208,12 @@ static NDIS_STATUS rtmp_ee_flash_reset(RTMP_ADAPTER *pAd, UCHAR *start)
 					pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE > MAX_EEPROM_BUFFER_SIZE?MAX_EEPROM_BUFFER_SIZE:pAd->chipCap.EEPROM_DEFAULT_BIN_SIZE);
 				MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
 								("Load EEPROM Buffer from default BIN.\n"));
-				pE2pCtrl->BinSource = "Default bin";
 				return NDIS_STATUS_SUCCESS;
 			}
 			else
 			{
-				return NDIS_STATUS_FAILURE;
-			}
+			return NDIS_STATUS_FAILURE;
+		}
 		}
 		else
 		{
@@ -235,7 +230,6 @@ static NDIS_STATUS rtmp_ee_flash_reset(RTMP_ADAPTER *pAd, UCHAR *start)
 			{
 				MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
 								("--> rtmp_ee_flash_reset copy %s to eeprom buffer\n", src));
-				pE2pCtrl->BinSource = src;
 			}
 
 			retval = RtmpOSFileClose(srcf);
@@ -417,8 +411,6 @@ NDIS_STATUS rtmp_nv_init(RTMP_ADAPTER *pAd)
 #ifdef MULTIPLE_CARD_SUPPORT
 	UCHAR *eepromBuf;
 #endif /* MULTIPLE_CARD_SUPPORT */
-	PEEPROM_CONTROL pE2pCtrl = &pAd->E2pCtrl;
-
 
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("--> rtmp_nv_init\n"));
 
@@ -449,25 +441,18 @@ NDIS_STATUS rtmp_nv_init(RTMP_ADAPTER *pAd)
 	RtmpFlashRead(pAd->eebuf, pAd->E2P_OFFSET_IN_FLASH[pAd->MC_RowID], EEPROM_SIZE);
 #else
 	RtmpFlashRead(pAd->eebuf, pAd->flash_offset, EEPROM_SIZE);
-#ifdef PRE_CAL_TRX_SET1_SUPPORT	
+#ifdef CAL_TO_FLASH_SUPPORT	
 	{
 		UINT8 ret=0;
-		ret += os_alloc_mem(pAd, &pAd->CalDCOCImage, CAL_IMAGE_SIZE);
-		ret += os_alloc_mem(pAd, &pAd->CalDPDAPart1Image, CAL_IMAGE_SIZE);
-		ret += os_alloc_mem(pAd, &pAd->CalDPDAPart2GImage, CAL_IMAGE_SIZE);
+		ret += os_alloc_mem(pAd, &pAd->CalDCOCToFlashImage, CAL_TO_FLASH_IMAGE_SIZE);
+		ret += os_alloc_mem(pAd, &pAd->CalDPDAPart1ToFlashImage, CAL_TO_FLASH_IMAGE_SIZE);
+		ret += os_alloc_mem(pAd, &pAd->CalDPDAPart2GToFlashImage, CAL_TO_FLASH_IMAGE_SIZE);
 	}
-	RtmpFlashRead(pAd->CalDCOCImage, pAd->flash_offset + DCOC_FLASH_OFFSET, CAL_IMAGE_SIZE);
-	pAd->bDCOCReloaded = TRUE;
-	RtmpFlashRead(pAd->CalDPDAPart1Image, pAd->flash_offset + DPDPART1_OFFSET, CAL_IMAGE_SIZE);
-	RtmpFlashRead(pAd->CalDPDAPart2GImage, pAd->flash_offset + DPDPART2_OFFSET, CAL_IMAGE_SIZE);
-	pAd->bDPDReloaded = TRUE;
-#endif /* PRE_CAL_TRX_SET1_SUPPORT */
-
-
+	RtmpFlashRead(pAd->CalDCOCToFlashImage, pAd->flash_offset + DCOC_TO_FLASH_OFFSET, CAL_TO_FLASH_IMAGE_SIZE);
+	RtmpFlashRead(pAd->CalDPDAPart1ToFlashImage, pAd->flash_offset + DPDPART1_TO_FLASH_OFFSET, CAL_TO_FLASH_IMAGE_SIZE);
+	RtmpFlashRead(pAd->CalDPDAPart2GToFlashImage, pAd->flash_offset + DPDPART2_TO_FLASH_OFFSET, CAL_TO_FLASH_IMAGE_SIZE);
+#endif /* CAL_TO_FLASH_SUPPORT */
 #endif /* MULTIPLE_CARD_SUPPORT */
-
-	pE2pCtrl->e2pCurMode = E2P_FLASH_MODE;
-	pE2pCtrl->e2pSource = E2P_SRC_FROM_FLASH;
 
 	return rtmp_ee_flash_init(pAd, pAd->eebuf);
 }

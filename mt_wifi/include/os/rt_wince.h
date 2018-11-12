@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -28,7 +27,6 @@
     Rory Chen   04-14-2005    created
 
 */
-#endif /* MTK_LICENSE */
 #ifndef __WINCE_H__
 #define __WINCE_H__
 

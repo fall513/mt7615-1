@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
     Abstract:
@@ -133,11 +132,12 @@ INT MBSS_VirtualIF_Open(PNET_DEV pDev)
 {
 	VOID *pAd;
 
+
 	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: ===> MBSSVirtualIF_open\n", RTMP_OS_NETDEV_GET_DEVNAME(pDev)));
 
 	pAd = RTMP_OS_NETDEV_GET_PRIV(pDev);
 
-	if (VIRTUAL_IF_UP(pAd, pDev) != 0)
+	if (VIRTUAL_IF_UP(pAd) != 0)
 		return -1;
 
     RTMP_AP_IoctlHandle(pAd, NULL, CMD_RTPRIV_IOCTL_MBSS_OPEN, 0, pDev, 0);
@@ -179,8 +179,8 @@ INT MBSS_VirtualIF_Close(PNET_DEV pDev)
 	RTMP_OS_NETDEV_STOP_QUEUE(pDev);
 
 	RTMP_AP_IoctlHandle(pAd, NULL, CMD_RTPRIV_IOCTL_MBSS_CLOSE, 0, pDev, 0);
-        
-	VIRTUAL_IF_DOWN(pAd, pDev);
+
+	VIRTUAL_IF_DOWN(pAd);
 
     RT_MOD_HNAT_DEREG(pDev);
 	RT_MOD_DEC_USE_COUNT();

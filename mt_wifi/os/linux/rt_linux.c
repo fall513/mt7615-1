@@ -43,10 +43,9 @@
 #endif /* MEM_ALLOC_INFO_SUPPORT */
 
 #if defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
-#include "../../../../../../../net/nat/hw_nat/ra_nat.h"
-#include "../../../../../../../net/nat/hw_nat/frame_engine.h"
+#include "../../../../../../net/nat/hw_nat/ra_nat.h"
+#include "../../../../../../net/nat/hw_nat/frame_engine.h"
 #endif
-
 
 /* TODO */
 #undef RT_CONFIG_IF_OPMODE_ON_AP
@@ -63,11 +62,6 @@
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3)
-
-#include "rtmp.h"
-
-#define FOE_MAGIC_WLAN 76
-
 static inline void *netdev_priv(struct net_device *dev)
 {
 	return dev->priv;
@@ -540,7 +534,11 @@ PNDIS_PACKET ClonePacket(PNET_DEV ndev, PNDIS_PACKET pkt, UCHAR *buf, ULONG sz)
 		pClonedPkt->dev = pRxPkt->dev;
 		pClonedPkt->data = buf;
 		pClonedPkt->len = sz;
-		SET_OS_PKT_DATATAIL(pClonedPkt, pClonedPkt->len);
+#ifdef NET_SKBUFF_DATA_USES_OFFSET
+		pClonedPkt->tail = (pClonedPkt->data-pClonedPkt->head)+pClonedPkt->len;
+#else
+		pClonedPkt->tail = pClonedPkt->data + pClonedPkt->len;
+#endif
 	}
 
 	return pClonedPkt;
@@ -594,16 +592,26 @@ PNDIS_PACKET duplicate_pkt_vlan(
 
 		skb_reserve(skb, 2);
 
+#ifdef NET_SKBUFF_DATA_USES_OFFSET
+		VLAN_Size = VLAN_8023_Header_Copy(VLAN_VID, VLAN_Priority,
+						  pHeader802_3, HdrLen,
+						  skb->data+skb->tail,
+						  TPID);
+
+		skb_put(skb, HdrLen + VLAN_Size);
+		os_move_mem(skb->data+skb->tail, pData, DataSize);
+#else
 		/* copy header (maybe with VLAN tag) */
 		VLAN_Size = VLAN_8023_Header_Copy(VLAN_VID, VLAN_Priority,
 						  pHeader802_3, HdrLen,
-						  GET_OS_PKT_DATATAIL(skb),
+						  skb->tail,
 						  TPID);
 
 		skb_put(skb, HdrLen + VLAN_Size);
 
 		/* copy data body */
-		os_move_mem(GET_OS_PKT_DATATAIL(skb), pData, DataSize);
+		os_move_mem(skb->tail, pData, DataSize);
+#endif
 
 		skb_put(skb, DataSize);
 		skb->dev = pNetDev;
@@ -746,7 +754,7 @@ VOID RtmpOsPktInit(
 	SET_OS_PKT_NETDEV(pRxPkt, pNetDev);
 	SET_OS_PKT_DATAPTR(pRxPkt, pData);
 	SET_OS_PKT_LEN(pRxPkt, DataSize);
-	SET_OS_PKT_DATATAIL(pRxPkt, DataSize);
+	SET_OS_PKT_DATATAIL(pRxPkt, pData, DataSize);
 }
 
 
@@ -770,7 +778,11 @@ void wlan_802_11_to_802_3_packet(
 	pOSPkt->dev = pNetDev;
 	pOSPkt->data = pData;
 	pOSPkt->len = DataSize;
-	SET_OS_PKT_DATATAIL(pOSPkt, pOSPkt->len);
+#ifdef NET_SKBUFF_DATA_USES_OFFSET
+	pOSPkt->tail = (pOSPkt->data - pOSPkt->head) + pOSPkt->len;
+#else
+	pOSPkt->tail = pOSPkt->data + pOSPkt->len;
+#endif
 
 	/* copy 802.3 header */
 #ifdef CONFIG_AP_SUPPORT
@@ -1471,45 +1483,6 @@ Return Value:
 Note:
 ========================================================================
 */
-
-unsigned long RtmpOSGetNetDevState(VOID *pDev)
-{
-	return (((PNET_DEV) pDev)->state);
-}
-
-
-
-unsigned int RtmpOSGetNetDevFlag(VOID *pDev)
-{
-	return (((PNET_DEV)pDev)->flags);
-}
-
-
-unsigned int RtmpOSGetNetDevQNum(VOID *pDev)
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
-	return (((PNET_DEV)pDev)->num_tx_queues);
-#else
-	return 0;
-#endif
-}
-
-
-unsigned long RtmpOSGetNetDevQState(VOID *pDev, unsigned int q_idx)
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
-	struct netdev_queue *que = netdev_get_tx_queue((PNET_DEV)pDev, q_idx);
-
-	if (que)
-		return (que->state);
-	else
-		return (~0x0);
-#else
-	return (~0x0);
-#endif
-}
-
-
 char *RtmpOsGetNetDevName(VOID *pDev)
 {
 	return ((PNET_DEV) pDev)->name;
@@ -1577,7 +1550,7 @@ static int RtmpOSNetDevRequestName(
 
 		slotNameLen = strlen(suffixName);
 		ASSERT(((slotNameLen + prefixLen) < IFNAMSIZ));
-		strncat(desiredName, suffixName, strlen(suffixName));
+		strcat(desiredName, suffixName);
 
 		existNetDev = RtmpOSNetDevGetByName(dev, &desiredName[0]);
 		if (existNetDev == NULL)
@@ -1590,7 +1563,7 @@ static int RtmpOSNetDevRequestName(
 #ifdef HOSTAPD_SUPPORT
 		*pIoctlIF = ifNameIdx;
 #endif /*HOSTAPD_SUPPORT */
-		strncpy(&dev->name[0], &desiredName[0], sizeof(dev->name) - 1);
+		strcpy(&dev->name[0], &desiredName[0]);
 		Status = NDIS_STATUS_SUCCESS;
 	} else {
 		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -1749,7 +1722,7 @@ static void RALINK_ET_DrvInfoGet(
 	struct net_device *pDev,
 	struct ethtool_drvinfo *pInfo)
 {
-	strncpy(pInfo->driver, "RALINK WLAN", sizeof(pInfo->driver) - 1);
+	strcpy(pInfo->driver, "RALINK WLAN");
 
 
 	sprintf(pInfo->bus_info, "CSR 0x%lx", pDev->base_addr);
@@ -2064,7 +2037,7 @@ VOID RtmpDrvAllMacPrint(
 				printk("%s", msg);
 				macAddr += AddrStep;
 			}
-			snprintf(msg, 1024, "\nDump all MAC values to %s\n", fileName);
+			sprintf(msg, "\nDump all MAC values to %s\n", fileName);
 		}
 		filp_close(file_w, NULL);
 	}
@@ -2115,7 +2088,8 @@ VOID RtmpDrvAllE2PPrint(
 				eepAddr += AddrStep;
 				pMacContent += (AddrStep >> 1);
 			}
-			snprintf(msg, 1024, "\nDump all EEPROM values to %s\n", fileName);
+			sprintf(msg, "\nDump all EEPROM values to %s\n",
+				fileName);
 		}
 		filp_close(file_w, NULL);
 	}
@@ -2484,7 +2458,7 @@ VOID RtmpOsPktNatMagicTag(IN PNDIS_PACKET pNetPkt)
 #if !defined(CONFIG_RA_NAT_NONE)
 #if defined (CONFIG_RA_HW_NAT)  || defined (CONFIG_RA_HW_NAT_MODULE)
 	struct sk_buff *pRxPkt = RTPKT_TO_OSPKT(pNetPkt);
-	FOE_MAGIC_TAG(pRxPkt) = 76;//FOE_MAGIC_WLAN; *******************************
+	FOE_MAGIC_TAG(pRxPkt) = FOE_MAGIC_WLAN;
 #endif /* CONFIG_RA_HW_NAT || CONFIG_RA_HW_NAT_MODULE */
 #endif /* CONFIG_RA_NAT_NONE */
 }
@@ -2555,17 +2529,17 @@ void OS_SPIN_UNLOCK_IRQ(NDIS_SPIN_LOCK *lock)
 	spin_unlock_irq((spinlock_t *)(lock));
 }
 
-int OS_TEST_BIT(int bit, ULONG *flags)
+int OS_TEST_BIT(int bit, unsigned long *flags)
 {
 	return test_bit(bit, flags);
 }
 
-void OS_SET_BIT(int bit, ULONG *flags)
+void OS_SET_BIT(int bit, unsigned long *flags)
 {
 	set_bit(bit, flags);
 }
 
-void OS_CLEAR_BIT(int bit, ULONG *flags)
+void OS_CLEAR_BIT(int bit, unsigned long *flags)
 {
 	clear_bit(bit, flags);
 }

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __MAC_H__
 #define __MAC_H__
@@ -191,7 +190,6 @@ typedef struct _MAC_TX_INFO{
     BOOLEAN IsTmr;
     BOOLEAN IsOffloadPkt;//host gen pkt template, make pkt enqued by fw.
 #endif /* MT_MAC */
-	BOOLEAN IsAutoRate;
 }MAC_TX_INFO;
 
 enum {
@@ -207,6 +205,10 @@ enum {
 	PID_NULL_FRAME_PWR_ACTIVE,
 	PID_NULL_FRAME_PWR_SAVE,
 	PID_BEACON = 0x20,
+#ifdef FTM_SUPPORT
+	PID_FTM_MIN = 0x21,
+	PID_FTM_MAX = 0x40,
+#endif /* FTM_SUPPORT */
 	PID_MAX = 0x40,
 };
 
@@ -221,9 +223,6 @@ VOID dump_rxinfo(struct _RTMP_ADAPTER *pAd, RXINFO_STRUC *pRxInfo);
 
 VOID dump_tmac_info(struct _RTMP_ADAPTER *pAd, UCHAR *tmac_info);
 VOID dump_rmac_info(struct _RTMP_ADAPTER *pAd, UCHAR *rmac_info);
-
-VOID dump_rmac_info_for_ICVERR(struct _RTMP_ADAPTER *pAd, UCHAR *rmac_info);
-
 
 #ifdef MT_MAC
 VOID DumpTxSFormat(struct _RTMP_ADAPTER *pAd, UINT8 Format, CHAR *Data);

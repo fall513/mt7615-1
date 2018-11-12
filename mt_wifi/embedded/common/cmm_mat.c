@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -31,7 +30,7 @@
     --------------  ----------      ----------------------------------------------
     Shiang  		02-26-2007      Init version
 */
-#endif /* MTK_LICENSE */
+
 #ifdef MAT_SUPPORT
 
 #include "rt_config.h"

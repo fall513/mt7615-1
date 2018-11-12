@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -24,7 +23,7 @@
     --------    ----------    ----------------------------------------------
     mtk05208    20131102      Start coding for TxV, RxV, CR_PHYMUX_11
 */
-#endif /* MTK_LICENSE */
+
 
 /* Ref. wf_phycr_back.doc */
 #ifndef __WF_PHY_BACK_H__

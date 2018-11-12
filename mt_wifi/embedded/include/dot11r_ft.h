@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -25,7 +24,7 @@
     ---------  ----------    ----------------------------------------------
     Fonchi Wu  12-02-2008    created for 11r soft-AP
  */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __DOT11R_FT_H
 #define __DOT11R_FT_H
@@ -33,7 +32,7 @@
 #include "rtmp_type.h"
 
 
-#if defined(DOT11R_FT_SUPPORT) || defined(DOT11K_RRM_SUPPORT)
+#ifdef DOT11R_FT_SUPPORT
 /*
 	Fast BSS transition auth algorithm in 802.11rD9.0 specification.
 	All other algorithms are defined in  rtmp_def.h
@@ -41,7 +40,7 @@
 #define FT_MDID_LEN					2
 #define FT_ROKH_ID_LEN				48
 #define FT_R1KH_ID_LEN				6
-#endif /* DOT11R_FT_SUPPORT || DOT11K_RRM_SUPPORT */
+#endif /* DOT11R_FT_SUPPORT */
 
 #if defined(DOT11R_FT_SUPPORT) || defined(DOT11Z_TDLS_SUPPORT)
 #define FT_MIC_LEN					16
@@ -64,7 +63,7 @@
 #define FT_STATUS_CODE_INVALID_FTIE			55
 #endif /* DOT11R_FT_SUPPORT */
 
-#if defined(DOT11R_FT_SUPPORT) || defined(DOT11Z_TDLS_SUPPORT)|| defined(DOT11K_RRM_SUPPORT)
+#if defined(DOT11R_FT_SUPPORT) || defined(DOT11Z_TDLS_SUPPORT)
 /* Information element ID defined in 802.11rD9.0 specification. */
 #define IE_FT_MDIE				54
 #define IE_FT_FTIE				55
@@ -81,7 +80,7 @@
 #define FT_AKM_SUITE_PSK	4
 #endif
 
-#if defined(DOT11R_FT_SUPPORT) || defined(DOT11K_RRM_SUPPORT)
+#ifdef DOT11R_FT_SUPPORT
 /*
 ** MDIE: Mobile Domain IE.
 */
@@ -107,7 +106,7 @@ typedef struct GNU_PACKED _FT_MDIE
 	UINT8 MdId[FT_MDID_LEN];
 	FT_CAP_AND_POLICY FtCapPlc;
 } FT_MDIE, *PFT_MDIE;
-#endif /* DOT11R_FT_SUPPORT || DOT11K_RRM_SUPPORT */
+#endif /* DOT11R_FT_SUPPORT */
 
 #if defined(DOT11R_FT_SUPPORT) || defined(DOT11Z_TDLS_SUPPORT)
 typedef union GNU_PACKED _FT_MIC_CTR_FIELD
@@ -221,7 +220,7 @@ typedef struct _FT_OVER_DS_ACTION_REQ_CONFIRM {
 	/* must be 1 or 3 */
 	UCHAR	Action;
 
-	/* the STAÂ¡Â¦s MAC address */
+	/* the STA¡¦s MAC address */
 	UCHAR	STA_Addr[ETH_ALEN];
 
 	/* the BSSID value of the target AP */
@@ -242,7 +241,7 @@ typedef struct _FT_OVER_DS_ACTION_RSP_ACK {
 	/* must be 2 or 4 */
 	UCHAR	Action;
 
-	/* the STAÂ¡Â¦s MAC address */
+	/* the STA¡¦s MAC address */
 	UCHAR	STA_Addr[ETH_ALEN];
 
 	/* the BSSID value of the target AP */

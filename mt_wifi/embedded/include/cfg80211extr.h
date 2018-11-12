@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -44,7 +43,7 @@
 	CFG80211_BeaconCountryRegionParse((VOID *)__pAd, __pVIE, __LenVIE);
 
 #define RT_CFG80211_BEACON_TIM_UPDATE(__pAd)                                \
-	CFG80211_UpdateBeacon((VOID *)__pAd, NULL, 0, NULL, 0, FALSE, 0);        
+        CFG80211_UpdateBeacon((VOID *)__pAd, NULL, 0, NULL, 0, FALSE);
 
 #define RT_CFG80211_CRDA_REG_HINT(__pAd, __pCountryIe, __CountryIeLen)		\
 	CFG80211_RegHint((VOID *)__pAd, __pCountryIe, __CountryIeLen);
@@ -71,8 +70,8 @@
 #define RT_CFG80211_LOST_GO_INFORM(__pAd) 									\
 	CFG80211_LostP2pGoInform((VOID *)__pAd);	
 #endif /*RT_CFG80211_P2P_CONCURRENT_DEVICE*/
-#define RT_CFG80211_REINIT(__pAd, __wdev)											\
-	CFG80211_SupBandReInit((VOID *)__pAd, (VOID *)__wdev);	
+#define RT_CFG80211_REINIT(__pAd)											\
+	CFG80211_SupBandReInit((VOID *)__pAd);	
 
 #define RT_CFG80211_RFKILL_STATUS_UPDATE(_pAd, _active) 					\
 	CFG80211_RFKillStatusUpdate(_pAd, _active);
@@ -90,37 +89,37 @@
 
 
 #ifdef SINGLE_SKU
-#define CFG80211_BANDINFO_FILL(__pAd, __wdev, __pBandInfo)							\
+#define CFG80211_BANDINFO_FILL(__pAd, __pBandInfo)							\
 {																			\
 	(__pBandInfo)->RFICType = HcGetRadioRfIC(__pAd);								\
 	(__pBandInfo)->MpduDensity = __pAd->CommonCfg.BACapability.field.MpduDensity;\
-	(__pBandInfo)->TxStream = (__wdev == NULL) ? 1 : wlan_config_get_tx_stream(__wdev);			\
-	(__pBandInfo)->RxStream = (__wdev == NULL) ? 1 : wlan_config_get_rx_stream(__wdev);			\
+	(__pBandInfo)->TxStream = __pAd->CommonCfg.TxStream;					\
+	(__pBandInfo)->RxStream = __pAd->CommonCfg.RxStream;					\
 	(__pBandInfo)->MaxTxPwr = __pAd->CommonCfg.DefineMaxTxPwr;				\
 	if (WMODE_EQUAL(HcGetRadioPhyMode(__pAd), WMODE_B))				\
 		(__pBandInfo)->FlgIsBMode = TRUE;									\
 	else																	\
 		(__pBandInfo)->FlgIsBMode = FALSE;									\
 	(__pBandInfo)->MaxBssTable = MAX_LEN_OF_BSS_TABLE;						\
-	(__pBandInfo)->RtsThreshold = (__wdev == NULL) ? DEFAULT_RTS_LEN_THLD : wlan_operate_get_rts_len_thld(__wdev);\
-	(__pBandInfo)->FragmentThreshold = (__wdev == NULL) ? DEFAULT_FRAG_THLD : wlan_operate_get_frag_thld(__wdev);\
+	(__pBandInfo)->RtsThreshold = __pAd->CommonCfg.RtsThreshold;				\
+	(__pBandInfo)->FragmentThreshold = __pAd->CommonCfg.FragmentThreshold;	\
 	(__pBandInfo)->RetryMaxCnt = 0;											\
 }
 #else
-#define CFG80211_BANDINFO_FILL(__pAd, __wdev, __pBandInfo)							\
+#define CFG80211_BANDINFO_FILL(__pAd, __pBandInfo)							\
 {																			\
 	(__pBandInfo)->RFICType =HcGetRadioRfIC(__pAd);								\
 	(__pBandInfo)->MpduDensity = __pAd->CommonCfg.BACapability.field.MpduDensity;\
-	(__pBandInfo)->TxStream = (__wdev == NULL) ? 1 : wlan_config_get_tx_stream(__wdev);			\
-	(__pBandInfo)->RxStream = (__wdev == NULL) ? 1 : wlan_config_get_rx_stream(__wdev);			\
+	(__pBandInfo)->TxStream = __pAd->CommonCfg.TxStream;					\
+	(__pBandInfo)->RxStream = __pAd->CommonCfg.RxStream;					\
 	(__pBandInfo)->MaxTxPwr = 0;											\
 	if (WMODE_EQUAL(HcGetRadioPhyMode(__pAd), WMODE_B))				\
 		(__pBandInfo)->FlgIsBMode = TRUE;									\
 	else																	\
 		(__pBandInfo)->FlgIsBMode = FALSE;									\
 	(__pBandInfo)->MaxBssTable = MAX_LEN_OF_BSS_TABLE;						\
-	(__pBandInfo)->RtsThreshold = (__wdev == NULL) ? DEFAULT_RTS_LEN_THLD : wlan_operate_get_rts_len_thld(__wdev);\
-	(__pBandInfo)->FragmentThreshold = (__wdev == NULL) ? DEFAULT_FRAG_THLD : wlan_operate_get_frag_thld(__wdev);\
+	(__pBandInfo)->RtsThreshold = __pAd->CommonCfg.RtsThreshold;				\
+	(__pBandInfo)->FragmentThreshold = __pAd->CommonCfg.FragmentThreshold;	\
 	(__pBandInfo)->RetryMaxCnt = 0;											\
 }
 #endif /* SINGLE_SKU */
@@ -129,10 +128,6 @@
 #define P2P_NOA_DISABLED 0x00
 #define P2P_NOA_TX_ON    0x01
 #define P2P_NOA_RX_ON    0x02
-
-#define WLAN_AKM_SUITE_8021X		0x000FAC01
-#define WDEV_NOT_FOUND				-1
-
 
 /* Scan Releated */
 
@@ -196,13 +191,9 @@ VOID CFG80211_UpdateBeacon(
    UINT32                          beacon_head_len,
    UCHAR                          *beacon_tail_buf,
    UINT32                          beacon_tail_len,
-   BOOLEAN 						   isAllUpdate,
-   UINT32						   apidx);
-   
+   BOOLEAN                         isAllUpdate);
 
-INT CFG80211_ApStaDelSendEvent(PRTMP_ADAPTER pAd, const PUCHAR mac_addr,IN PNET_DEV pNetDevIn);
-INT CFG80211_FindMbssApIdxByNetDevice(RTMP_ADAPTER *pAd, PNET_DEV pNetDev);
-
+INT CFG80211_ApStaDelSendEvent(PRTMP_ADAPTER pAd, const PUCHAR mac_addr);
 
 
 /* Information Releated */
@@ -229,12 +220,10 @@ BOOLEAN CFG80211DRV_ApKeyAdd(
 
 VOID CFG80211DRV_RtsThresholdAdd(
 	VOID                                            *pAdOrg,
-	struct wifi_dev *wdev,
 	UINT                                            threshold);
 
 VOID CFG80211DRV_FragThresholdAdd(
 	VOID                                            *pAdOrg,
-	struct wifi_dev *wdev,
 	UINT                                            threshold);
 
 BOOLEAN CFG80211DRV_ApKeyDel(
@@ -242,10 +231,8 @@ BOOLEAN CFG80211DRV_ApKeyDel(
 	VOID						*pData);
 
 INT CFG80211_setApDefaultKey(
-		IN VOID 				   *pAdCB,
-		IN struct net_device		*pNetdev,
-		IN UINT 					Data);
-
+    VOID                        *pAdCB,
+    UINT                         Data);
 INT CFG80211_setPowerMgmt(
 	VOID                     *pAdCB,
 	UINT 			Enable);
@@ -290,8 +277,7 @@ VOID CFG80211_RegRuleApply(
 	UCHAR						*pAlpha2);
 
 BOOLEAN CFG80211_SupBandReInit(
-	VOID						*pAdCB,
-	VOID						*wdev);
+	VOID						*pAdCB);
 
 #ifdef RFKILL_HW_SUPPORT
 VOID CFG80211_RFKillStatusUpdate(

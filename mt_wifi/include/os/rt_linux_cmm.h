@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,7 +23,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
  */
-#endif /* MTK_LICENSE */
+ 
 
 #ifndef __RT_LINUX_CMM_H__
 #define __RT_LINUX_CMM_H__
@@ -485,7 +484,7 @@ extern RTMP_USB_CONFIG *pRtmpUsbConfig;
 #endif
 #endif /* DOT11_VHT_AC */
 #ifdef BB_SOC
-#define MGMT_RING_SIZE          128
+#define MGMT_RING_SIZE          64
 #else
 #define MGMT_RING_SIZE          128
 #endif

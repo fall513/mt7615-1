@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -15,7 +14,7 @@
  * way altering	the	source code	is stricitly prohibited, unless	the	prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 	Abstract:
 
@@ -194,9 +193,7 @@ typedef union GNU_PACKED __RRM_EN_CAP_IE
 	struct GNU_PACKED
 	{
 #ifdef RT_BIG_ENDIAN
-		UINT64 :28;
-		UINT64 CIVICMeasureCap:1;
-		UINT64 FTMRangeReportCapability:1;
+		UINT64 :30;
 		UINT64 AntennaInfoCap:1;
 		UINT64 BssAvaiableAcmCap:1;
 		UINT64 BssAvgAccessDelayCap:1;
@@ -255,9 +252,7 @@ typedef union GNU_PACKED __RRM_EN_CAP_IE
 		UINT64 BssAvgAccessDelayCap:1;
 		UINT64 BssAvaiableAcmCap:1;
 		UINT64 AntennaInfoCap:1;
-		UINT64 FTMRangeReportCapability:1;
-		UINT64 CIVICMeasureCap:1;
-		UINT64 :28;
+		UINT64 :30;
 #endif
 	} field;
 	UINT64 word;

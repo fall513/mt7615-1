@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -19,7 +18,7 @@
 	Module Name:
 	wsc_v2.c
 */
-#endif /* MTK_LICENSE */
+
 #include    "rt_config.h"
 
 #ifdef WSC_V2_SUPPORT
@@ -47,8 +46,6 @@ VOID 	WscOnOff(
 		pWpsV2Info->bWpsEnable = FALSE;
 		pAd->ApCfg.MBSSID[ApIdx & 0x0F].WscIEBeacon.ValueLen = 0;
 		pAd->ApCfg.MBSSID[ApIdx & 0x0F].WscIEProbeResp.ValueLen = 0;
-		/* probe_resp checks WscConfMode (not WscIEProbeResp.ValueLen) for sending dummy WPS ie for dynamic WEP */
-        pAd->ApCfg.MBSSID[ApIdx & 0x0F].WscControl.WscConfMode = WSC_DISABLE;
 		MTWF_LOG(DBG_CAT_SEC, CATSEC_WPS, DBG_LVL_TRACE, ("WscOnOff - OFF.\n"));
 	}
 	else

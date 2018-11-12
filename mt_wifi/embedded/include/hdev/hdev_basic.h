@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -17,7 +16,7 @@
  ***************************************************************************
 
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __HDEV_BASIC_H
 #define __HDEV_BASIC_H
 
@@ -36,6 +35,11 @@ struct _EDCA_PARM;
 struct MCU_CTRL;
 struct _BCTRL_INFO_T;
 struct _BCTRL_ENTRY;
+
+typedef enum {
+	PHY_IDLE=0,
+	PHY_INUSE,
+} PHY_STATUS;
 
 
 /*
@@ -62,14 +66,11 @@ typedef struct _WTBL_IDX_PARAMETER{
 
 typedef struct _WTBL_CFG{
 	UCHAR MaxUcastEntryNum;
-	UCHAR MinMcastWcid;
-	BOOLEAN mcast_wait;
 	WTBL_IDX_PARAMETER WtblIdxRec[MAX_LEN_OF_MAC_TABLE];
 	NDIS_SPIN_LOCK WtblIdxRecLock;
-	RTMP_OS_COMPLETION mcast_complete;
 }WTBL_CFG;
 
-#define WTC_WAIT_TIMEOUT CMD_MSG_TIMEOUT
+
 
 
 typedef struct _OMAC_BSS_CTRL {
@@ -112,6 +113,7 @@ typedef struct _HD_DEV_OBJ {
 	BOOLEAN bWmmAcquired;
 	HD_DEV *pHdev;
 	DL_LIST RepeaterList;
+	DL_LIST WtblList;
 	DL_LIST list;
     UCHAR RefCnt;
     NDIS_SPIN_LOCK RefCntLock;
@@ -126,7 +128,6 @@ typedef struct _HD_CFG{
 	RTMP_CHIP_OP		ChipOps;
 	HD_RESOURCE_CFG 	HwResourceCfg;
 	HD_DEV_OBJ*			HObjList[WDEV_NUM_MAX];
-	HD_DEV_OBJ			HObjBody[WDEV_NUM_MAX];
 	struct MCU_CTRL 	McuCtrl;
 	VOID 				*priv; /*implicit point to pAd*/
 }HD_CFG;

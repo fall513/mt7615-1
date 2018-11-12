@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 
@@ -593,7 +592,7 @@ static VOID SendGASCBRsp(
 		GASFrame->u.GAS_CB_RSP.StatusCode = cpu2le16(Event->u.GAS_CB_REQ_DATA.StatusCode); 
 		FrameLen += 2;
 
-		if (bGASQueryRspFragFound && GASQueryRspFrag)
+		if (bGASQueryRspFragFound)
 			GASFrame->u.GAS_CB_RSP.GASRspFragID = (GASQueryRspFrag->GASRspFragID & 0x7F);
 		else
 			GASFrame->u.GAS_CB_RSP.GASRspFragID = 0;
@@ -612,7 +611,7 @@ static VOID SendGASCBRsp(
 		
 		*Pos++ = Event->u.GAS_CB_REQ_DATA.AdvertisementProID; /* Advertisement Protocol ID field */
 
-		if ((Event->u.GAS_CB_REQ_DATA.StatusCode == 0) && GASQueryRspFrag)
+		if (Event->u.GAS_CB_REQ_DATA.StatusCode == 0)
 		{
 
 			tmpLen = cpu2le16(GASQueryRspFrag->FragQueryRspLen);
@@ -677,8 +676,7 @@ static VOID SendGASCBRsp(
 		GASFrame->u.GAS_CB_RSP.StatusCode = cpu2le16(Event->u.GAS_CB_REQ_MORE_DATA.StatusCode); 
 		FrameLen += 2;
 
-        if(GASQueryRspFrag)
-		    GASFrame->u.GAS_CB_RSP.GASRspFragID = (0x80 | (GASQueryRspFrag->GASRspFragID & 0x7F));
+		GASFrame->u.GAS_CB_RSP.GASRspFragID = (0x80 | (GASQueryRspFrag->GASRspFragID & 0x7F));
 		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_WNM, DBG_LVL_OFF, ("GASRspFragID = %d\n", GASFrame->u.GAS_CB_RSP.GASRspFragID));
 		FrameLen += 1;
 		
@@ -691,19 +689,17 @@ static VOID SendGASCBRsp(
 		*Pos++ = 0; /* Query response info field */
 		
 		*Pos++ = Event->u.GAS_CB_REQ_MORE_DATA.AdvertisementProID; /* Advertisement Protocol ID field */
-        if(GASQueryRspFrag)
-        {
-            tmpLen = cpu2le16(GASQueryRspFrag->FragQueryRspLen);
+
+		tmpLen = cpu2le16(GASQueryRspFrag->FragQueryRspLen);
 			
-    		NdisMoveMemory(Pos, &tmpLen, 2);
-    		Pos += 2;
-    		FrameLen +=	6;
+		NdisMoveMemory(Pos, &tmpLen, 2);
+		Pos += 2;
+		FrameLen +=	6;
 
-    		NdisMoveMemory(Pos, GASQueryRspFrag->FragQueryRsp,
-    							GASQueryRspFrag->FragQueryRspLen);
+		NdisMoveMemory(Pos, GASQueryRspFrag->FragQueryRsp,
+							GASQueryRspFrag->FragQueryRspLen);
 
-    		FrameLen += GASQueryRspFrag->FragQueryRspLen;	 
-        }
+		FrameLen += GASQueryRspFrag->FragQueryRspLen;	
 		
 		//GASSetPeerCurrentState(pAd, Elem, WAIT_GAS_CB_REQ); 
 		GASSetPeerCurrentState(pAd, Event, WAIT_GAS_CB_REQ); 

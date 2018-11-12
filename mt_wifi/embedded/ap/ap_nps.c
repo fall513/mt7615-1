@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -25,7 +24,6 @@
     --------    ----------    ----------------------------------------------
     Carter Chen  08-23-2013    created for 7603 AP
  */
-#endif /* MTK_LICENSE */
 #ifdef MT_MAC
 
 #include "rt_config.h"
@@ -132,7 +130,6 @@ VOID write_tmac_info_tim(RTMP_ADAPTER *pAd, INT apidx, UCHAR *tmac_buf, HTTRANSM
 	mac_info.bss_idx = apidx;
 	mac_info.SpeEn = 1;
 	mac_info.Preamble = LONG_PREAMBLE;
-	mac_info.IsAutoRate = FALSE;
 	wdev = WdevSearchByAddress(pAd, tmac_buf + sizeof(TMAC_TXD_L) + 10);
 	if (!wdev)
 		return;
@@ -291,8 +288,7 @@ INT wdev_tim_buf_init(RTMP_ADAPTER *pAd, TIM_BUF_STRUC *tim_info)
 	//tim_info->TimBufIdx = HW_BEACON_MAX_NUM;
 
 	if (!tim_info->TimPkt) {
-        if(RTMPAllocateNdisPacket(pAd, &tim_info->TimPkt, NULL, 0, NULL, MAX_TIM_SIZE) != NDIS_STATUS_SUCCESS)
-		    return FALSE;
+		RTMPAllocateNdisPacket(pAd, &tim_info->TimPkt, NULL, 0, NULL, MAX_TIM_SIZE);
 	} else {
 		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s():TimPkt is allocated!\n", __FUNCTION__));
 

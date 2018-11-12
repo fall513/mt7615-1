@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
 	Paul Lin	06-08-08		Initial
 	JuemingChen 06-10-30        Do modifications and Add APIs for AP
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 #ifdef WSC_INCLUDED
@@ -41,8 +40,6 @@ static UCHAR	Wsc_Personal_String[] =  "Wi-Fi Easy and Secure Key Derivation";
 #define WSC_TLV_ENT(TLV_PARA) (0x00ff & TLV_PARA)
 #define WSC_TLV_BYTE1(TLV_PARA) (0x000f & TLV_PARA)
 #define WSC_TLV_BYTE2(TLV_PARA) (0x000f & (TLV_PARA >> 4))
-
-#define PLAIN_LEN_TOTAL_SIZE 512
 
 /* Global reusable buffer */
 static WSC_TLV_0B wsc_tlv_0b[]=
@@ -719,12 +716,16 @@ int BuildMessageM1(
 	if (pWscControl->WscV2Info.bEnableWpsV2)
 	{
 		/*
-			WIN8 WCN Win8 WCN Wireless Push Button Auth (Push Button Test) V2 
-			need to see PBC capability in M1. @20131002
-			
-			WPS Certification only check WSC_ID_CONFIG_METHODS of probe response. 
-			@20160803
+			AP MUST NOT support using PBC to add an external Registrar 
 		*/
+		if ((CurOpMode == AP_MODE)
+#ifdef APCLI_SUPPORT                                 
+            && !(pWscControl->EntryIfIdx & MIN_NET_DEVICE_FOR_APCLI)
+#endif /* APCLI_SUPPORT  */
+			)
+		{
+			ConfigMethods = (pWscControl->WscConfigMethods & 0x210F);
+		}
 
 		}
 		else
@@ -1559,7 +1560,7 @@ int BuildMessageM4(
 	UCHAR				KDK[32];
 	UCHAR				Plain[128]; /*, IV_EncrData[144];//IV len 16,EncrData len 128 */
 	UCHAR				*IV_EncrData = NULL;/*IV len 16,EncrData len 128 */
-	UINT				PlainLen = 0, EncrLen;
+	INT					PlainLen = 0, EncrLen;
 	UCHAR				*pHash=NULL;
 #ifdef WSC_V2_SUPPORT
 	PWSC_TLV			pWscTLV = &pWscControl->WscV2Info.ExtraTlv;
@@ -1747,7 +1748,7 @@ int BuildMessageM5(
 	INT				    HmacLen;
 	UCHAR				Plain[128]; /*, IV_EncrData[144];//IV len 16,EncrData len 128 */
 	UCHAR				*IV_EncrData = NULL;/*IV len 16,EncrData len 128 */
-	UINT				PlainLen=0, EncrLen;
+	INT					PlainLen=0, EncrLen;
 #ifdef WSC_V2_SUPPORT
 	PWSC_TLV			pWscTLV = &pWscControl->WscV2Info.ExtraTlv;
 #endif /* WSC_V2_SUPPORT */
@@ -1883,7 +1884,7 @@ int BuildMessageM6(
 	UCHAR				KDK[32];
 	UCHAR				Plain[128]; /*, IV_EncrData[144];//IV len 16,EncrData len 128 */
 	UCHAR				*IV_EncrData = NULL;/*IV len 16,EncrData len 128 */
-	UINT				PlainLen = 0, EncrLen;
+	INT					PlainLen = 0, EncrLen;
 #ifdef WSC_V2_SUPPORT
 	PWSC_TLV			pWscTLV = &pWscControl->WscV2Info.ExtraTlv;
 #endif /* WSC_V2_SUPPORT */
@@ -2235,7 +2236,7 @@ int BuildMessageM8(
 		MTWF_LOG(DBG_CAT_SEC, CATSEC_WPS, DBG_LVL_ERROR, ("%s: Allocate memory fail!!!\n", __FUNCTION__));
 		goto LabelErr;
 	}
-	os_alloc_mem(NULL, (UCHAR **)&Plain, PLAIN_LEN_TOTAL_SIZE);
+	os_alloc_mem(NULL, (UCHAR **)&Plain, 300);
 	if (Plain == NULL)
 	{
 		MTWF_LOG(DBG_CAT_SEC, CATSEC_WPS, DBG_LVL_ERROR, ("%s: Allocate memory fail!!!\n", __FUNCTION__));
@@ -2310,29 +2311,18 @@ int BuildMessageM8(
 	 	)
 	 {
 	 	/* Reguired attribute item in M8 if Enrollee is STA. */
-		PlainLen += AppendWSCTLV(WSC_ID_CREDENTIAL, &Plain[0], TB, CerLen);
-	 	if (PlainLen > PLAIN_LEN_TOTAL_SIZE)
-	 	{
-	 		/*Plain buf overflow*/
-	 		os_free_mem(Plain);
-	 		Plain = NULL;
-	 		MTWF_LOG(DBG_CAT_SEC, CATSEC_WPS, DBG_LVL_ERROR, ("%s: Plain buf overflow!!!\n", __FUNCTION__));
-	 		goto LabelErr;
-	 	}
+        if (PlainLen >= 0 && PlainLen <= 299)
+        {
+		    PlainLen += AppendWSCTLV(WSC_ID_CREDENTIAL, &Plain[0], TB, CerLen);
+        }
 	 }
 
 	/* Generate HMAC */
 	RT_HMAC_SHA256(pReg->AuthKey, 32, &Plain[0], PlainLen, TB, SHA256_DIGEST_SIZE);
-	
-	PlainLen += AppendWSCTLV(WSC_ID_KEY_WRAP_AUTH, &Plain[PlainLen], TB, 0);
-	if (PlainLen > PLAIN_LEN_TOTAL_SIZE)
-	{
-	     	/*Plain buf overflow*/
-	     	os_free_mem(Plain);
-		Plain = NULL;
-		MTWF_LOG(DBG_CAT_SEC, CATSEC_WPS, DBG_LVL_ERROR, ("%s: Plain buf overflow!!!\n", __FUNCTION__));
-		goto LabelErr;
-	}
+    if (PlainLen >= 0 && PlainLen <= 275)
+    {
+        PlainLen += AppendWSCTLV(WSC_ID_KEY_WRAP_AUTH, &Plain[PlainLen], TB, 0);
+    }
 	/* 4b. Encrypted Settings */
 	/* Encrypt data */
     EncrLen = IV_ENCR_DATA_LEN_512 - 16;    

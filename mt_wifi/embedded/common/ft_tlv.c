@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,7 +23,7 @@
     ---------  ----------    ----------------------------------------------
     Fonchi Wu  12-02-2008    created for 11r soft-AP
  */
-#endif /* MTK_LICENSE */
+
 #ifdef DOT11R_FT_SUPPORT
 
 

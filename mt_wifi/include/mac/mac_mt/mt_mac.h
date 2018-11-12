@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __MT_MAC_H__
 #define __MT_MAC_H__
 
@@ -78,7 +77,6 @@ typedef struct _TMAC_INFO{
 	UINT8 Pid; /*W: PacketID*/
 	UINT8 AntPri; 
 	UINT8 SpeEn;
-    CHAR  PowerOffset;
 	BOOLEAN	TimingMeasure;
 	TX_RADIO_SET_T TxRadioSet;
 	BOOLEAN LongFmt;
@@ -102,7 +100,7 @@ typedef struct _TMAC_INFO{
 	UINT8 VhtNss;
 }TMAC_INFO;
 
-INT MtWriteTMacInfo(struct _RTMP_ADAPTER *pAd,UCHAR *buf,struct _TMAC_INFO *TxInfo);
+VOID MtWriteTMacInfo(struct _RTMP_ADAPTER *pAd,UCHAR *buf,struct _TMAC_INFO *TxInfo);
 
 
 #endif /* __MT_MAC_H__ */

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	rt_sdio.c
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 VOID

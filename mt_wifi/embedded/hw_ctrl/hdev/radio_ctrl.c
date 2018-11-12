@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -17,7 +16,7 @@
  ***************************************************************************
 
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 #include "hdev/hdev.h"
 
@@ -91,11 +90,13 @@ static UCHAR rcGetDefaultPhyMode(UCHAR Channel)
 	if(Channel <=14)
 	{
 		return WMODE_B;
-	}
-	else
+	}else
+	if(Channel > 14)
 	{
 		return WMODE_A;
 	}
+
+	return WMODE_B;
 }
 
 
@@ -216,7 +217,7 @@ static INT32 rcUpdateBandByType(HD_DEV_OBJ *pObj, BCTRL_ENTRY_T *pEntry)
 	default:
 	{
 		// TODO: STAR for DBDC
-		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%s(): Current not support this type of WdevType=%d\n",__FUNCTION__,pObj->Type));
+		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s(): Current not support this type of WdevType=%d\n",__FUNCTION__,pObj->Type));
 		return -1;
 	}
 	break;
@@ -676,7 +677,6 @@ VOID RcRadioInit(HD_CFG *pHdCfg,UCHAR RfIC, UCHAR DbdcMode)
 		pRadioCtrl =&pPhyCtrl->RadioCtrl;
 		pPhyCtrl->rf_band_cap = rcGetBandSupport(pHdCfg,DbdcMode,i);
 		pRadioCtrl->BandIdx = i;
-		pRadioCtrl->ExtCha = EXTCHA_NOASSIGN;
 		if( (pPhyCtrl->rf_band_cap) & RFIC_24GHZ )
 		{
 			pRadioCtrl->Channel = rcGetDefaultChannel(WMODE_B);
@@ -694,10 +694,6 @@ VOID RcRadioInit(HD_CFG *pHdCfg,UCHAR RfIC, UCHAR DbdcMode)
 			pRadioCtrl->IsBfBand = 1;
 		}
 #endif /*TXBF_SUPPORT*/
-
-#ifdef GREENAP_SUPPORT
-                pRadioCtrl->bGreenAPActive = FALSE;
-#endif /* GREENAP_SUPPORT */
 
 		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s(): pRadioCtrl=%p,Band=%d,rfcap=%d,channel=%d,PhyMode=%d\n",
 			__FUNCTION__,pRadioCtrl,i,pPhyCtrl->rf_band_cap,pRadioCtrl->Channel,pRadioCtrl->PhyMode));
@@ -734,8 +730,7 @@ VOID RcReleaseBandForObj( HD_CFG *pHdCfg,HD_DEV_OBJ *pObj)
 		}
 		HdevObjDel(pHdev,pObj);
         NdisFreeSpinLock(&pObj->RefCntLock);
-		//pObj is not dynamically allocated, so we can't free it.
-		//os_free_mem(pObj);
+		os_free_mem(pObj);
 	}
 	return;
 }
@@ -763,10 +758,8 @@ HD_DEV_OBJ* RcAcquiredBandForObj(HD_CFG *pHdCfg,UCHAR ObjIdx, UCHAR PhyMode, UCH
 
     pRadioCtrl = pHdev->pRadioCtrl;
 
-	//os_alloc_mem(NULL,(UCHAR**)&pHdevObj,sizeof(HD_DEV_OBJ));
-	//os_zero_mem(pHdevObj,sizeof(HD_DEV_OBJ));
-	// Instead of allocate new memory, we use pre-allocated memory
-	pHdevObj = &pHdCfg->HObjBody[ObjIdx];
+	os_alloc_mem(NULL,(UCHAR**)&pHdevObj,sizeof(HD_DEV_OBJ));
+	os_zero_mem(pHdevObj,sizeof(HD_DEV_OBJ));
 	/*Can get Hdev. change phyCtrl to INUSED state*/
 	pRadioCtrl->CurStat = PHY_INUSE;
 	/*if mixed mode*/
@@ -797,7 +790,6 @@ HD_DEV_OBJ* RcAcquiredBandForObj(HD_CFG *pHdCfg,UCHAR ObjIdx, UCHAR PhyMode, UCH
 	pHdevObj->Idx = ObjIdx;
 	pHdevObj->Type = ObjType;
 	pHdevObj->OmacIdx = GetOmacIdx(pHdCfg,ObjType,ObjIdx);
-	pHdevObj->WmmIdx = 0;
 
 	HdevObjAdd(pHdev,pHdevObj);
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_INFO,("%s(): BandIdx:%d, PhyMode=%d,Channel=%d,pHdev=%p,pHdevObj=%p\n",
@@ -864,9 +856,7 @@ HD_DEV* RcGetHdevByPhyMode(HD_CFG *pHdCfg, UCHAR PhyMode)
 
 	if(!pHdev)
 	{
-		UCHAR *str = wmode_2_str(PhyMode);
-		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("%s():Err! chip not support this PhyMode:%s !\n",__FUNCTION__,str));
-		os_free_mem(str);
+		MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("%s():Err! chip not support this PhyMode:%s !\n",__FUNCTION__,wmode_2_str(PhyMode)));
 	}
 
 	return pHdev;
@@ -1024,22 +1014,6 @@ UCHAR RcGetCentralCh(HD_DEV *pHdev)
 UCHAR RcGetBandIdx(HD_DEV *pHdev)
 {
 	return pHdev->pRadioCtrl->BandIdx;
-}
-
-/*
-*
-*/
-PHY_STATUS RcGetRadioCurStat(HD_DEV *pHdev)
-{
-	return pHdev->pRadioCtrl->CurStat;
-}
-
-/*
-*
-*/
-VOID RcSetRadioCurStat(HD_DEV *pHdev, PHY_STATUS CurStat)
-{
-	pHdev->pRadioCtrl->CurStat = CurStat;
 }
 
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
     Module Name:
     HMAC
@@ -27,10 +26,9 @@
 ***************************************************************************/
 
 #include "security/crypt_hmac.h"
-#include "rt_config.h"
 
 
-#ifdef SHA1_SUPPORT
+#ifdef HMAC_SHA1_SUPPORT
 /*
 ========================================================================
 Routine Description:
@@ -80,7 +78,7 @@ VOID RT_HMAC_SHA1 (
     /* End of if */
 
     /* Exclusive-Or K0 with ipad */
-    /* ipad: Inner pad; the byte xÂ¡Â¦36Â¡Â¦ repeated B times. */
+    /* ipad: Inner pad; the byte x¡¦36¡¦ repeated B times. */
     for (index = 0; index < SHA1_BLOCK_SIZE; index++)
         K0[index] ^= 0x36;
         /* End of for */
@@ -93,7 +91,7 @@ VOID RT_HMAC_SHA1 (
     RT_SHA1_End(&sha_ctx1, Digest);
 
     /* Exclusive-Or K0 with opad and remove ipad */
-    /* opad: Outer pad; the byte xÂ¡Â¦5cÂ¡Â¦ repeated B times. */
+    /* opad: Outer pad; the byte x¡¦5c¡¦ repeated B times. */
     for (index = 0; index < SHA1_BLOCK_SIZE; index++)
         K0[index] ^= 0x36^0x5c;
         /* End of for */
@@ -110,10 +108,10 @@ VOID RT_HMAC_SHA1 (
     else
         NdisMoveMemory(MAC, Digest, MACLen);    
 } /* End of RT_HMAC_SHA1 */
-#endif /* SHA1_SUPPORT */
+#endif /* HMAC_SHA1_SUPPORT */
 
 
-#ifdef SHA256_SUPPORT
+#ifdef HMAC_SHA256_SUPPORT
 /*
 ========================================================================
 Routine Description:
@@ -163,7 +161,7 @@ VOID RT_HMAC_SHA256 (
     }
 
     /* Exclusive-Or K0 with ipad */
-    /* ipad: Inner pad; the byte xÂ¡Â¦36Â¡Â¦ repeated B times. */
+    /* ipad: Inner pad; the byte x¡¦36¡¦ repeated B times. */
     for (index = 0; index < SHA256_BLOCK_SIZE; index++)
         K0[index] ^= 0x36;
         /* End of for */
@@ -176,7 +174,7 @@ VOID RT_HMAC_SHA256 (
     RT_SHA256_End(&sha_ctx1, Digest);
 
     /* Exclusive-Or K0 with opad and remove ipad */
-    /* opad: Outer pad; the byte xÂ¡Â¦5cÂ¡Â¦ repeated B times. */
+    /* opad: Outer pad; the byte x¡¦5c¡¦ repeated B times. */
     for (index = 0; index < SHA256_BLOCK_SIZE; index++)
         K0[index] ^= 0x36^0x5c;
         /* End of for */
@@ -194,10 +192,10 @@ VOID RT_HMAC_SHA256 (
         NdisMoveMemory(MAC, Digest, MACLen);
     
 } /* End of RT_HMAC_SHA256 */
-#endif /* SHA256_SUPPORT */
+#endif /* HMAC_SHA256_SUPPORT */
 
 
-#ifdef MD5_SUPPORT
+#ifdef HMAC_MD5_SUPPORT
 /*
 ========================================================================
 Routine Description:
@@ -247,7 +245,7 @@ VOID RT_HMAC_MD5(
     }
 
     /* Exclusive-Or K0 with ipad */
-    /* ipad: Inner pad; the byte xÂ¡Â¦36Â¡Â¦ repeated B times. */
+    /* ipad: Inner pad; the byte x¡¦36¡¦ repeated B times. */
     for (index = 0; index < MD5_BLOCK_SIZE; index++)
         K0[index] ^= 0x36;
         /* End of for */
@@ -260,7 +258,7 @@ VOID RT_HMAC_MD5(
     RT_MD5_End(&md5_ctx1, Digest);
 
     /* Exclusive-Or K0 with opad and remove ipad */
-    /* opad: Outer pad; the byte xÂ¡Â¦5cÂ¡Â¦ repeated B times. */
+    /* opad: Outer pad; the byte x¡¦5c¡¦ repeated B times. */
     for (index = 0; index < MD5_BLOCK_SIZE; index++)
         K0[index] ^= 0x36^0x5c;
         /* End of for */
@@ -277,7 +275,7 @@ VOID RT_HMAC_MD5(
     else
         NdisMoveMemory(MAC, Digest, MACLen);    
 } /* End of RT_HMAC_SHA256 */
-#endif /* MD5_SUPPORT */
+#endif /* HMAC_MD5_SUPPORT */
 
 
 /* End of crypt_hmac.c */

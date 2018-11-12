@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -52,7 +51,6 @@ INT CFG80211DRV_IoctlHandle(
 {
 	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
 	POS_COOKIE pObj = (POS_COOKIE)pAd->OS_Cookie;
-	struct wifi_dev *wdev = get_wdev_by_ioctl_idx_and_iftype(pAd, pObj->ioctl_if, pObj->ioctl_if_type);
 #ifdef CONFIG_MULTI_CHANNEL
 	PAPCLI_STRUCT pApCliEntry = NULL;
 #endif /* CONFIG_MULTI_CHANNEL */
@@ -166,11 +164,7 @@ INT CFG80211DRV_IoctlHandle(
 		case CMD_RTPRIV_IOCTL_80211_BANDINFO_GET:
 		{
 			CFG80211_BAND *pBandInfo = (CFG80211_BAND *)pData;
-			CFG80211_BANDINFO_FILL(pAd, wdev, pBandInfo);
-#ifdef DBDC_MODE
-			if(pAd->CommonCfg.dbdc_mode)
-				pBandInfo->RFICType=RFIC_DUAL_BAND;	
-#endif		
+			CFG80211_BANDINFO_FILL(pAd, pBandInfo);
 		}
 			break;
 
@@ -247,18 +241,15 @@ case CMD_RTPRIV_IOCTL_80211_POWER_MGMT_SET:
 
 		case CMD_RTPRIV_IOCTL_80211_BEACON_DEL:
 		{
-			INT i,apidx = Data;
-			struct wifi_dev *pWdev = &pAd->ApCfg.MBSSID[apidx].wdev;
-			
+			INT i;
 			for(i = 0; i < WLAN_MAX_NUM_OF_TIM; i++)
-                		pAd->ApCfg.MBSSID[apidx].wdev.bcn_buf.TimBitmaps[i] = 0;
+                		pAd->ApCfg.MBSSID[MAIN_MBSSID].wdev.bcn_buf.TimBitmaps[i] = 0;
 			if (pAd->cfg80211_ctrl.beacon_tail_buf != NULL)
 			{
 				os_free_mem(pAd->cfg80211_ctrl.beacon_tail_buf);
 				pAd->cfg80211_ctrl.beacon_tail_buf = NULL;
 			}
 			pAd->cfg80211_ctrl.beacon_tail_len = 0;
-			WifiSysApLinkDown(pAd,pWdev);
 		}
 			break;
 
@@ -267,11 +258,11 @@ case CMD_RTPRIV_IOCTL_80211_POWER_MGMT_SET:
                         break;
 
                 case CMD_RTPRIV_IOCTL_80211_RTS_THRESHOLD_ADD:
-                        CFG80211DRV_RtsThresholdAdd(pAd, wdev, Data);
+                        CFG80211DRV_RtsThresholdAdd(pAd, Data);
                         break;
 
                 case CMD_RTPRIV_IOCTL_80211_FRAG_THRESHOLD_ADD:
-                        CFG80211DRV_FragThresholdAdd(pAd, wdev, Data);
+                        CFG80211DRV_FragThresholdAdd(pAd, Data);
                         break;
 
                 case CMD_RTPRIV_IOCTL_80211_AP_KEY_DEL:
@@ -279,7 +270,7 @@ case CMD_RTPRIV_IOCTL_80211_POWER_MGMT_SET:
                         break;
 
                 case CMD_RTPRIV_IOCTL_80211_AP_KEY_DEFAULT_SET:
-                        CFG80211_setApDefaultKey(pAd, pData, Data);                        
+                        CFG80211_setApDefaultKey(pAd, Data);
                         break;
 
                 case CMD_RTPRIV_IOCTL_80211_PORT_SECURED:
@@ -573,12 +564,8 @@ BOOLEAN CFG80211DRV_OpsSetChannel(RTMP_ADAPTER *pAd, VOID *pData)
 #ifdef DOT11_N_SUPPORT
 	BOOLEAN FlgIsChanged;
 #endif /* DOT11_N_SUPPORT */
-	BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[MAIN_MBSSID];	//for now, focus on 1 BSS
+	BSS_STRUCT *pMbss = &pAd->ApCfg.MBSSID[CFG_GO_BSSID_IDX];
 	struct wifi_dev *wdev = &pMbss->wdev;
-	UCHAR RfIC = 0;
-	UCHAR newBW = BW_20;	
-	UCHAR ext_cha;
-	
 /*
  *  enum nl80211_channel_type {
  *	NL80211_CHAN_NO_HT,
@@ -593,27 +580,6 @@ BOOLEAN CFG80211DRV_OpsSetChannel(RTMP_ADAPTER *pAd, VOID *pData)
 	IfType = pChan->IfType;
 	ChannelType = pChan->ChanType;
 
-#ifdef HOSTAPD_AUTO_CH_SUPPORT
-	printk("HOSTAPD AUTO_CH_SUPPORT Ignore Channel %d from HostAPD \n",pChan->ChanId);
-	return TRUE;
-#endif
-
-	/* set phymode by channel number */
-	if(ChanId>14)
-	{
-		wdev->PhyMode = (WMODE_A | WMODE_AN | WMODE_AC); /*5G phymode*/
-		RTMPSetPhyMode(pAd,wdev, wdev->PhyMode);
-		RfIC=RFIC_5GHZ;
-	}
-	else
-	{
-		wdev->PhyMode = (WMODE_B | WMODE_G | WMODE_GN);  /*2G phymode*/
-		RTMPSetPhyMode(pAd,wdev, wdev->PhyMode);
-		RfIC=RFIC_24GHZ;
-	}
-
-		
-
 	if (IfType != RT_CMD_80211_IFTYPE_MONITOR)
 	{
 		/* get channel BW */
@@ -622,39 +588,38 @@ BOOLEAN CFG80211DRV_OpsSetChannel(RTMP_ADAPTER *pAd, VOID *pData)
 		/* set to new channel BW */
 		if (ChannelType == RT_CMD_80211_CHANTYPE_HT20)
 		{
-			newBW = BW_20;
-			wlan_operate_set_ht_bw(wdev,BW_20);
-			pAd->CommonCfg.HT_Disable = 0;
-			
+#ifdef RT_CFG80211_P2P_MULTI_CHAN_SUPPORT
 			if(IfType == RT_CMD_80211_IFTYPE_AP ||
 			   IfType == RT_CMD_80211_IFTYPE_P2P_GO)
 			{
-				pAd->CommonCfg.Channel = ChanId;
+				wdev->bw = 0;
 				wdev->CentralChannel = ChanId;
 				wdev->channel = ChanId;
 			}
-			
-			wlan_operate_set_ext_cha(wdev,EXTCHA_NONE);
-			HcUpdateChannel(pAd,pAd->CommonCfg.Channel);
-			
+#endif /* RT_CFG80211_P2P_MULTI_CHAN_SUPPORT */
+
+			pAd->CommonCfg.RegTransmitSetting.field.BW = BW_20;
+			wdev->extcha= EXTCHA_NONE;			
+			HcUpdateExtCha(pAd,wdev->channel,wdev->extcha);
+			pAd->CommonCfg.HT_Disable = 0;
 		}
 		else if (ChannelType == RT_CMD_80211_CHANTYPE_HT40MINUS)
 		{
-			newBW = BW_40;
-			wlan_operate_set_ht_bw(wdev,BW_40);
-			wlan_operate_set_ext_cha(wdev,EXTCHA_BELOW);
-			ext_cha = wlan_operate_get_ext_cha(wdev);
-
+			pAd->CommonCfg.RegTransmitSetting.field.BW = BW_40;
+			wdev->extcha= EXTCHA_BELOW;
+			HcUpdateExtCha(pAd,wdev->channel,wdev->extcha);
 			pAd->CommonCfg.HT_Disable = 0;
-
+#ifdef RT_CFG80211_P2P_MULTI_CHAN_SUPPORT
 			if(IfType == RT_CMD_80211_IFTYPE_AP ||
 			   IfType == RT_CMD_80211_IFTYPE_P2P_GO)
 			{
+
+				wdev->bw = pAd->CommonCfg.RegTransmitSetting.field.BW;
 				pAd->CommonCfg.Channel = ChanId;
 
-				if(ext_cha == EXTCHA_BELOW)
+				if(wdev->extcha == EXTCHA_BELOW)
 					pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel - 2;
-				else if (ext_cha == EXTCHA_ABOVE)
+				else if (wdev->extcha == EXTCHA_ABOVE)
 					pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel + 2;
 				else
 					pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel;
@@ -662,26 +627,27 @@ BOOLEAN CFG80211DRV_OpsSetChannel(RTMP_ADAPTER *pAd, VOID *pData)
 				wdev->CentralChannel = pAd->CommonCfg.CentralChannel;
 				wdev->channel = pAd->CommonCfg.Channel;
 			}
-			HcUpdateChannel(pAd,pAd->CommonCfg.Channel);
+#endif /* RT_CFG80211_P2P_MULTI_CHAN_SUPPORT */
+
 		}
 		else if	(ChannelType == RT_CMD_80211_CHANTYPE_HT40PLUS)
 		{
 			/* not support NL80211_CHAN_HT40MINUS or NL80211_CHAN_HT40PLUS */
 			/* i.e. primary channel = 36, secondary channel must be 40 */
-			newBW = BW_40;
-			wlan_operate_set_ht_bw(wdev,BW_40);
-			wlan_operate_set_ext_cha(wdev,EXTCHA_ABOVE);
-			ext_cha = wlan_operate_get_ext_cha(wdev);
+			pAd->CommonCfg.RegTransmitSetting.field.BW = BW_40;
+			wdev->extcha = EXTCHA_ABOVE;			
+			HcUpdateExtCha(pAd,wdev->channel,wdev->extcha);
 			pAd->CommonCfg.HT_Disable = 0;
-
+#ifdef RT_CFG80211_P2P_MULTI_CHAN_SUPPORT
 			if(IfType == RT_CMD_80211_IFTYPE_AP ||
 	   			IfType == RT_CMD_80211_IFTYPE_P2P_GO)
 			{
+				wdev->bw = pAd->CommonCfg.RegTransmitSetting.field.BW;
 				pAd->CommonCfg.Channel = ChanId;
 
-				if(ext_cha == EXTCHA_BELOW)
+				if(wdev->extcha == EXTCHA_BELOW)
 					pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel - 2;
-				else if (ext_cha == EXTCHA_ABOVE)
+				else if (wdev->extcha == EXTCHA_ABOVE)
 					pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel + 2;
 				else
 					pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel;
@@ -689,46 +655,26 @@ BOOLEAN CFG80211DRV_OpsSetChannel(RTMP_ADAPTER *pAd, VOID *pData)
 				wdev->CentralChannel = pAd->CommonCfg.CentralChannel;
 				wdev->channel = pAd->CommonCfg.Channel;
 			}
-			HcUpdateChannel(pAd,pAd->CommonCfg.Channel);
+#endif /* RT_CFG80211_P2P_MULTI_CHAN_SUPPORT */
+
 
 		}
 		else if  (ChannelType == RT_CMD_80211_CHANTYPE_NOHT)
 		{
-			newBW = BW_20;
-			wlan_operate_set_ht_bw(wdev,BW_20);
-			wlan_operate_set_ext_cha(wdev,EXTCHA_NONE);
-			ext_cha = wlan_operate_get_ext_cha(wdev);
+			pAd->CommonCfg.RegTransmitSetting.field.BW = BW_20;
+			wdev->extcha = EXTCHA_NONE;			
+			HcUpdateExtCha(pAd,wdev->channel,wdev->extcha);
 			pAd->CommonCfg.HT_Disable = 1;
-
+#ifdef RT_CFG80211_P2P_MULTI_CHAN_SUPPORT
 			if(IfType == RT_CMD_80211_IFTYPE_AP ||
 			   IfType == RT_CMD_80211_IFTYPE_P2P_GO)
 			{
-				pAd->CommonCfg.Channel = ChanId;
+				wdev->bw = 0;
 				wdev->CentralChannel = ChanId;
 				wdev->channel = ChanId;
 			}
-			HcUpdateChannel(pAd,pAd->CommonCfg.Channel);
-		}
-		else if  (ChannelType == RT_CMD_80211_CHANTYPE_VHT80)
-		{			
-			newBW = BW_80;
-			wlan_operate_set_ht_bw(wdev,BW_40);
-			wlan_operate_set_vht_bw(wdev,VHT_BW_80);
+#endif /* RT_CFG80211_P2P_MULTI_CHAN_SUPPORT */
 
-			if(pChan->CenterChanId > pChan->ChanId)
-				ext_cha = EXTCHA_ABOVE;
-			else
-				ext_cha = EXTCHA_BELOW;
-				
-			if(IfType == RT_CMD_80211_IFTYPE_AP ||
-			   IfType == RT_CMD_80211_IFTYPE_P2P_GO)
-			{
-				pAd->CommonCfg.Channel = ChanId;
-				wdev->CentralChannel = pChan->CenterChanId;
-				wdev->channel = ChanId;
-			}
-			wlan_operate_set_ext_cha(wdev,ext_cha);
-			HcUpdateChannel(pAd,pAd->CommonCfg.Channel);
 		}
 
 		CFG80211DBG(DBG_LVL_TRACE, ("80211> HT Disable = %d\n", pAd->CommonCfg.HT_Disable));
@@ -738,34 +684,29 @@ BOOLEAN CFG80211DRV_OpsSetChannel(RTMP_ADAPTER *pAd, VOID *pData)
 		/* for monitor mode */
 		FlgIsChanged = TRUE;
 		pAd->CommonCfg.HT_Disable = 0;
-		wlan_operate_set_ht_bw(wdev,BW_40);
+		pAd->CommonCfg.RegTransmitSetting.field.BW = BW_40;
 	}
 
 	if (FlgIsChanged == TRUE)
-		SetCommonHtVht(pAd,wdev);
+		SetCommonHtVht(pAd,NULL);
 
-	ext_cha = wlan_operate_get_ext_cha(wdev);
 	/* switch to the channel with Common Channel */
 	pAd->CommonCfg.Channel = ChanId;
 
-        if(ext_cha== EXTCHA_BELOW)
+        if(wdev->extcha == EXTCHA_BELOW)
               pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel - 2;
-        else if (ext_cha == EXTCHA_ABOVE)
+        else if (wdev->extcha == EXTCHA_ABOVE)
               pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel + 2;
         else
         	pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel;
 
-	AsicBBPAdjust(pAd,pAd->CommonCfg.Channel);
-	AsicSwitchChannel(pAd, pAd->CommonCfg.CentralChannel,FALSE);	
-	
-	CFG80211DBG(DBG_LVL_ERROR, ("80211> CentralChannel = %d, New BW = %d with Ext[%d]\n",
-		pAd->CommonCfg.CentralChannel, newBW,ext_cha));
-#ifdef CONFIG_AP_SUPPORT
-	os_msec_delay(1000);
-	APStopByRf(pAd,RfIC);
-	os_msec_delay(1000);
-	APStartUpByRf(pAd,RfIC);
-#endif /* CONFIG_AP_SUPPORT */
+	HcBbpSetBwByChannel(pAd,pAd->CommonCfg.RegTransmitSetting.field.BW,pAd->CommonCfg.CentralChannel);
+        AsicSwitchChannel(pAd, pAd->CommonCfg.CentralChannel,FALSE);
+        AsicLockChannel(pAd, pAd->CommonCfg.CentralChannel);
+
+	CFG80211DBG(DBG_LVL_TRACE, ("80211> CentralChannel = %d, New BW = %d with Ext[%d]\n",
+		pAd->CommonCfg.CentralChannel, pAd->CommonCfg.RegTransmitSetting.field.BW,
+		wdev->extcha));
 
 	if(IfType == RT_CMD_80211_IFTYPE_AP ||
 	   IfType == RT_CMD_80211_IFTYPE_P2P_GO)
@@ -773,7 +714,6 @@ BOOLEAN CFG80211DRV_OpsSetChannel(RTMP_ADAPTER *pAd, VOID *pData)
 		CFG80211DBG(DBG_LVL_ERROR, ("80211> Set the channel in AP Mode\n"));
 		return TRUE;
 	}
-
 	return TRUE;
 }
 
@@ -804,19 +744,11 @@ BOOLEAN CFG80211DRV_StaGet(
 	MAC_TABLE_ENTRY *pEntry;
 	ULONG DataRate = 0;
 	UINT32 RSSI;
-	UINT8 from_saved_data = 0;
+
 
 	pEntry = MacTableLookup(pAd, pIbssInfo->MAC);
-	if (pEntry == NULL)	
-	{
-		if (MAC_ADDR_EQUAL(pAd->last_assoc_sta.Addr, pIbssInfo->MAC))
-		{	
-			pEntry = &pAd->last_assoc_sta;
-			from_saved_data = 1;
-		}
-		else
-			return FALSE;
-	}
+	if (pEntry == NULL)
+		return FALSE;
 
 	/* fill tx rate */
 	getRate(pEntry->HTPhyMode, &DataRate);
@@ -839,35 +771,18 @@ BOOLEAN CFG80211DRV_StaGet(
 	}
 
 	/* fill signal */
-	RSSI = RTMPAvgRssi(pAd, pEntry->wdev, &pEntry->RssiSample);
+	RSSI = RTMPAvgRssi(pAd, &pEntry->RssiSample);
 	pIbssInfo->Signal = RSSI;
 
 	/* fill tx count */
-	
-	/* wrong info
 	pIbssInfo->TxPacketCnt = pEntry->OneSecTxNoRetryOkCount +
 						pEntry->OneSecTxRetryOkCount +
-						pEntry->OneSecTxFailCount;*/
-	/* fill rx bytes count */					
-	pIbssInfo->rx_bytes = pEntry->RxBytes;
-	
-	/* fill tx_bytes count */
-	pIbssInfo->tx_bytes = pEntry->TxBytes;
-	
-	/* fill rx_packets count */
-	pIbssInfo->rx_packets = pEntry->RxPackets.u.LowPart;
-	
-	/* fill tx_packets count */
-	pIbssInfo->tx_packets = pEntry->TxPackets.u.LowPart;
-	
+						pEntry->OneSecTxFailCount;
+
 	/* fill inactive time */
 	pIbssInfo->InactiveTime = pEntry->NoDataIdleCount * 1000; /* unit: ms */
 	pIbssInfo->InactiveTime *= MLME_TASK_EXEC_MULTIPLE;
 	pIbssInfo->InactiveTime /= 20;
-
-	if(from_saved_data)
-		NdisZeroMemory(&pAd->last_assoc_sta, sizeof(struct _MAC_TABLE_ENTRY));
-
 }
 #endif /* CONFIG_AP_SUPPORT */
 
@@ -1266,14 +1181,14 @@ VOID CFG80211_RegRuleApply(
 				continue;
 			}
 
-			if (pBand24G == NULL)
+			if (!WMODE_CAP_2G(pAd->CommonCfg.cfg_wmode))
 			{
 				/* 5G-only mode */
 				if (ChanId <= CFG80211_NUM_OF_CHAN_2GHZ)
 					continue;
 			}
 
-			if (pBand5G == NULL)
+			if (!WMODE_CAP_5G(pAd->CommonCfg.cfg_wmode))
 			{
 				/* 2.4G-only mode */
 				if (ChanId > CFG80211_NUM_OF_CHAN_2GHZ)
@@ -1402,10 +1317,10 @@ Note:
 	need to re-init bands in xx_open().
 ========================================================================
 */
-BOOLEAN CFG80211_SupBandReInit(VOID *pAdCB, VOID *wdev)
+BOOLEAN CFG80211_SupBandReInit(
+	IN VOID						*pAdCB)
 {
-	struct _RTMP_ADAPTER *pAd = (struct _RTMP_ADAPTER *)pAdCB;
-	struct wifi_dev *curr_wdev = (struct wifi_dev *)wdev;
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
 	CFG80211_BAND BandInfo;
 
 
@@ -1413,12 +1328,7 @@ BOOLEAN CFG80211_SupBandReInit(VOID *pAdCB, VOID *wdev)
 
 	/* re-init bands */
 	os_zero_mem(&BandInfo, sizeof(BandInfo));
-	CFG80211_BANDINFO_FILL(pAd, curr_wdev, &BandInfo);
-
-#ifdef DBDC_MODE
-	if(pAd->CommonCfg.dbdc_mode)
-		BandInfo.RFICType=RFIC_DUAL_BAND;
-#endif		
+	CFG80211_BANDINFO_FILL(pAd, &BandInfo);
 
 	return CFG80211OS_SupBandReInit(CFG80211CB, &BandInfo);
 } /* End of CFG80211_SupBandReInit */
@@ -1593,13 +1503,10 @@ BOOLEAN CFG80211_checkScanTable(
 UCHAR CFG80211_getCenCh(RTMP_ADAPTER *pAd, UCHAR prim_ch)
 {
 	UCHAR ret_channel;
-	struct wifi_dev *wdev = get_default_wdev(pAd);
-	UCHAR ht_bw = wlan_operate_get_ht_bw(wdev);
-	UCHAR ext_cha = wlan_operate_get_ext_cha(wdev);
 
-	if (ht_bw == BW_40)
+	if (pAd->CommonCfg.RegTransmitSetting.field.BW == BW_40)
 	{
-		if (ext_cha == EXTCHA_ABOVE)
+		if (pAd->StaCfg[0].wdev.extcha== EXTCHA_ABOVE)
 			ret_channel = prim_ch + 2;
 		else
 		{
@@ -1615,6 +1522,97 @@ UCHAR CFG80211_getCenCh(RTMP_ADAPTER *pAd, UCHAR prim_ch)
 	return ret_channel;
 }
 
+VOID CFG80211_JoinIBSS(
+	IN VOID						*pAdCB,
+	IN UCHAR					*pBSSID)
+{
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdCB;
+	UCHAR *pBeaconFrame = NULL;
+	NDIS_STATUS NStatus;
+	ULONG FrameLen = 0;
+	UCHAR SupRate[MAX_LEN_OF_SUPPORTED_RATES];
+	UCHAR SupRateLen = 0;
+	UCHAR ExtRate[MAX_LEN_OF_SUPPORTED_RATES];
+	UCHAR ExtRateLen = 0;
+	UCHAR DsLen = 1, IbssLen = 2;
+	UCHAR Channel = 1;
+	CFG80211_CB *pCfg80211_CB = NULL;
+
+	/*
+		Driver will ready default setting from DAT file.
+		If driver finds same setting of adhoc peer,
+		driver will join automatically.
+		Linux kernel cfg80211 will dump WARN message,
+		if driver sends join event while cfg80211 is scanning.
+		Do NOT send join event while cfg80211 is scanning. @20140417
+	*/
+	pCfg80211_CB = (CFG80211_CB *)pAd->pCfg80211_CB;
+	if (pCfg80211_CB->pCfg80211_ScanReq)
+		return;
+
+	CFG80211DBG(DBG_LVL_TRACE, ("80211> %s ==>\n", __FUNCTION__));
+
+	NStatus = MlmeAllocateMemory(NULL, &pBeaconFrame);
+	if (NStatus != NDIS_STATUS_SUCCESS) {
+		CFG80211DBG(DBG_LVL_TRACE, ("80211> %s pBeaconFrame alloc failed.\n", __FUNCTION__));
+		return;
+	}
+
+	if (WMODE_EQUAL(pAd->CommonCfg.PhyMode, WMODE_B)
+	    && (pAd->CommonCfg.Channel <= 14)) {
+		SupRate[0] = 0x82;	/* 1 mbps */
+		SupRate[1] = 0x84;	/* 2 mbps */
+		SupRate[2] = 0x8b;	/* 5.5 mbps */
+		SupRate[3] = 0x96;	/* 11 mbps */
+		SupRateLen = 4;
+		ExtRateLen = 0;
+	} else if (pAd->CommonCfg.Channel > 14) {
+		SupRate[0] = 0x8C;	/* 6 mbps, in units of 0.5 Mbps, basic rate */
+		SupRate[1] = 0x12;	/* 9 mbps, in units of 0.5 Mbps */
+		SupRate[2] = 0x98;	/* 12 mbps, in units of 0.5 Mbps, basic rate */
+		SupRate[3] = 0x24;	/* 18 mbps, in units of 0.5 Mbps */
+		SupRate[4] = 0xb0;	/* 24 mbps, in units of 0.5 Mbps, basic rate */
+		SupRate[5] = 0x48;	/* 36 mbps, in units of 0.5 Mbps */
+		SupRate[6] = 0x60;	/* 48 mbps, in units of 0.5 Mbps */
+		SupRate[7] = 0x6c;	/* 54 mbps, in units of 0.5 Mbps */
+		SupRateLen = 8;
+		ExtRateLen = 0;
+	} else {
+		SupRate[0] = 0x82;	/* 1 mbps */
+		SupRate[1] = 0x84;	/* 2 mbps */
+		SupRate[2] = 0x8b;	/* 5.5 mbps */
+		SupRate[3] = 0x96;	/* 11 mbps */
+		SupRateLen = 4;
+
+		ExtRate[0] = 0x0C;	/* 6 mbps, in units of 0.5 Mbps, */
+		ExtRate[1] = 0x12;	/* 9 mbps, in units of 0.5 Mbps */
+		ExtRate[2] = 0x18;	/* 12 mbps, in units of 0.5 Mbps, */
+		ExtRate[3] = 0x24;	/* 18 mbps, in units of 0.5 Mbps */
+		ExtRate[4] = 0x30;	/* 24 mbps, in units of 0.5 Mbps, */
+		ExtRate[5] = 0x48;	/* 36 mbps, in units of 0.5 Mbps */
+		ExtRate[6] = 0x60;	/* 48 mbps, in units of 0.5 Mbps */
+		ExtRate[7] = 0x6c;	/* 54 mbps, in units of 0.5 Mbps */
+		ExtRateLen = 8;
+	}
+
+
+	MakeOutgoingFrame(pBeaconFrame, &FrameLen,
+			  1, &SsidIe,
+			  1, &pAd->StaCfg[0].SsidLen,
+			  pAd->StaCfg[0].SsidLen, pAd->StaCfg[0].Ssid,
+			  1, &SupRateIe,
+			  1, &SupRateLen,
+			  SupRateLen, SupRate,
+			  1, &DsIe,
+			  1, &DsLen,
+			  1, &Channel,
+			  1, &IbssIe,
+			  1, &IbssLen, END_OF_ARGS);
+
+	MlmeFreeMemory( pBeaconFrame);
+
+	CFG80211OS_JoinIBSS(pAd->net_dev, pBSSID);
+}
 
 #ifdef MT_MAC
 VOID CFG80211_InitTxSCallBack(RTMP_ADAPTER *pAd)

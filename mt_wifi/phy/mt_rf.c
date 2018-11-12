@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,6 @@
 	Module Name:
 	mt_rf.c
 */
-#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)

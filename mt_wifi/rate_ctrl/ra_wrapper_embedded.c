@@ -5,7 +5,6 @@
     \brief
 */
 
-#ifdef MTK_LICENSE
 /*******************************************************************************
 * Copyright (c) 2014 MediaTek Inc.
 *
@@ -47,91 +46,9 @@
 * (ICC).
 ********************************************************************************
 */
-#endif /* MTK_LICENSE */
 
 /*
 ** $Log: ra_wrapper_embedded.c $
-**
-** 08 18 2016 by.huang
-** [WCNCR00128952] There are some limitation by current SKU algorithm in MT7615 power
-** 	
-** 	1) Purpose:
-** 	
-** 	1. revise SKU mechanism for compatibility with Nss combine gain with spatial extension
-** 	2. add Spatial extension control(on/off) by profile
-** 	
-** 	2) Changed function name:
-** 	
-** 	1. SKUTxPwrOffsetGet
-** 	2. EventTxPowerShowInfo
-** 	3. EventTxPowerCompTable
-** 	4. MtSingleSkuLoadParam
-** 	5. SetMUTxPower
-** 	6. SetBFNDPATxDCtrl
-** 	
-** 	3) Code change description brief:
-** 	
-** 	1. revise SKU compensation look table mechanism for Nss spatial extension combine gain backoff
-** 	2. add compensation info command
-** 	3. add command for config MU Tx Power and NDPA Power
-** 	
-** 	4) Unit Test Result:
-** 	
-** 	1. build pass 
-** 	2. function pass (use IQxel check Power upper bound for all phymode and phy rate and al Tx stream in QA mode and Normal mode)
-**
-** 06 16 2016 chunting.wu
-** [WCNCR00121389] [JEDI][64-bit porting]
-** 	
-** 	1) Purpose:
-** 	Fix 4-byte alignment.
-** 	2) Changed function name:
-** 	RA_PHY_CFG_T, CMD_STAREC_AUTO_RATE_T, 
-** 	CMD_STAREC_AUTO_RATE_CFG_T
-** 	3) Code change description brief:
-** 	Fix 4-byte alignment.
-** 	4) Unit Test Result:
-** 	UT pass.
-**
-** 05 26 2016 chunting.wu
-** [WCNCR00121272] [MT7615] dynamic adjust max phy rate for mt7621 platform
-** 	
-** 	1) Purpose:
-** 	MT7621 can TX 4SS MCS8,9 when initial.
-** 	2) Changed function name:
-** 	MtCmdSetMaxPhyRate()
-** 	MacTableMaintenance()
-** 	3) Code change description brief:
-** 	send MCU command to limit max phy rate when TP > 50mbps.	
-** 	4) Unit Test Result:
-** 	RDUT pass.
-**
-** 05 04 2016 chunting.wu
-** [WCNCR00120115] [MT7615] change text format from dos to Unix avoid compile error
-** 	
-** 	1) Purpose:
-** 	Change text format from dos to unix.
-** 	2) Changed function name:
-** 	
-** 	3) Code change description brief:
-** 	
-** 	4) Unit Test Result:
-** 	Build pass.
-**
-** 03 11 2016 chunting.wu
-** [WCNCR00036330] [MT7615] Auto rate control
-** 	
-** 	1) Purpose:
-** 	Profile support G band 256QAM enable/disable.
-** 	2) Changed function name:
-** 	ExtEventGBand256QamProbeResule()
-** 	raWrapperEntrySet()
-** 	3) Code change description brief:
-** 	driver notify FW RA enable/disable G band 256QAM probing.
-** 	4) Unit Test Result:
-** 	RD UT pass
-** 	
-** 	Review: http://mtksap20:8080/go?page=NewReview&reviewid=242440
 **
 **
 **
@@ -216,19 +133,7 @@ raWrapperEntrySet(
     pRaEntry->aucHtCapMCSSet[3] = pEntry->HTCapability.MCSSet[3];
     pRaEntry->ucMmpsMode = pEntry->MmpsMode;
 
-    if (pEntry->fgGband256QAMSupport == TRUE)
-    {
-        pRaEntry->ucGband256QAMSupport = RA_G_BAND_256QAM_ENABLE;
-    }
-    else if (pAd->CommonCfg.g_band_256_qam == TRUE)
-    {
-        pRaEntry->ucGband256QAMSupport = RA_G_BAND_256QAM_PROBING;
-    }
-    else
-    {
-        pRaEntry->ucGband256QAMSupport = RA_G_BAND_256QAM_DISABLE;
-    }
-
+    pRaEntry->fgGband256QAMSupport = pEntry->fgGband256QAMSupport;
     pRaEntry->ucMaxAmpduFactor = pEntry->MaxRAmpduFactor;
     pRaEntry->RateLen = pEntry->RateLen;
     pRaEntry->ucSupportRateMode = pEntry->SupportRateMode;
@@ -239,11 +144,8 @@ raWrapperEntrySet(
 #ifdef DOT11_VHT_AC
     pRaEntry->u2SupportVHTMCS1SS = pEntry->SupportVHTMCS1SS;
     pRaEntry->u2SupportVHTMCS2SS = pEntry->SupportVHTMCS2SS;
-    if (pEntry->MaxHTPhyMode.field.BW < BW_160)
-    {
-        pRaEntry->u2SupportVHTMCS3SS = pEntry->SupportVHTMCS3SS;
-        pRaEntry->u2SupportVHTMCS4SS = pEntry->SupportVHTMCS4SS;
-    }
+    pRaEntry->u2SupportVHTMCS3SS = pEntry->SupportVHTMCS3SS;
+    pRaEntry->u2SupportVHTMCS4SS = pEntry->SupportVHTMCS4SS;
     pRaEntry->force_op_mode = pEntry->force_op_mode;
     pRaEntry->vhtOpModeChWidth = pEntry->operating_mode.ch_width;
     pRaEntry->vhtOpModeRxNss = pEntry->operating_mode.rx_nss;
@@ -269,6 +171,8 @@ raWrapperEntrySet(
     pRaEntry->ClientStatusFlags = pEntry->ClientStatusFlags;
 
     pRaEntry->MaxPhyCfg.MODE = pEntry->MaxHTPhyMode.field.MODE;
+    pRaEntry->MaxPhyCfg.iTxBF = pEntry->MaxHTPhyMode.field.iTxBF;
+    pRaEntry->MaxPhyCfg.eTxBF = pEntry->MaxHTPhyMode.field.eTxBF;
     pRaEntry->MaxPhyCfg.STBC = pEntry->MaxHTPhyMode.field.STBC;
     pRaEntry->MaxPhyCfg.ShortGI = pEntry->MaxHTPhyMode.field.ShortGI;
     pRaEntry->MaxPhyCfg.BW = pEntry->MaxHTPhyMode.field.BW;
@@ -289,6 +193,8 @@ raWrapperEntrySet(
     }
 
     pRaEntry->TxPhyCfg.MODE = pEntry->HTPhyMode.field.MODE;
+    pRaEntry->TxPhyCfg.iTxBF = pEntry->HTPhyMode.field.iTxBF;
+    pRaEntry->TxPhyCfg.eTxBF = pEntry->HTPhyMode.field.eTxBF;
     pRaEntry->TxPhyCfg.STBC = pEntry->HTPhyMode.field.STBC;
     pRaEntry->TxPhyCfg.ShortGI = pEntry->HTPhyMode.field.ShortGI;
     pRaEntry->TxPhyCfg.BW = pEntry->HTPhyMode.field.BW;
@@ -331,6 +237,8 @@ raWrapperEntryRestore(
     )
 {
     pEntry->MaxHTPhyMode.field.MODE = pRaEntry->MaxPhyCfg.MODE;
+    pEntry->MaxHTPhyMode.field.iTxBF = pRaEntry->MaxPhyCfg.iTxBF;
+    pEntry->MaxHTPhyMode.field.eTxBF = pRaEntry->MaxPhyCfg.eTxBF;
     pEntry->MaxHTPhyMode.field.STBC = pRaEntry->MaxPhyCfg.STBC;
     pEntry->MaxHTPhyMode.field.ShortGI = pRaEntry->MaxPhyCfg.ShortGI ? 1:0;
     pEntry->MaxHTPhyMode.field.BW = pRaEntry->MaxPhyCfg.BW;
@@ -349,6 +257,8 @@ raWrapperEntryRestore(
     }
 
     pEntry->HTPhyMode.field.MODE = pRaEntry->TxPhyCfg.MODE;
+    pEntry->HTPhyMode.field.iTxBF = pRaEntry->TxPhyCfg.iTxBF;
+    pEntry->HTPhyMode.field.eTxBF = pRaEntry->TxPhyCfg.eTxBF;
     pEntry->HTPhyMode.field.STBC = pRaEntry->TxPhyCfg.STBC;
     pEntry->HTPhyMode.field.ShortGI = pRaEntry->TxPhyCfg.ShortGI ? 1:0;
     pEntry->HTPhyMode.field.BW = pRaEntry->TxPhyCfg.BW;
@@ -384,17 +294,14 @@ raWrapperEntryRestore(
 VOID
 raWrapperConfigSet(
     IN PRTMP_ADAPTER pAd,
-    IN struct wifi_dev *wdev,
     OUT P_RA_COMMON_INFO_T pRaCfg)
 {
     pRaCfg->OpMode = pAd->OpMode;
     pRaCfg->fgAdHocOn = ADHOC_ON(pAd);
     pRaCfg->fgShortPreamble = OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_SHORT_PREAMBLE_INUSED)?TRUE:FALSE;
 
-    //pRaCfg->TxStream = pAd->CommonCfg.TxStream;
-    //pRaCfg->RxStream = pAd->CommonCfg.RxStream;
-    pRaCfg->TxStream = wlan_config_get_tx_stream(wdev);
-    pRaCfg->RxStream = wlan_config_get_rx_stream(wdev);
+    pRaCfg->TxStream = pAd->CommonCfg.TxStream;
+    pRaCfg->RxStream = pAd->CommonCfg.RxStream;
 
     pRaCfg->ucRateAlg = pAd->rateAlg;
 
@@ -413,11 +320,7 @@ raWrapperConfigSet(
 #endif /* WFA_VHT_PF */
 #endif /* DOT11_VHT_AC */
 #endif /* DOT11_N_SUPPORT */
-    pRaCfg->fgSeOff = pAd->CommonCfg.bSeOff;
-    if (wlan_config_get_tx_stream(wdev) == 4)
-    {
-        pRaCfg->ucAntennaIndex = pAd->CommonCfg.ucAntennaIndex;
-    }
+
 #ifdef THERMAL_PROTECT_SUPPORT
     pRaCfg->fgThermalProtectToggle = pAd->fgThermalProtectToggle;
     pRaCfg->force_one_tx_stream = pAd->force_one_tx_stream;
@@ -433,15 +336,10 @@ raWrapperConfigSet(
 
 #if defined(MT7615) || defined(MT7622)
 #ifdef RACTRL_LIMIT_MAX_PHY_RATE
-    if (pAd->fgRaLimitPhyRate == TRUE)
-    {
-        pRaCfg->u2MaxPhyRate = RACTRL_LIMIT_MAX_PHY_RATE;
-    }
-    else
-#endif /* RACTRL_LIMIT_MAX_PHY_RATE */
-    {
-        pRaCfg->u2MaxPhyRate = 0;
-    }
+    pRaCfg->u2MaxPhyRate = RACTRL_LIMIT_MAX_PHY_RATE;
+#else
+    pRaCfg->u2MaxPhyRate = 0;
+#endif 
 #endif /* defined(MT7615) || defined(MT7622) */
 
     pRaCfg->PhyCaps = pAd->chipCap.phy_caps;
@@ -492,10 +390,16 @@ QuickResponeForRateAdaptMT(/* actually for both up and down */
     os_zero_mem(&RaCfg, sizeof(RaCfg));
 
     raWrapperEntrySet(pAd, pEntry, pRaEntry);
-    raWrapperConfigSet(pAd, pEntry->wdev, &RaCfg);
+    raWrapperConfigSet(pAd, &RaCfg);
 
     raSelectTxRateTable(pRaEntry, &RaCfg, pRaInternal, &pRaInternal->pucTable, &TableSize, &InitTxRateIdx);
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+    if (RaCfg.ucRateAlg == RATE_ALG_GRP) 
+    {
+        QuickResponeForRateAdaptMTCore(pAd, pRaEntry, &RaCfg, pRaInternal);
+    }
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #if defined(RATE_ADAPT_AGBS_SUPPORT) && (!defined(RACTRL_FW_OFFLOAD_SUPPORT) || defined(WIFI_BUILD_RAM))
     if (RaCfg.ucRateAlg == RATE_ALG_AGBS) 
@@ -540,10 +444,16 @@ DynamicTxRateSwitchingAdaptMT(
     os_zero_mem(&RaCfg, sizeof(RaCfg));
 
     raWrapperEntrySet(pAd, pEntry, pRaEntry);
-    raWrapperConfigSet(pAd, pEntry->wdev, &RaCfg);
+    raWrapperConfigSet(pAd, &RaCfg);
 
     raSelectTxRateTable(pRaEntry, &RaCfg, pRaInternal, &pRaInternal->pucTable, &TableSize, &InitTxRateIdx);
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+    if (RaCfg.ucRateAlg == RATE_ALG_GRP) 
+    {
+        DynamicTxRateSwitchingAdaptMtCore(pAd, pRaEntry, &RaCfg, pRaInternal);
+    }
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #if defined(RATE_ADAPT_AGBS_SUPPORT) && (!defined(RACTRL_FW_OFFLOAD_SUPPORT) || defined(WIFI_BUILD_RAM))
     if (RaCfg.ucRateAlg == RATE_ALG_AGBS) 
@@ -640,6 +550,39 @@ APMlmeDynamicTxRateSwitching(
         {
             DynamicTxRateSwitchingAdaptMT(pAd, (UINT_8)i);
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+            if (pAd->rateAlg == RATE_ALG_GRP) 
+            {
+                if ( pAd->MacTab.Size == 1 )
+                {
+                    if ( ((pEntry->RaInternal.pucTable == RateSwitchTableAdapt11N2S) && pEntry->HTPhyMode.field.MCS >= 14 ) ||
+                            ((pEntry->RaInternal.pucTable == RateSwitchTableAdapt11N1S) && pEntry->HTPhyMode.field.MCS >= 6 ) )
+                    {
+                        if (pAd->bDisableRtsProtect != TRUE)
+                        {
+                            RTMP_UPDATE_RTS_THRESHOLD(pAd, MAX_RTS_PKT_THRESHOLD, MAX_RTS_THRESHOLD);
+                            pAd->bDisableRtsProtect = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        if (pAd->bDisableRtsProtect != FALSE)
+                        {
+                            RTMP_UPDATE_RTS_THRESHOLD(pAd, pAd->CommonCfg.RtsPktThreshold, pAd->CommonCfg.RtsThreshold);
+                            pAd->bDisableRtsProtect = FALSE;
+                        }
+                    }
+                }
+                else
+                {
+                    if (pAd->bDisableRtsProtect != FALSE)
+                    {
+                        RTMP_UPDATE_RTS_THRESHOLD(pAd, pAd->CommonCfg.RtsPktThreshold, pAd->CommonCfg.RtsThreshold);
+                        pAd->bDisableRtsProtect = FALSE;
+                    }
+                }
+            }
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
             continue;
         }
@@ -651,6 +594,16 @@ APMlmeDynamicTxRateSwitching(
         MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
         pEntry->pTable = pTable;
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+        if (ADAPT_RATE_TABLE(pTable))
+        {
+            if ((pAd->chipCap.hif_type == HIF_RTMP) || (pAd->chipCap.hif_type == HIF_RLT))
+            {
+                APMlmeDynamicTxRateSwitchingAdapt(pAd, i);
+            }
+
+        }
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef AGS_SUPPORT
         if (SUPPORT_AGS(pAd) && AGS_IS_USING(pAd, pTable))
@@ -765,6 +718,17 @@ APQuickResponeForRateUpExec(
         MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
         pEntry->pTable = pTable;
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+        if (ADAPT_RATE_TABLE(pTable))
+        {
+            if ((pAd->chipCap.hif_type == HIF_RTMP) || (pAd->chipCap.hif_type == HIF_RLT))
+            {
+                APQuickResponeForRateUpExecAdapt(pAd, i);
+            }
+
+            continue;
+		}
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef AGS_SUPPORT
         if (SUPPORT_AGS(pAd) && AGS_IS_USING(pAd, pTable))
@@ -937,16 +901,14 @@ VOID RTMPSetSupportMCS(
 #ifdef WDS_SUPPORT
             if (IS_ENTRY_WDS(pEntry))
             {
-                if (pEntry->func_tb_idx < MAX_WDS_ENTRY)
-                    pDesired_ht_phy = &pAd->WdsTab.WdsEntry[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
+                pDesired_ht_phy = &pAd->WdsTab.WdsEntry[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
             }
             else
 #endif /* WDS_SUPPORT */
 #ifdef APCLI_SUPPORT
             if (IS_ENTRY_APCLI(pEntry)|| IS_ENTRY_REPEATER(pEntry))
             {
-                if (pEntry->func_tb_idx < MAX_APCLI_NUM)
-                    pDesired_ht_phy = &pAd->ApCfg.ApCliTab[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
+                pDesired_ht_phy = &pAd->ApCfg.ApCliTab[pEntry->func_tb_idx].wdev.DesiredHtPhyInfo;
             }
             else
 #endif /* APCLI_SUPPORT */
@@ -983,7 +945,7 @@ VOID RTMPSetSupportMCS(
             pEntry->SupportVHTMCS3SS = 0;
             pEntry->SupportVHTMCS4SS = 0;
 
-            for (j = wlan_config_get_tx_stream(pEntry->wdev); j > 0; j--)
+            for (j = pAd->CommonCfg.TxStream; j > 0; j--)
             {
                 switch (j)
                 {

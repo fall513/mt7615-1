@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	mt_io.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __MT_WIFI_IO_H__
 #define __MT_WIFI_IO_H__
 

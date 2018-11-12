@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -28,7 +27,7 @@
 	Name		Date	    Modification logs
 	Paul Lin    06-25-2004  created
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 
@@ -203,25 +202,21 @@ static NTSTATUS _802_11_CounterMeasureHdlr(IN PRTMP_ADAPTER pAd, IN PCmdQElmt CM
 
 static NTSTATUS ApSoftReStart(IN PRTMP_ADAPTER pAd, IN PCmdQElmt CMDQelmt)
 {
-	UCHAR RfIC;
-	NdisMoveMemory(&RfIC , CMDQelmt->buffer, sizeof(UCHAR));
-	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
-		("cmd> ApSoftReStart: RfIC = %d\n", RfIC));
-	APStopByRf(pAd, RfIC);
-	APStartUpByRf(pAd, RfIC);
+    APStop(pAd);
+	APStartUp(pAd);
 	return NDIS_STATUS_SUCCESS;
 }
 
 #ifdef APCLI_SUPPORT
 static NTSTATUS ApCliSetChannel(IN PRTMP_ADAPTER pAd, IN PCmdQElmt CMDQelmt)
 {
-	PAPCLI_STRUCT pApCliTab = (PAPCLI_STRUCT)CMDQelmt->buffer;
 	UCHAR channel = 0;
-
-	channel = pApCliTab->MlmeAux.Channel;
+	RTMP_STRING ChStr[5] = {0};
+	NdisMoveMemory(&channel , CMDQelmt->buffer, sizeof(UCHAR));
 
 	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("cmd> channel=%d CMDTHREAD_APCLI_PBC_TIMEOUT! \n",channel));
-	rtmp_set_channel(pAd, &pApCliTab->wdev, channel);
+	snprintf(ChStr, sizeof(ChStr), "%d", channel);
+	Set_Channel_Proc(pAd, ChStr);
 
 	return NDIS_STATUS_SUCCESS;	
 }
@@ -274,7 +269,6 @@ static NTSTATUS ChannelRescanHdlr(IN PRTMP_ADAPTER pAd, IN PCmdQElmt CMDQelmt)
 	/*SUPPORT RTMP_CHIP ONLY, Single Band*/
 	UCHAR Channel = HcGetRadioChannel(pAd);
 	UCHAR PhyMode = HcGetRadioPhyMode(pAd);
-	UCHAR RfIC = wmode_2_rfic(PhyMode);
 	AUTO_CH_CTRL *pAutoChCtrl = HcGetAutoChCtrl(pAd);
 	Channel = AP_AUTO_CH_SEL(pAd, TRUE,pAutoChCtrl->pChannelInfo->IsABand);
 
@@ -286,8 +280,8 @@ static NTSTATUS ChannelRescanHdlr(IN PRTMP_ADAPTER pAd, IN PCmdQElmt CMDQelmt)
 
 	HcUpdateChannel(pAd,Channel);
 	MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("cmd> Switch to %d! \n", Channel));
-	APStopByRf(pAd, RfIC);
-	APStartUpByRf(pAd, RfIC);
+	APStop(pAd);
+	APStartUp(pAd);
 
 #ifdef AP_QLOAD_SUPPORT
 	QBSS_LoadAlarmResume(pAd);
@@ -397,16 +391,6 @@ static MT_CMD_TABL_T CMDHdlrTable[] = {
 #ifdef INTERNAL_CAPTURE_SUPPORT
     {CMDTHRED_WIFISPECTRUM_RAWDATA_DUMP, WifiSpectrumRawDataDumpHandler},
 #endif/*INTERNAL_CAPTURE_SUPPORT*/    
-#if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
-    {CMDTHRED_PRECAL_TXLPF, PreCalTxLPFStoreProcHandler},
-    {CMDTHRED_PRECAL_TXIQ, PreCalTxIQStoreProcHandler},
-    {CMDTHRED_PRECAL_TXDC, PreCalTxDCStoreProcHandler},
-    {CMDTHRED_PRECAL_RXFI, PreCalRxFIStoreProcHandler},
-    {CMDTHRED_PRECAL_RXFD, PreCalRxFDStoreProcHandler},
-#endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */    
-#ifdef CONFIG_AP_SUPPORT
-	{CMDTHRED_DOT11H_SWITCH_CHANNEL, Dot11HCntDownTimeoutAction},
-#endif /* CONFIG_AP_SUPPORT */
 	{CMDTHREAD_END_CMD_ID,NULL}
 };
 

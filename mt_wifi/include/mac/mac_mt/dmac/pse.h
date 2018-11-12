@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __PSE_H__
 #define __PSE_H__
@@ -82,11 +81,6 @@
 #define PSE_FL_QUE_CTRL_3			(PSE_BASE + 0x1bc)
 #define PSE_PL_QUE_CTRL_0			(PSE_BASE + 0x1c0)
 
-/* PSE spare dummy CR */
-#define PSE_SPARE_DUMMY_CR1			(PSE_BASE +  0x1e4)
-#define PSE_SPARE_DUMMY_CR2			(PSE_BASE +  0x1e8)
-#define PSE_SPARE_DUMMY_CR3			(PSE_BASE +  0x2e8)
-#define PSE_SPARE_DUMMY_CR4			(PSE_BASE +  0x2ec)
 
 /* CPU Interface Get First Frame ID Control Regitser */
 #define C_GFF (PSE_BASE + 0x24)

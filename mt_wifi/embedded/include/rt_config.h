@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -29,26 +28,9 @@
 	Paul Lin    08-01-2002    created
 
 */
-#endif /* MTK_LICENSE */
 #ifndef	__RT_CONFIG_H__
 #define	__RT_CONFIG_H__
 
-#define MT7615 1
-#define CONFIG_ATE 1
-
-#define UAPSD_SUPPORT 1
-
-#define MT_DFS_SUPPORT 1
-
-#define DOT11_VHT_AC 1
-#define RTMP_MAC_PCI 1
-
-#define CUT_THROUGH 1 
-#define CUT_THROUGH_FULL_OFFLOAD 1
-
-#define MT_MAC 1
-#define CONFIG_AP_SUPPORT 1
-//#define COMPOS_TESTMODE_WIN 1
 
 #include "rtmp_comm.h"
 
@@ -65,10 +47,10 @@
 #ifdef BAND_STEERING
 #include "band_steering_def.h"
 #endif /* BAND_STEERING */
-//#ifdef VOW_SUPPORT
+#ifdef VOW_SUPPORT
 /* VOW support */
 #include "ap_vow.h"
-//#endif /* VOW_SUPPORT */
+#endif /* VOW_SUPPORT */
 #endif /* CONFIG_AP_SUPPORT */
 
 
@@ -121,6 +103,7 @@
 #ifdef MBSS_SUPPORT
 #include "ap_mbss.h"
 #endif /* MBSS_SUPPORT */
+
 #ifdef WDS_SUPPORT
 #include "ap_wds.h"
 #endif /* WDS_SUPPORT */
@@ -250,6 +233,9 @@
 #include "wnm.h"
 #endif /* DOT11V_WNM_SUPPORT */
 
+#ifdef FTM_SUPPORT
+#include "ftm.h"
+#endif /* FTM_SUPPORT */
 
 #ifdef WAPI_SUPPORT
 #include "security/wapi.h"
@@ -341,7 +327,6 @@
 
 #include "hdev_ctrl.h"
 
-#include "protocol/protection.h"
 #ifdef SINGLE_SKU_V2
 #include "txpwr/single_sku.h"
 #endif
@@ -356,20 +341,6 @@
 #include "scs.h"
 #endif /* SMART_CARRIER_SENSE_SUPPORT */
 
-#ifdef REDUCE_TCP_ACK_SUPPORT
-#include "cmm_tcprack.h"
-#endif
-
-#include "wlan_config/config_export.h"
-#include "mgmt/be_export.h"
-
-#if defined(BB_SOC) && defined(BB_RA_HWNAT_WIFI)
-#include <linux/foe_hook.h>
-#endif
-
-#if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
-#include "phy/rlm_cal_cache.h"
-#endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */
 
 #endif	/* __RT_CONFIG_H__ */
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +23,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #define RTMP_MODULE_OS
 
 #ifdef RT_CFG80211_SUPPORT
@@ -239,30 +238,15 @@ BOOLEAN CFG80211_HandleP2pMgmtFrame(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk, UCHAR OpM
 #ifndef MT_MAC
 	RXWI_STRUC *pRxWI = pRxBlk->pRxWI;
 #endif /* !MT_MAC */
-	HEADER_802_11 Header;
+	HEADER_802_11 Header = {0};
 	PHEADER_802_11 pHeader = &Header;
-	
-	//MAC_TABLE_ENTRY *pEntry = MacTableLookup(pAd,pRxBlk->Addr2);
-	struct wifi_dev *pWdev = WdevSearchByBssid(pAd,pRxBlk->Addr1);
-	PNET_DEV pNetDev;
-
+#ifdef RT_CFG80211_P2P_CONCURRENT_DEVICE
+	PNET_DEV pNetDev = NULL;
+#endif /* RT_CFG80211_P2P_CONCURRENT_DEVICE */
 	PCFG80211_CTRL pCfg80211_ctrl = &pAd->cfg80211_ctrl;
 	UINT32 freq;
 	UINT32 MPDUtotalByteCnt = 0;
-	
-	if(pWdev == NULL)
-	{
-		MTWF_LOG(DBG_CAT_RX, DBG_SUBCAT_ALL, DBG_LVL_LOUD, 
-			("%s return , can't find wdev for %02x:%02x:%02x:%02x:%02x:%02x\n"
-			, __FUNCTION__, PRINT_MAC(pHeader->Addr2)));
-		pNetDev = CFG80211_GetEventDevice(pAd);
-	}
-	else
-	{
-		pNetDev = pWdev->if_dev;
-		
-	}
-	NdisZeroMemory(&Header, sizeof(HEADER_802_11));
+
 	NdisCopyMemory((UCHAR *)&(pHeader->FC), pRxBlk->FC, sizeof(FRAME_CONTROL));
 	NdisCopyMemory(pHeader->Addr1, pRxBlk->Addr1, MAC_ADDR_LEN);
 	NdisCopyMemory(pHeader->Addr2, pRxBlk->Addr2, MAC_ADDR_LEN);
@@ -304,26 +288,7 @@ BOOLEAN CFG80211_HandleP2pMgmtFrame(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk, UCHAR OpM
 			{
 				MTWF_LOG(DBG_CAT_P2P, DBG_SUBCAT_ALL, DBG_LVL_INFO,("MAIN STA RtmpOsCFG80211RxMgmt OK!! TYPE = %d, freq = %d, %02x:%02x:%02x:%02x:%02x:%02x\n",
 										pHeader->FC.SubType, freq, PRINT_MAC(pHeader->Addr2)));
-#ifdef DISABLE_HOSTAPD_PROBE_RESP
-				if((pHeader->FC.SubType == SUBTYPE_PROBE_REQ) && IS_BROADCAST_MAC_ADDR(pRxBlk->Addr1))
-				{
-					int apidx;
-					/*deliver broadcast frame to all virtual interface */
-					for(apidx=0; apidx<pAd->ApCfg.BssidNum; apidx++)
-					{
-						BSS_STRUCT *mbss = &pAd->ApCfg.MBSSID[apidx];
-						struct wifi_dev *wdev = &mbss->wdev;
-						if(wdev->if_dev != NULL)
-						{
-							CFG80211OS_RxMgmt(wdev->if_dev, freq, pRxBlk->pData, MPDUtotalByteCnt);
-						}
-					}
-				}
-				else
-					CFG80211OS_RxMgmt(pNetDev, freq, pRxBlk->pData, MPDUtotalByteCnt);
-#else
-					CFG80211OS_RxMgmt(pNetDev, freq, pRxBlk->pData, MPDUtotalByteCnt);
-#endif
+				CFG80211OS_RxMgmt(CFG80211_GetEventDevice(pAd), freq, (PUCHAR)pHeader, MPDUtotalByteCnt);
 
 				if (OpMode == OPMODE_AP)
 						return TRUE;

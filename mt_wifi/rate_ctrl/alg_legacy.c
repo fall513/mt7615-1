@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -123,7 +122,7 @@ VOID APMlmeDynamicTxRateSwitchingLegacy(RTMP_ADAPTER *pAd, UINT i)
 	pEntry->LastTimeTxRateChangeAction = pEntry->LastSecTxRateChangeAction;
 
 	/* different calculation in APQuickResponeForRateUpExec() */
-	Rssi = RTMPAvgRssi(pAd, pEntry->wdev, &pEntry->RssiSample);
+	Rssi = RTMPAvgRssi(pAd, &pEntry->RssiSample);
 
 	CurrRateIdx = UpRateIdx = DownRateIdx = pEntry->CurrTxRateIndex;
 
@@ -389,7 +388,7 @@ VOID APQuickResponeForRateAdaptLegacy(
 
 	pEntry = &pAd->MacTab.Content[idx];
     pTable = pEntry->pTable;
-	Rssi = RTMPAvgRssi(pAd, pEntry->wdev, &pEntry->RssiSample);
+	Rssi = RTMPAvgRssi(pAd, &pEntry->RssiSample);
 
 	if (pAd->MacTab.Size == 1)
 	{

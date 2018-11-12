@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,6 @@
 	Module Name:
 	hw_ctrl_basic.c
 */
-#endif /* MTK_LICENSE */
 #include "rt_config.h"
 #include "hw_ctrl_basic.h"
 
@@ -171,20 +169,10 @@ static VOID HwCtrlCmdHandler(RTMP_ADAPTER *pAd)
 		}
 		if(cmdqelmt->NeedWait)
 		{
-			RTMP_SEM_LOCK(&cmdqelmt->lock);
-			
-			if (cmdqelmt->status == HWCTRL_STATUS_TIMEOUT)
-			{	
-				RTMP_SEM_UNLOCK(&cmdqelmt->lock);
-				HwCtrlFreeCmd(pAd,cmdqelmt);
-			}
-			else
-			{
-				RTMP_SEM_UNLOCK(&cmdqelmt->lock);
-				RTMP_OS_COMPLETE(&cmdqelmt->ack_done);
-			}
+			RTMP_OS_COMPLETE(&cmdqelmt->ack_done);
 		}
-		else
+
+		if(!cmdqelmt->NeedWait || cmdqelmt->status == HWCTRL_STATUS_TIMEOUT)
 		{
 			HwCtrlFreeCmd(pAd,cmdqelmt);
 		}
@@ -262,8 +250,10 @@ static INT HwCtrlThread(ULONG Context)
 		{
 			HwCtrlFlagHandler(pAd);
 		}
-		/*every time check command formate event*/
-		HwCtrlCmdHandler(pAd);
+		else
+		{
+			HwCtrlCmdHandler(pAd);
+		}
 		pHwCtrl->TotalCnt++;
 	}
 
@@ -397,7 +387,6 @@ UINT32 HwCtrlInit(RTMP_ADAPTER *pAd)
 	cmdq->head = NULL;
 	cmdq->tail = NULL;
 	cmdq->size = 0;
-	cmdq->max_size = 0;
 	cmdq->CmdQState = RTMP_TASK_STAT_INITED;
 	NdisReleaseSpinLock(&pHwCtrl->HwCtrlQLock);
 
@@ -513,9 +502,6 @@ NDIS_STATUS HwCtrlEnqueueCmd(
 			cmdq->tail = cmdqelmt;
 			cmdqelmt->next = NULL;
 			cmdq->size++;
-
-			if (cmdq->size > cmdq->max_size)
-				cmdq->max_size = cmdq->size;
 			status = NDIS_STATUS_SUCCESS;
 		}
 		else

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -15,7 +14,7 @@
  * way altering	the	source code	is stricitly prohibited, unless	the	prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 	Abstract:
         IEEE P802.11w
@@ -66,7 +65,7 @@ VOID PMF_MlmeSAQueryReq(
 {
         PUCHAR pOutBuffer = NULL;
         HEADER_802_11 SAQReqHdr;
-        ULONG FrameLen = 0;
+        UINT32 FrameLen = 0;
         UCHAR SACategoryType, SAActionType;
         PPMF_CFG pPmfCfg = NULL;
 
@@ -120,7 +119,7 @@ VOID PMF_MlmeSAQueryReq(
 
         	SACategoryType = CATEGORY_SA;
         	SAActionType = ACTION_SAQ_REQUEST;
-                MakeOutgoingFrame(pOutBuffer, &FrameLen,
+                MakeOutgoingFrame(pOutBuffer, (ULONG *) &FrameLen,
                                 sizeof(HEADER_802_11), &SAQReqHdr,
                                 1, &SACategoryType,
                                 1, &SAActionType,
@@ -158,7 +157,7 @@ VOID PMF_PeerSAQueryReqAction(
                 USHORT TransactionID;
                 PUCHAR pOutBuffer = NULL;
                 HEADER_802_11 SAQRspHdr;
-                ULONG FrameLen = 0;
+                UINT32 FrameLen = 0;
                 UCHAR SACategoryType, SAActionType;
 		PPMF_CFG pPmfCfg = NULL;
 
@@ -219,7 +218,7 @@ VOID PMF_PeerSAQueryReqAction(
 
 		SACategoryType = CATEGORY_SA;
 		SAActionType = ACTION_SAQ_RESPONSE;
-                MakeOutgoingFrame(pOutBuffer, &FrameLen,
+                MakeOutgoingFrame(pOutBuffer, (ULONG *) &FrameLen,
                                 sizeof(HEADER_802_11), &SAQRspHdr,
                                 1, &SACategoryType,
                                 1, &SAActionType,
@@ -961,11 +960,6 @@ INT PMF_DecryptUniRobustFrameAction(
 		MTWF_LOG(DBG_CAT_SEC, CATSEC_PMF, DBG_LVL_ERROR,("%s : the entry no PMF capable !\n", __FUNCTION__));
 		return PMF_UNICAST_DECRYPT_FAILURE;
 	}		
-#ifdef RT_BIG_ENDIAN
-      	if ((pHeader->FC.SubType == SUBTYPE_DISASSOC) || (pHeader->FC.SubType == SUBTYPE_DEAUTH)) {
-		*(USHORT *)pDate = cpu2le16(*(USHORT *)pDate); /* swap reason code */
-   	}
-#endif /* RT_BIG_ENDIAN */		
 	
 	if (RTMPSoftDecryptCCMP(pAd, 
 				pMgmtFrame, 
@@ -994,10 +988,7 @@ INT PMF_EncapBIPAction(
 	UCHAR BIP_MIC[LEN_PMF_BIP_MIC];
 	PUCHAR pFrameBody = &pHdr->Octet[0];
 	UINT32 body_len = mgmt_len - LENGTH_802_11;				
-#ifdef RT_BIG_ENDIAN
-	PUCHAR pMacHdr = NULL;
-	BOOLEAN bSwaped = FALSE;
-#endif
+
 	/* Sanity check the total frame body length */
 	if (body_len <= (2 + LEN_PMF_MMIE))
 	{
@@ -1050,16 +1041,6 @@ INT PMF_EncapBIPAction(
 	INC_TX_TSC(pPmfCfg->IPN[idx], LEN_WPA_TSC);	
 
 	/* Compute AAD  */
-#ifdef RT_BIG_ENDIAN
-	if (pHdr->FC.SubType ==SUBTYPE_DISASSOC || pHdr->FC.SubType == SUBTYPE_DEAUTH)
-	{
-		pMacHdr = (PUCHAR) pHdr;
-		*(USHORT *)pMacHdr = cpu2le16(*(USHORT *)pMacHdr); //swap frame-control
-		pMacHdr += sizeof(HEADER_802_11);
-		*(USHORT *)pMacHdr = cpu2le16(*(USHORT *)pMacHdr);	//swap reason code
-		bSwaped= TRUE;
-	}
-#endif
 	PMF_ConstructBIPAad((PUCHAR)pHdr, aad_hdr);
 
 	/* Calculate BIP MIC */
@@ -1068,16 +1049,6 @@ INT PMF_EncapBIPAction(
 	/* Fill into the MMIE MIC field */
 	NdisMoveMemory(pMMIE->MIC, BIP_MIC, LEN_PMF_BIP_MIC);
 
-#ifdef RT_BIG_ENDIAN
-	if (bSwaped)
-	{
-		pMacHdr = (PUCHAR) pHdr;
-		*(USHORT *)pMacHdr = cpu2le16(*(USHORT *)pMacHdr);
-		pMacHdr += sizeof(HEADER_802_11);
-		*(USHORT *)pMacHdr = cpu2le16(*(USHORT *)pMacHdr);	
-		bSwaped= TRUE;
-	}
-#endif
 	/* BIP doesn't need encrypt frame */
 	pHdr->FC.Wep = 0;
 

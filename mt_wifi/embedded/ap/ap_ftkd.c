@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -213,9 +212,6 @@ VOID TYPE_FUNC FT_KDP_Release(
 	if (pAd->ApCfg.FtTab.FlgIsFtKdpInit == 0)
 		return;
 
-	if (pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK == NULL)
-		return;
-
 	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("ap_ftkd> Release FT KDP Module...\n"));
 
 #ifndef FT_KDP_FUNC_SOCK_COMM
@@ -235,6 +231,12 @@ VOID TYPE_FUNC FT_KDP_Release(
 	}
 #endif /* FT_KDP_FUNC_R0KH_IP_RECORD */
 
+	if (pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK != NULL)
+	{
+		FT_MEM_FREE(pAd, pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK);
+		pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK = NULL;
+	}
+
 #ifdef FT_KDP_FUNC_INFO_BROADCAST
 {
 	BOOLEAN Status;
@@ -244,9 +246,6 @@ VOID TYPE_FUNC FT_KDP_Release(
 
 	/* free spin lock */
 	NdisFreeSpinLock(&(pAd->ApCfg.FtTab.FT_KdpLock));
-
-	FT_MEM_FREE(pAd, pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK);
-	pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK = NULL;
 #endif /* FT_KDP_EMPTY */
 
 	pAd->ApCfg.FtTab.FlgIsFtKdpInit = 0;
@@ -441,7 +440,6 @@ VOID TYPE_FUNC FT_KDP_EventInform(
 			if (pCB == NULL)
 			{
 				MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("ap_ftkd> pCB == NULL!\n"));
-				FT_MEM_FREE(pAd, pFtKdp);
 				return;
 			}
 
@@ -551,7 +549,7 @@ VOID TYPE_FUNC FT_KDP_EventInform(
 	if (pPktComm != NULL)
 	{
 		/* make up 802.3 header */
-		NdisMoveMemory(pHdr8023->DA, pAd->ApCfg.MBSSID[ApIdx].wdev.bssid, MAC_ADDR_LEN);
+		NdisMoveMemory(pHdr8023->DA, pAd->ApCfg.MBSSID[ApIdx].wdev.bssid, 6);
 
 		/* can not send a packet with same SA & DA in 5VT board */
 /*		NdisMoveMemory(pHdr8023->SA, pAd->ApCfg.MBSSID[ApIdx].Bssid, 6); */
@@ -600,7 +598,9 @@ VOID TYPE_FUNC FT_KDP_EventInform(
 }
 #endif
 
+#ifdef FT_KDP_FUNC_SOCK_COMM
 	FT_MEM_FREE(pAd, pFtKdp);
+#endif /* FT_KDP_FUNC_SOCK_COMM */
 #endif /* FT_KDP_EMPTY */
 }
 
@@ -683,9 +683,9 @@ BOOLEAN TYPE_FUNC FT_KDP_KeyRequestToUs(
 {
 #ifndef FT_KDP_EMPTY
 	UINT32 IDR0KH;
-	UINT32 ApIdx = BSS0;
-	MAC_TABLE_ENTRY *pEntry = NULL;
-	
+	UINT32 ApIdx;
+
+
 	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
 			("ap_ftkd> Key Req from Peer IP = %d.%d.%d.%d!\n",
 			IAPP_SHOW_IP_HTONL(PeerIP)));
@@ -712,6 +712,8 @@ BOOLEAN TYPE_FUNC FT_KDP_KeyRequestToUs(
 			pEvtKeyReq->KeyInfo.R0KHID[4],
 			pEvtKeyReq->KeyInfo.R0KHID[5]));
 #endif /* FT_KDP_DEBUG */
+
+	ApIdx = BSS0;
 
 	for(IDR0KH=0; IDR0KH<FT_KDP_R0KHID_MAX_SIZE; IDR0KH++)
 	{
@@ -749,13 +751,6 @@ BOOLEAN TYPE_FUNC FT_KDP_KeyRequestToUs(
 				pEvtKeyReq->KeyInfo.R1KHID[4],
 				pEvtKeyReq->KeyInfo.R1KHID[5]));
 #endif /* FT_KDP_DEBUG */
-
-		pEntry = MacTableLookup(pAd, pEvtKeyReq->MacAddr);
-
-		if (!pEntry)
-			return FALSE;
-		else
-			ApIdx = pEntry->func_tb_idx;
 
 		/* calculate the PMK-R1 Key for the station vs. the AP */
 		if (FT_QueryKeyInfoForKDP(pAd, ApIdx, pEvtKeyReq) == FALSE)

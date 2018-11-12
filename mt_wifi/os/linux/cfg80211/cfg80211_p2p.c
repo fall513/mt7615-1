@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -90,10 +89,7 @@ VOID CFG80211RemainOnChannelTimeout(
 									pAd->CommonCfg.Channel));
 
 #ifdef RT_CFG80211_P2P_MULTI_CHAN_SUPPORT
-{
-	struct wifi_dev *p2p_dev = &pAd->StaCfg[0].wdev;
-	UCHAR op_ht_bw = wlan_operate_get_ht_bw(p2p_dev);
-	if (op_ht_bw == HT_BW_40)
+	if (pAd->StaCfg[0].wdev.bw == HT_BW_40)
 	{
 		HcBbpSetBwByChannel(pAd,BW_40,pAd->StaCfg[0].wdev.CentralChannel)
 		AsicSwitchChannel(pAd, pAd->StaCfg[0].wdev.CentralChannel, FALSE);
@@ -111,7 +107,6 @@ VOID CFG80211RemainOnChannelTimeout(
 		pAd->CommonCfg.Channel = pAd->StaCfg[0].wdev.channel;
 		pAd->CommonCfg.CentralChannel = pAd->StaCfg[0].wdev.channel;			
 	}
-}
 #else
         AsicSwitchChannel(pAd, pAd->CommonCfg.Channel, FALSE);
         AsicLockChannel(pAd, pAd->CommonCfg.Channel);
@@ -385,11 +380,10 @@ VOID CFG80211DRV_P2pClientKeyAdd(VOID *pAdOrg, VOID *pData)
 					struct wifi_dev *wdev = &pAd->StaCfg[0].wdev;
 					BOOLEAN bStart = FALSE;
 					PAPCLI_STRUCT pApCliEntry = pApCliEntry = &pAd->ApCfg.ApCliTab[MAIN_MBSSID];
-					struct wifi_dev *p2p_wdev = NULL;
-					UCHAR op_ht_bw1 = wlan_operate_get_ht_bw(wdev);
-					UCHAR op_ht_bw2;
+					struct wifi_dev *p2p_wdev = NULL;			
+
 					p2p_wdev = &pApCliEntry->wdev;
-					op_ht_bw2 = wlan_operate_get_ht_bw(p2p_wdev);
+
 
     					MTWF_LOG(DBG_CAT_P2P, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("CFG Debug: Infra AuthMode =%d, wdev->WepStatus=%d\n",wdev->AuthMode,wdev->WepStatus));
 
@@ -418,13 +412,13 @@ VOID CFG80211DRV_P2pClientKeyAdd(VOID *pAdOrg, VOID *pData)
 					if (bStart == TRUE)
 					{
 
-						if ((op_ht_bw1 != op_ht_bw2) && ((wdev->channel == p2p_wdev->channel)))
+						if ((wdev->bw != p2p_wdev->bw) && ((wdev->channel == p2p_wdev->channel)))
 						{
 							MTWF_LOG(DBG_CAT_P2P, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("start bw !=  && P2P GC SCC\n"));
 							pAd->Mlme.bStartScc = TRUE;				
 						}				
-						if (( ((op_ht_bw1 == op_ht_bw2) && (wdev->channel != p2p_wdev->channel )) 
-								||!((op_ht_bw1 == op_ht_bw2) && ((wdev->channel == p2p_wdev->channel)))))
+						if (( ((wdev->bw == p2p_wdev->bw) && (wdev->channel != p2p_wdev->channel )) 
+								||!((wdev->bw == p2p_wdev->bw) && ((wdev->channel == p2p_wdev->channel)))))
 						{
 							Start_MCC(pAd);
 //							pAd->MCC_DHCP_Protect = TRUE;

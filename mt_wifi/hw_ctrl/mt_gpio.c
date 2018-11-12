@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	mt_gpio.c
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 static VOID GPIOMuxSelect(RTMP_ADAPTER *pAd, UINT32 GPIO)

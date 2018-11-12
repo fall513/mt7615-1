@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -24,7 +23,6 @@
      Who         When          What
      --------    ----------    ----------------------------------------------
  */
-#endif /* MTK_LICENSE */
 #ifdef IDS_SUPPORT
 
 #include "rt_config.h"
@@ -238,11 +236,7 @@ BOOLEAN RTMPSpoofedMgmtDetection(
 			RcvdRssi = RTMPMaxRssi(pAd, 
 								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_0), 
 								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_1), 
-								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2)
-#ifdef CUSTOMER_DCC_FEATURE
-								,ConvertToRssi(pAd, &rssi_info, RSSI_IDX_3)
-#endif
-								);
+								ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2));
 		
 			switch (FC->SubType) 
 			{
@@ -304,12 +298,7 @@ VOID RTMPConflictSsidDetection(
 	IN UCHAR			SsidLen,
 	IN CHAR				Rssi0,
 	IN CHAR				Rssi1,
-	IN CHAR				Rssi2
-#ifdef CUSTOMER_DCC_FEATURE
-	,
-	IN CHAR				Rssi3
-#endif
-)
+	IN CHAR				Rssi2)
 {
 	INT	i;
 	
@@ -324,17 +313,10 @@ VOID RTMPConflictSsidDetection(
 			rssi_info.raw_rssi[0] = Rssi0;
 			rssi_info.raw_rssi[1] = Rssi1;
 			rssi_info.raw_rssi[2] = Rssi2;
-#ifdef CUSTOMER_DCC_FEATURE
-			rssi_info.raw_rssi[3] = Rssi3;
-#endif
 			
 			RcvdRssi = RTMPMaxRssi(pAd, ConvertToRssi(pAd, &rssi_info, RSSI_IDX_0),
 						ConvertToRssi(pAd, &rssi_info, RSSI_IDX_1),
-						ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2)
-#ifdef CUSTOMER_DCC_FEATURE
-						,ConvertToRssi(pAd, &rssi_info, RSSI_IDX_3)
-#endif
-									);
+						ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2));
 
 			pAd->ApCfg.MBSSID[i].RcvdConflictSsidCount ++;
 			pAd->ApCfg.MBSSID[i].RssiOfRcvdConflictSsid = RcvdRssi;
@@ -365,11 +347,7 @@ BOOLEAN RTMPReplayAttackDetection(
 
 			RcvdRssi = RTMPMaxRssi(pAd, ConvertToRssi(pAd, &rssi_info, RSSI_IDX_0),
 									ConvertToRssi(pAd, &rssi_info, RSSI_IDX_1),
-									ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2)
-#ifdef CUSTOMER_DCC_FEATURE
-									,ConvertToRssi(pAd, &rssi_info, RSSI_IDX_3)
-#endif
-									);
+									ConvertToRssi(pAd, &rssi_info, RSSI_IDX_2));
 		
 			pAd->ApCfg.MBSSID[i].RcvdReplayAttackCount ++;
 			pAd->ApCfg.MBSSID[i].RssiOfRcvdReplayAttack = RcvdRssi;

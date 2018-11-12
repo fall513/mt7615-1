@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +24,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __ANDES_CORE_H__
 #define __ANDES_CORE_H__
 
@@ -76,7 +75,7 @@ enum cmd_msg_error_type {
 
 struct MCU_CTRL {
 	UINT8 cmd_seq;
-	ULONG flags; /* Use long, becasue we want to do atomic bit operation */
+	ULONG flags;
 #ifdef LINUX
 #ifndef WORKQUEUE_BH
 	RTMP_NET_TASK_STRUCT cmd_msg_task;

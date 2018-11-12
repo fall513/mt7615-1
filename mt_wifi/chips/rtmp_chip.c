@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #include "rt_config.h"
 
@@ -513,6 +512,11 @@ int RtmpChipOpsHook(VOID *pCB)
 
 	/*initial chip hook function*/
 	WfSysPreInit(pAd);
+
+#ifdef GREENAP_SUPPORT
+	pChipOps->EnableAPMIMOPS = EnableAPMIMOPSv1;
+	pChipOps->DisableAPMIMOPS = DisableAPMIMOPSv1;
+#endif /* GREENAP_SUPPORT */
 
 #ifdef RTMP_MAC
 	// TODO: default settings for rest of the chips!! change this to really default chip.

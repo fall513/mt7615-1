@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -119,9 +118,6 @@ VOID InitPeerEntryRateCapability(
 	UCHAR MaxSupportedRate = RATE_11;
 	UCHAR MaxSupportedRateIn500Kbps = 0;
 	UCHAR idx;
-	struct wifi_dev *wdev = &pAd->StaCfg[0].wdev;
-	ADD_HT_INFO_IE *addht = wlan_operate_get_addht(wdev);
-	UCHAR cfg_ht_bw = wlan_config_get_ht_bw(wdev);
 
     for (idx = 0; idx < SupportRateLens; idx++)
     {
@@ -196,11 +192,11 @@ VOID InitPeerEntryRateCapability(
 		{
 			pEntry->MaxHTPhyMode.field.MODE = MODE_HTMIX;
 			pAd->MacTab.fAnyStationNonGF = TRUE;
-			addht->AddHtInfo2.NonGfPresent = 1;
+			pAd->CommonCfg.AddHTInfo.AddHtInfo2.NonGfPresent = 1;
 		}
 
 		if ((pHtCapability->HtCapInfo.ChannelWidth) &&
-			cfg_ht_bw)
+			(pAd->CommonCfg.DesiredHtPhy.ChannelWidth))
 		{
 			pEntry->MaxHTPhyMode.field.BW= BW_40;
 			pEntry->MaxHTPhyMode.field.ShortGI = ((pAd->CommonCfg.DesiredHtPhy.ShortGIfor40)&(pHtCapability->HtCapInfo.ShortGIfor40));
@@ -252,7 +248,7 @@ VOID InitPeerEntryRateCapability(
 		pEntry->AMsduSize = (UCHAR)pHtCapability->HtCapInfo.AMsduSize;
 		pEntry->HTPhyMode.word = pEntry->MaxHTPhyMode.word;
 
-		if (wlan_config_get_ht_gi(wdev) == GI_400)
+		if (pAd->CommonCfg.RegTransmitSetting.field.ShortGI == GI_400)
 		{
 			if (pHtCapability->HtCapInfo.ShortGIfor20)
 					CLIENT_STATUS_SET_FLAG(pEntry, fCLIENT_STATUS_SGI20_CAPABLE);
@@ -284,7 +280,8 @@ VOID InitPeerEntryRateCapability(
 	pEntry->HTPhyMode.word = pEntry->MaxHTPhyMode.word;
 
 	if ((pHtCapability->HtCapInfo.ChannelWidth) &&
-		cfg_ht_bw)
+		(pAd->CommonCfg.DesiredHtPhy.ChannelWidth) &&
+		(pAd->StaActive.SupportedHtPhy.ChannelWidth))
 	{
 		pEntry->HTPhyMode.field.BW= BW_40;
 	}
@@ -336,8 +333,6 @@ BOOLEAN CFG80211DRV_StaTdlsInsertDeletepEntry(
 	PMAC_TABLE_ENTRY pMacEntry = NULL;
 	UCHAR HtLen;
 	HT_CAPABILITY_IE HtCapabilityTmp;
-	struct wifi_dev *wdev = &pAd->StaCfg[0].wdev;
-	UCHAR op_ht_bw = wlan_operate_get_ht_bw(wdev);
 
 	peer = (UCHAR *)pData;
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_TDLS, DBG_LVL_ERROR,("=====>  %s() peer: %02x:%02x:%02x:%02x:%02x:%02x ,op: %d\n", __FUNCTION__,PRINT_MAC(peer),Data));  //Kyle Debug
@@ -419,11 +414,11 @@ BOOLEAN CFG80211DRV_StaTdlsInsertDeletepEntry(
 #ifndef RT_BIG_ENDIAN
 				os_zero_mem(&HtCapabilityTmp, sizeof(HT_CAPABILITY_IE));
 				os_move_mem(&HtCapabilityTmp, &pAd->CommonCfg.HtCapability, HtLen);
-				HtCapabilityTmp.HtCapInfo.ChannelWidth = op_ht_bw;
+				HtCapabilityTmp.HtCapInfo.ChannelWidth = pAd->CommonCfg.RegTransmitSetting.field.BW;
 #else
 				os_zero_mem(&HtCapabilityTmp, sizeof(HT_CAPABILITY_IE));
 				os_move_mem(&HtCapabilityTmp, &pAd->CommonCfg.HtCapability, HtLen);
-				HtCapabilityTmp.HtCapInfo.ChannelWidth = op_ht_bw;
+				HtCapabilityTmp.HtCapInfo.ChannelWidth = pAd->CommonCfg.RegTransmitSetting.field.BW;
 
 				*(USHORT *)(&HtCapabilityTmp.HtCapInfo) = SWAP16(*(USHORT *)(&HtCapabilityTmp.HtCapInfo));
 				*(USHORT *)(&HtCapabilityTmp.ExtHtCapInfo) = SWAP16(*(USHORT *)(&HtCapabilityTmp.ExtHtCapInfo));
@@ -485,7 +480,7 @@ BOOLEAN CFG80211DRV_StaTdlsInsertDeletepEntry(
 
 #ifdef MT_MAC
 					MTWF_LOG(DBG_CAT_PROTO, CATPROTO_TDLS, DBG_LVL_TRACE,("======%s %d EntryType %d UpdateRxWCIDTable\n",__FUNCTION__,__LINE__,pMacEntry->EntryType));
-					RTMP_STA_ENTRY_ADD(pAd, pMacEntry->wcid, pAd->CommonCfg.Bssid,FALSE, TRUE);
+					RTMP_STA_ENTRY_ADD(pAd, pMacEntry->wcid, pAd->CommonCfg.Bssid,FALSE);
 #endif
 					pMacEntry->wdev->PortSecured = WPA_802_1X_PORT_SECURED;
 					pMacEntry->PrivacyFilter = Ndis802_11PrivFilterAcceptAll;
@@ -870,8 +865,6 @@ INT cfg_tdls_build_frame(PRTMP_ADAPTER pAd,u8 *peer,u8 dialog_token,u8 action_co
 	UCHAR Length = sizeof(EXT_CAP_INFO_ELEMENT);
 	EXT_CAP_INFO_ELEMENT	extCapInfo;
 	BSS_2040_COEXIST_IE BssCoexistence;
-	struct wifi_dev *wdev = &pAd->StaCfg[0].wdev;
-	UCHAR op_ht_bw = wlan_operate_get_ht_bw(wdev);
 
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_TDLS, DBG_LVL_INFO,("======>  %s() \n", __FUNCTION__));
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_TDLS, DBG_LVL_OFF,("%s() - TDLSEntry[%d] Initiator = %d\n", __FUNCTION__,tdls_entry_link_index,pAd->StaCfg[0].wpa_supplicant_info.CFG_Tdls_info.TDLSEntry[tdls_entry_link_index].bInitiator));
@@ -1013,7 +1006,7 @@ INT cfg_tdls_build_frame(PRTMP_ADAPTER pAd,u8 *peer,u8 dialog_token,u8 action_co
 				UCHAR RegluatoryRxtIdent = 221;
 				UCHAR CoverageClass = 0;
 
-				regclass = cfg_tdls_GetRegulatoryClass(pAd, op_ht_bw, pAd->CommonCfg.Channel);
+				regclass = cfg_tdls_GetRegulatoryClass(pAd, pAd->CommonCfg.RegTransmitSetting.field.BW, pAd->CommonCfg.Channel);
 				MakeOutgoingFrame(TmpFrame+TmpLen2, &TmpLen,
 									1,				&RegluatoryRxtIdent,
 									1,				&regclass,
@@ -1203,7 +1196,7 @@ INT cfg_tdls_build_frame(PRTMP_ADAPTER pAd,u8 *peer,u8 dialog_token,u8 action_co
 			UCHAR SuppClassesList[] = {1, 2, 3, 4, 12, 22, 23, 24, 25, 27, 28, 29, 30, 32, 33};
 			UCHAR regclass;
 
-			regclass = cfg_tdls_GetRegulatoryClass(pAd, op_ht_bw, pAd->CommonCfg.Channel);
+			regclass = cfg_tdls_GetRegulatoryClass(pAd, pAd->CommonCfg.RegTransmitSetting.field.BW, pAd->CommonCfg.Channel);
 
 			MakeOutgoingFrame(pOutBuffer + FrameLen,			&TempLen,
 								1,				&TDLS_IE,
@@ -1225,7 +1218,7 @@ INT cfg_tdls_build_frame(PRTMP_ADAPTER pAd,u8 *peer,u8 dialog_token,u8 action_co
 #ifndef RT_BIG_ENDIAN
 			os_zero_mem(&HtCapabilityTmp, sizeof(HT_CAPABILITY_IE));
 			os_move_mem(&HtCapabilityTmp, &pAd->CommonCfg.HtCapability, HtLen);
-			HtCapabilityTmp.HtCapInfo.ChannelWidth = op_ht_bw;
+			HtCapabilityTmp.HtCapInfo.ChannelWidth = pAd->CommonCfg.RegTransmitSetting.field.BW;
 
 			MakeOutgoingFrame(pOutBuffer + FrameLen,	&TempLen,
 								1,			&HtCapIe,
@@ -1235,7 +1228,7 @@ INT cfg_tdls_build_frame(PRTMP_ADAPTER pAd,u8 *peer,u8 dialog_token,u8 action_co
 #else
 			os_zero_mem(&HtCapabilityTmp, sizeof(HT_CAPABILITY_IE));
 			os_move_mem(&HtCapabilityTmp, &pAd->CommonCfg.HtCapability, HtLen);
-			HtCapabilityTmp.HtCapInfo.ChannelWidth = op_ht_bw;
+			HtCapabilityTmp.HtCapInfo.ChannelWidth = pAd->CommonCfg.RegTransmitSetting.field.BW;
 
 			*(USHORT *)(&HtCapabilityTmp.HtCapInfo) = SWAP16(*(USHORT *)(&HtCapabilityTmp.HtCapInfo));
 			*(USHORT *)(&HtCapabilityTmp.ExtHtCapInfo) = SWAP16(*(USHORT *)(&HtCapabilityTmp.ExtHtCapInfo));

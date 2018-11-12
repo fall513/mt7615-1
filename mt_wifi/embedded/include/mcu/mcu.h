@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,13 +25,9 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __MCU_H__
 #define __MCU_H__
-
-#define CONFG_BASE_ADDR                  0x2000
-#define CONFG_COM_REG3                  (CONFG_BASE_ADDR + 0x0000020C)
-#define CONFG_COM_REG3_FWOPMODE          BIT(4)
 
 #define ENABLE_RXD_LOG 0
 

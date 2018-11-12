@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,6 @@
 	Module Name:
 	testmode_ioctl.c
 */
-#endif /* MTK_LICENSE */
 #if defined(COMPOS_WIN)
 #include "MtConfig.h"
 #elif defined (COMPOS_TESTMODE_WIN)
@@ -23,9 +21,6 @@
 #include "rt_config.h"
 #include "hdev/hdev.h"
 #endif
-
-#include "rtmp.h"
-
 static INT EthGetParamAndShiftBuff(BOOLEAN convert, UINT size, UCHAR **buf, 
 									   IN UCHAR *out)
 {
@@ -284,7 +279,7 @@ static INT32 HQA_StartTx(
 	UINT16 TxLength;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -363,7 +358,7 @@ static INT32 HQA_StartRx(
 	INT32 Ret = 0;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -394,7 +389,7 @@ static INT32 HQA_StopTx(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	UINT32 Mode;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -464,7 +459,7 @@ static INT32 HQA_StopRx(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	UINT32 Mode;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -499,7 +494,7 @@ static INT32 HQA_SetTxPath(
 	INT32 ant_sel = 0;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -535,7 +530,7 @@ static INT32 HQA_SetRxPath(
 	INT16 Value = 0;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -594,7 +589,7 @@ static INT32 HQA_SetTxPower0(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	ATE_TXPOWER TxPower;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -629,7 +624,7 @@ static INT32 HAQ_SetTxPower1(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	ATE_TXPOWER TxPower;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -1825,7 +1820,7 @@ static INT32 HQA_WriteBulkEEPROM(
     if (Len == 16) {
         memcpy(pAd->eebuf + Offset, (UCHAR *)Buffer + Offset, Len);
     }
-    if ((Offset + Len) == EEPROM_SIZE)
+    if (Offset == 0x1f0)
         rtmp_ee_flash_write_all(pAd, (PUSHORT)pAd->eebuf);
 
     if (Len != 16)
@@ -2977,8 +2972,6 @@ static INT32 HQA_WriteBufferDone(
 	switch (Value)
 	{
 		case E2P_EFUSE_MODE:
-            /* update status of Effuse write back */
-            pAd->fgQAEffuseWriteBack = TRUE;
 			Set_EepromBufferWriteBack_Proc(pAd, "1");
 			break;
 		case E2P_FLASH_MODE:
@@ -2994,9 +2987,6 @@ static INT32 HQA_WriteBufferDone(
 			MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: Unknow write back mode(%d)\n", __FUNCTION__, Value));
 	}
 #endif	
-
-    /* update status of Effuse write back */
-    pAd->fgQAEffuseWriteBack = FALSE;
 
     ResponseToQA(HqaCmdFrame, WRQ, 2, Ret);
     return Ret;
@@ -3085,7 +3075,7 @@ static INT32 HQA_MPSSetSeqData(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, 
 	len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/sizeof(UINT32)- 1;
 	
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>512) || (len == 0))
 		goto MPS_SEQ_DATA_RET;
 
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
@@ -3127,7 +3117,7 @@ static INT32 HQA_MPSSetPayloadLength(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT 
     len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/4 - 1;
 	
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>1024) || (len == 0))
 		goto MPS_PKT_LEN_RET;
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
 	if(Ret == NDIS_STATUS_FAILURE)
@@ -3167,7 +3157,7 @@ static INT32 HQA_MPSSetPacketCount(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *W
     len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/4 - 1;
 	
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>1024) || (len == 0))
 		goto MPS_PKT_CNT_RET;
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
 	if(Ret == NDIS_STATUS_FAILURE)
@@ -3207,7 +3197,7 @@ static INT32 HQA_MPSSetPowerGain(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ
 	len = PKTS_TRAN_TO_NET(HqaCmdFrame->Length)/4 - 1;
 		
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>1024) || (len == 0))
 		goto MPS_SET_PWR_RET;
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
 	if(Ret == NDIS_STATUS_FAILURE)
@@ -3281,7 +3271,7 @@ static INT32 HQA_MPSSetNss(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQA_
 	len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/sizeof(UINT32)- 1;
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>512) || (len == 0))
 		goto out;
 
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
@@ -3324,7 +3314,7 @@ static INT32 HQA_MPSSetPerpacketBW(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *W
 	len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/sizeof(UINT32)- 1;
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>512) || (len == 0))
 		goto out;
 
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
@@ -3384,8 +3374,8 @@ static INT32 HQA_CheckEfuseModeType(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *
     UINT32 val = 0;
 	INT32 Ret = 0;
 #if !defined(COMPOS_TESTMODE_WIN) && !defined(COMPOS_WIN)
-	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s, %x\n", __FUNCTION__, pAd->E2pCtrl.e2pCurMode));
-	val = PKTL_TRAN_TO_NET(pAd->E2pCtrl.e2pCurMode); 	//Fix me::pAd unify
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s, %x\n", __FUNCTION__, pAd->e2pCurMode));
+	val = PKTL_TRAN_TO_NET(pAd->e2pCurMode); 	//Fix me::pAd unify
 #endif
 	NdisMoveMemory(HqaCmdFrame->Data + 2, &(val), sizeof(val));
 	ResponseToQA(HqaCmdFrame, WRQ, 2+sizeof(val), Ret);
@@ -3441,6 +3431,7 @@ static INT32 HQA_SetBandMode(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQ
 
 static INT32 HQA_GetBandMode(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQA_CMD_FRAME *HqaCmdFrame)
 {
+
 	INT32 Ret = 0;
 	UINT32 band_mode = 0;
 #ifndef COMPOS_TESTMODE_WIN
@@ -3450,10 +3441,9 @@ static INT32 HQA_GetBandMode(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQ
 	UINT8 wdev_idx = 0;
 	
 	NdisMoveMemory((UCHAR *)&band_idx, HqaCmdFrame->Data, sizeof(band_idx));	
-	band_idx = PKTL_TRAN_TO_HOST(band_idx);
 	wdev_idx = MT_ATEGetWDevIdxByBand(pAd, band_idx);
-	wdev = pAd->wdev_list[wdev_idx];
-
+	if (wdev_idx != -1)
+		wdev = pAd->wdev_list[wdev_idx];
 	if (!wdev)
 		goto resp;
 
@@ -5210,7 +5200,7 @@ static INT32 HQA_MUGetQD(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQA_CM
 	PKTLA_DUMP( DBG_LVL_INFO, sizeof(qd)/sizeof(int), &qd);
 	NdisMoveMemory(HqaCmdFrame->Data + 2,(UCHAR *)&qd, sizeof(qd));
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("%s, sub:%d, qd.length:%zu, pqd:%p, HqaCmd->Data:%p\n"
+		("%s, sub:%d, qd.length:%u, pqd:%p, HqaCmd->Data:%p\n"
 		, __FUNCTION__, subcarrier_idx, sizeof(qd), &qd, HqaCmdFrame->Data));
 	ResponseToQA(HqaCmdFrame, WRQ, 2 + sizeof(qd), Ret);
 	DebugLevel = debug_lvl;
@@ -5452,14 +5442,12 @@ static INT32 hqa_set_channel_ext(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq
 	EthGetParamAndShiftBuff(TRUE, sizeof(UINT32), &data,(UCHAR *)&param.pri_sel);
 	EthGetParamAndShiftBuff(TRUE, sizeof(UINT32), &data,(UCHAR *)&param.reason);
 	EthGetParamAndShiftBuff(TRUE, sizeof(UINT32), &data,(UCHAR *)&param.ch_band);
-	EthGetParamAndShiftBuff(TRUE, sizeof(UINT32), &data, (UCHAR *)&param.out_band_freq);
 	
-	band_idx = param.band_idx;
-	if (band_idx > TESTMODE_BAND_NUM) {
+	if(param.band_idx > TESTMODE_BAND_NUM){
 		ret = NDIS_STATUS_INVALID_DATA;
 		goto err0;
 	}
-
+	band_idx = param.band_idx;
 	switch(param.sys_bw){
 	case ATE_BAND_WIDTH_20:
 		bw = BAND_WIDTH_20;
@@ -5525,8 +5513,7 @@ static INT32 hqa_set_channel_ext(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq
 	TESTMODE_SET_PARAM(ate_ctrl, band_idx, BW, bw);
 	TESTMODE_SET_PARAM(ate_ctrl, band_idx, PriSel, param.pri_sel);
 	TESTMODE_SET_PARAM(ate_ctrl, band_idx, Ch_Band, param.ch_band);
-    TESTMODE_SET_PARAM(ate_ctrl, band_idx, OutBandFreq, param.out_band_freq);
-	
+
 	ate_ops->SetChannel(pAd, param.central_ch0, band_idx, param.pri_sel, param.reason, param.ch_band);
 	
 	err0:
@@ -6014,7 +6001,7 @@ static INT32 hqa_iBFSetValue_ext(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq
 	                 u4InArg[0], u4InArg[1], 
 	                 u4InArg[2]);
 
-        pAd->fgCalibrationFail = FALSE; // Enable EEPROM write of calibrated phase
+        pAd->fgCalibrationStatus = TRUE; // Enable EEPROM write of calibrated phase
         
         if (SetATETxBfPhaseE2pUpdate(pAd, cmd) == FALSE)
         {
@@ -6186,22 +6173,12 @@ static INT32 hqa_ext_cmds(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq, HQA_C
 
 	NdisMoveMemory((PUCHAR)&idx, (PUCHAR)&cmd_frame->Data, 4);
 	idx = PKTL_TRAN_TO_HOST(idx);
-	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-		("%s: 0x%x\n", __FUNCTION__, idx));
-
-	if (idx >= (sizeof(hqa_ext_cmd_set)/sizeof(HQA_CMD_HANDLER))) {
-		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_WARN,
-			("%s: cmd idx 0x%x is over bounded\n",
-			__FUNCTION__, idx));
-		return ret;
-	}
-
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s %d\n", __FUNCTION__, idx));
+	
 	if (hqa_ext_cmd_set[idx] != NULL)
 		ret = (*hqa_ext_cmd_set[idx])(pAd, wrq, cmd_frame);
 	else
-		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_WARN,
-			("%s: cmd idx 0x%x is not supported\n",
-			__FUNCTION__, idx));
+		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_WARN,("%s cmd idx %d is not supported\n", __FUNCTION__, idx));
 
 	return ret;
 }

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
 	Name		Date		Modification logs
 
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 #define MCAST_WCID_TO_REMOVE 0 //Pat: TODO
@@ -481,7 +480,6 @@ static void rx_done_tasklet(unsigned long data)
 
 	if (Status != USB_ST_NOERROR)
 	{
-	        // TODO: move radio off from pAd to wdev
 		/* Parsing all packets. because after reset, the index will reset to all zero. */
 		if ((!RTMP_TEST_FLAG(pAd, (fRTMP_ADAPTER_BULKIN_RESET |
 									fRTMP_ADAPTER_HALT_IN_PROGRESS |

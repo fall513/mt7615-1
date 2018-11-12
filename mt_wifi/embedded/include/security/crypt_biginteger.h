@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
     Module Name:
     BigInteger
@@ -27,16 +26,7 @@
 #ifndef __CRYPT_BIGINTEGER_H__
 #define __CRYPT_BIGINTEGER_H__
 
-#include "rtmp_type.h"
-#ifndef IN
-#define IN
-#endif
-#ifndef OUT
-#define OUT
-#endif
-#ifndef INOUT
-#define INOUT
-#endif
+#include "rt_config.h"
 
 
 /* BigInteger definition & structure */

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -23,7 +22,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __RT_THREADX_H__
 #define __RT_THREADX_H__
 
@@ -587,9 +586,6 @@ do{													\
 
 #define NdisAcquireSpinLock		RTMP_SEM_LOCK
 #define NdisReleaseSpinLock		RTMP_SEM_UNLOCK
-#define RTMP_SPIN_LOCK			RTMP_SEM_LOCK
-#define RTMP_SPIN_UNLOCK		RTMP_SEM_UNLOCK
-
 
 typedef int atomic_t;
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
     ------    ----------      ----------------------------------------------
     Fonchi    02-13-2007      created
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef _AP_WDS_H_
 #define _AP_WDS_H_
@@ -82,14 +81,19 @@ MAC_TABLE_ENTRY *WdsTableLookup(
 
 MAC_TABLE_ENTRY *FindWdsEntry(
 	IN PRTMP_ADAPTER	pAd,
-	IN RX_BLK 		*pRxBlk);
+	IN UCHAR 			Wcid,
+	IN PUCHAR			pAddr,
+	IN UINT32			PhyMode);
 
 VOID WdsTableMaintenance(
     IN PRTMP_ADAPTER    pAd);
 
+
+VOID WdsDown(
+	IN PRTMP_ADAPTER pAd);
+
 VOID AsicUpdateWdsRxWCIDTable(
-	IN PRTMP_ADAPTER pAd, 
-	IN UINT WdsTabIdx);
+	IN PRTMP_ADAPTER pAd);
 
 VOID AsicUpdateWdsEncryption(
 	IN PRTMP_ADAPTER pAd,
@@ -112,6 +116,7 @@ VOID rtmp_read_wds_from_file(
 			RTMP_STRING *tmpbuf,
 			RTMP_STRING *buffer);
 
+VOID RT28xx_WDS_Close(RTMP_ADAPTER *pAd);
 VOID WDS_Init(RTMP_ADAPTER *pAd, RTMP_OS_NETDEV_OP_HOOK *pNetDevOps);
 VOID WDS_Remove(RTMP_ADAPTER *pAd);
 BOOLEAN WDS_StatsGet(RTMP_ADAPTER *pAd, RT_CMD_STATS *pStats);
@@ -143,11 +148,6 @@ UCHAR WdsPhyOpModeToSuppRateMode(
 BOOLEAN ValidWdsEntry(
 	IN PRTMP_ADAPTER pAd,
 	IN UCHAR WdsIndex);
-
-UCHAR WDS_Open(struct _RTMP_ADAPTER *ad, void *dev);
-UCHAR WDS_Close(struct _RTMP_ADAPTER *ad, void *dev);
-
-
 
 #endif /* _AP_WDS_H_ */
 

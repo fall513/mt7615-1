@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,6 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 
@@ -237,11 +235,12 @@ static VOID ChipBBPAdjust(RTMP_ADAPTER *pAd, UCHAR Channel)
 		RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R73, 0x10);
 	}
 
-	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s(): BW_%s, ChannelWidth=%d, Channel=%d, ExtChanOffset=%d \n",
+	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s(): BW_%s, ChannelWidth=%d, Channel=%d, ExtChanOffset=%d(%d) \n",
 					__FUNCTION__, (rf_bw == BW_40 ? "40" : "20"),
-					rf_bw, 
+					pAd->CommonCfg.HtCapability.HtCapInfo.ChannelWidth, 
 					Channel, 
-					HcGetExtCha(pAd,Channel)));
+					HcGetExtCha(pAd,Channel),
+					pAd->CommonCfg.AddHTInfo.AddHtInfo.ExtChanOffset));
 
 	/* request by Gary 20070208 for middle and long range A Band*/
 	if (Channel > 14)

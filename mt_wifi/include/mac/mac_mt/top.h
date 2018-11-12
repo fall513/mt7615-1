@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	top.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __TOP_H__
 #define __TOP_H__
 

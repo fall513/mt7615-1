@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -28,7 +27,6 @@
     Rory Chen   01-03-2003    created
 	Rory Chen   02-14-2005    modify to support RT61
 */
-#endif /* MTK_LICENSE */
 
 #define RTMP_MODULE_OS
 
@@ -169,11 +167,6 @@ struct iw_priv_args privtab[] = {
 	IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "efuseinfo" },
 	{SHOW_TP_INFO,
 		IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "tpinfo" },
-	{SHOW_E2P_INFO,
-	    IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "e2pinfo" },
-	{SHOW_PROTECT_INFO,
-	IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "protectinfo"},
-
 /* --- sub-ioctls relations --- */
 
 #ifdef DBG
@@ -254,11 +247,6 @@ struct iw_priv_args privtab[] = {
   IW_PRIV_TYPE_CHAR | 1024, 0,
   "meta_query"}, 
 #endif /* WCX_SUPPORT */
-#ifdef REDUCE_TCP_ACK_SUPPORT
-    { SHOW_TCP_RACK_INFO,
-     IW_PRIV_TYPE_CHAR | 1024, 
-     IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "ReduceAckShow"},
-#endif
 };
 
 extern INT32 ralinkrate[];
@@ -1624,6 +1612,9 @@ int rt_ioctl_siwrts(struct net_device *dev,
 	else
 		val = rts->value;
 	
+/*	if (val != pAd->CommonCfg.RtsThreshold) */
+/*		pAd->CommonCfg.RtsThreshold = val; */
+
     if (NDIS_STATUS_SUCCESS != DetermineCallerInterface(dev, pAd))
         return -EFAULT;
 
@@ -1693,6 +1684,8 @@ int rt_ioctl_siwfrag(struct net_device *dev,
 	    val = MAX_FRAG_THRESHOLD;
 	else
 		return -EINVAL;
+
+/*	pAd->CommonCfg.FragmentThreshold = val; */
 
     if (NDIS_STATUS_SUCCESS != DetermineCallerInterface(dev, pAd))
         return -EFAULT;
@@ -2568,6 +2561,7 @@ int rt_ioctl_siwrate(struct net_device *dev,
     /* rate = -1 => auto rate
        rate = X, fixed = 1 => (fixed rate X)       
     */
+
 
 	CmdRate.Rate = rate;
 	CmdRate.Fixed = fixed;

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __WF_WTBL_OFF_H__
 #define __WF_WTBL_OFF_H__
@@ -56,9 +55,6 @@
 #define WTBL_OFF_RCR	(WF_WTBL_OFF_BASE + 0x0)	/* 0x23400 */
 #define CHECK_CTRL(p) ((p & 0x1))
 #define CHECK_CTRL_MASK (0x1)
-
-#define WTBL_OFF_ACR	(WF_WTBL_OFF_BASE + 0xC)	/* 0x2340C */
-#define WTBL_ADM_RX_EN                           (1 << 31)
 
 #endif /* __WF_WTBL_OFF_H__ */
 

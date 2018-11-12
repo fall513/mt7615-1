@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -29,7 +28,7 @@
     Carter      2014-1120     create
 
 */
-#endif /* MTK_LICENSE */
+
 #ifndef _TMR_H_
 #define _TMR_H_
 
@@ -52,7 +51,7 @@ typedef enum _TMR_INITIATOR_SEND_PKT_STATE {
     SEND_OUT
 } TMR_INITIATOR_SEND_PKT_STATE, *P_TMR_INITIATOR_SEND_PKT_STATE;
 
-VOID TmrReportParser(RTMP_ADAPTER *pAd,TMR_FRM_STRUC *tmr, BOOLEAN fgFinalResult, UINT32 TOAECalibrationResult);
+VOID TmrReportParser(RTMP_ADAPTER *pAd,TMR_FRM_STRUC *tmr, BOOLEAN fgFinalResult);
 
 VOID MtSetTmrEnable(RTMP_ADAPTER *pAd, UCHAR enable);
 INT TmrCtrlInit(RTMP_ADAPTER *pAd, UCHAR TmrType, UCHAR Ver);

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -29,7 +28,7 @@
 	--------	----------		----------------------------------------------
 	Shiang      02/26/07      Init version
 */
-#endif /* MTK_LICENSE */
+
 #ifdef MAT_SUPPORT
 
 #include "rt_config.h"
@@ -751,7 +750,8 @@ static PUCHAR MATProto_PPPoEDis_Rx(
 					nextTagHead = pTagContent + tagLen;	/*The start address of next tag ID/info in sk buffer. */
 					memmove(tagHead, nextTagHead, tailLen);
 				}
-
+/*				SET_OS_PKT_DATATAIL(pSkb, GET_OS_PKT_DATATAIL(pSkb), (-removedTagLen)); */
+/*				GET_OS_PKT_LEN(pSkb) -= removedTagLen; */
 				OS_PKT_TAIL_ADJUST(pSkb, removedTagLen);
 
 				*((UINT16 *)pPayloadLen) = OS_HTONS(payloadLen - removedTagLen);
