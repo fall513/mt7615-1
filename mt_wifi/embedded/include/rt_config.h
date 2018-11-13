@@ -33,6 +33,22 @@
 #ifndef	__RT_CONFIG_H__
 #define	__RT_CONFIG_H__
 
+#define MT7615 1
+#define CONFIG_ATE 1
+
+#define UAPSD_SUPPORT 1
+
+#define MT_DFS_SUPPORT 1
+
+#define DOT11_VHT_AC 1
+#define RTMP_MAC_PCI 1
+
+#define CUT_THROUGH 1 
+#define CUT_THROUGH_FULL_OFFLOAD 1
+
+#define MT_MAC 1
+#define CONFIG_AP_SUPPORT 1
+//#define COMPOS_TESTMODE_WIN 1
 
 #include "rtmp_comm.h"
 

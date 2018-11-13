@@ -32,6 +32,9 @@
 #ifdef VENDOR_FEATURE6_SUPPORT
 #include "arris_wps_gpio_handler.h"
 #endif
+
+#include "rtmp.h"
+
 #define MCAST_WCID_TO_REMOVE 0 //Pat: TODO
 static VOID dynamic_ampdu_efficiency_adjust_all(struct _RTMP_ADAPTER *ad);
 char const *pEventText[EVENT_MAX_EVENT_TYPE] = {

@@ -43,9 +43,10 @@
 #endif /* MEM_ALLOC_INFO_SUPPORT */
 
 #if defined(CONFIG_RA_HW_NAT) || defined(CONFIG_RA_HW_NAT_MODULE)
-#include "../../../../../../net/nat/hw_nat/ra_nat.h"
-#include "../../../../../../net/nat/hw_nat/frame_engine.h"
+#include "../../../../../../../net/nat/hw_nat/ra_nat.h"
+#include "../../../../../../../net/nat/hw_nat/frame_engine.h"
 #endif
+
 
 /* TODO */
 #undef RT_CONFIG_IF_OPMODE_ON_AP
@@ -62,6 +63,11 @@
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,3)
+
+#include "rtmp.h"
+
+#define FOE_MAGIC_WLAN 76
+
 static inline void *netdev_priv(struct net_device *dev)
 {
 	return dev->priv;
@@ -2478,7 +2484,7 @@ VOID RtmpOsPktNatMagicTag(IN PNDIS_PACKET pNetPkt)
 #if !defined(CONFIG_RA_NAT_NONE)
 #if defined (CONFIG_RA_HW_NAT)  || defined (CONFIG_RA_HW_NAT_MODULE)
 	struct sk_buff *pRxPkt = RTPKT_TO_OSPKT(pNetPkt);
-	FOE_MAGIC_TAG(pRxPkt) = FOE_MAGIC_WLAN;
+	FOE_MAGIC_TAG(pRxPkt) = 76;//FOE_MAGIC_WLAN; *******************************
 #endif /* CONFIG_RA_HW_NAT || CONFIG_RA_HW_NAT_MODULE */
 #endif /* CONFIG_RA_NAT_NONE */
 }

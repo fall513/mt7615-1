@@ -26,7 +26,8 @@
 #endif /* MTK_LICENSE */
 
 #include "rt_config.h"
-
+#include "rtmp.h"
+#include "ate.h"
 
 UCHAR	SNAP_802_1H[] = {0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00};
 UCHAR	SNAP_BRIDGE_TUNNEL[] = {0xaa, 0xaa, 0x03, 0x00, 0x00, 0xf8};

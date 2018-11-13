@@ -3821,7 +3821,7 @@ VOID FastPathDequeBh(ULONG Param)
 	UCHAR *pMacAddr = NULL;
 #endif
 #ifdef MAT_SUPPORT
-	PUCHAR pSrcBufVA = NULL;
+	//PUCHAR pSrcBufVA = NULL;
 	PNDIS_PACKET pPacket;
 	PACKET_INFO PacketInfo;
 	PNDIS_PACKET convertPkt = NULL;

@@ -2153,7 +2153,7 @@ static INT32 MT_ATEInitBandInfo(RTMP_ADAPTER *pAd, UINT32 band_idx)
 		__FUNCTION__, idx , ATECtrl->band_ext[idx].pate_pkt, wdev_idx));
 #endif
 	return ret;
-err:
+//err:
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
 		("%s: cannot find wdev by band_idx %u\n", __FUNCTION__, band_idx));
 	return -1;

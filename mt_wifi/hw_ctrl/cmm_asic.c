@@ -43,6 +43,8 @@
 #define MCAST_WCID_TO_REMOVE 0 //Pat: TODO
 #define BCAST_WCID         127
 
+#include "rtmp.h"
+
 
 static char *hif_2_str[]={"HIF_RTMP", "HIF_RLT", "HIF_MT", "Unknown"};
 VOID AsicNotSupportFunc(RTMP_ADAPTER *pAd, const RTMP_STRING *caller)

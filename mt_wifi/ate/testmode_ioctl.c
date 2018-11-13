@@ -23,6 +23,9 @@
 #include "rt_config.h"
 #include "hdev/hdev.h"
 #endif
+
+#include "rtmp.h"
+
 static INT EthGetParamAndShiftBuff(BOOLEAN convert, UINT size, UCHAR **buf, 
 									   IN UCHAR *out)
 {

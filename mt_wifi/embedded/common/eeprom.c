@@ -31,11 +31,11 @@
 
 
 #ifdef MT_FIRST_CARD
-#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/mt7615e.eeprom.bin"
+#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/RT2860/MT7615_EEPROM_1.bin"
 #endif /* MT_FIRST_CARD */
 
 #ifdef MT_SECOND_CARD
-#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/mt7615e.eeprom.bin"
+#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/iNIC/MT7615_EEPROM_2.bin"
 #endif /* MT_SECOND_CARD */
 
 #if defined(PRE_CAL_TRX_SET1_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) || defined(RLM_CAL_CACHE_SUPPORT)

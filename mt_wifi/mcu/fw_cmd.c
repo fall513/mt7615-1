@@ -22,6 +22,7 @@
 #else
 #include "rt_config.h"
 #endif
+#include "rtmp.h"
 
 static VOID EventExtCmdResult(struct cmd_msg *msg, char *Data, UINT16 Len)
 {

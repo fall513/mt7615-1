@@ -534,8 +534,8 @@ INT32 TxSTypeCtlPerPktType(RTMP_ADAPTER *pAd, UINT8 PktType, UINT8 PktSubType, U
 			}
 			else
 			{
-				TxSCtl->TxSStatusPerWlanIdx[0] = 0xffffffffffffffff;
-				TxSCtl->TxSStatusPerWlanIdx[1] = 0xffffffffffffffff;
+				TxSCtl->TxSStatusPerWlanIdx[0] = -1;
+				TxSCtl->TxSStatusPerWlanIdx[1] = -1;
 			}
 
 			TxSType->DumpTxSReport = DumpTxSReport;

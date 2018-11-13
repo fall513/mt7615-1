@@ -65,6 +65,8 @@ struct _RX_BLK;
 #define CMW_RCPI_MA_1_8                   8
 #endif /* NR_PD_DETECTION */
 
+#include "rtmp.h"
+
 VOID AsicNotSupportFunc(struct _RTMP_ADAPTER *pAd, const RTMP_STRING *caller);
 
 

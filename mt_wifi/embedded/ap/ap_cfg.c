@@ -27,6 +27,7 @@
 #endif /* MTK_LICENSE */
 
 #include "rt_config.h"
+#include "rtmp.h"
 
 #ifdef VENDOR_FEATURE6_SUPPORT
 #ifdef WSC_LED_SUPPORT
@@ -2013,7 +2014,9 @@ static struct {
 	{"bcninfo",		ShowBcnProc},
 
 	{"cn_info",       ShowCnInfoProc},
+	#ifdef WSC_AP_SUPPORT
 	{"pdmainfo", 	ShowPDMAProc},
+	#endif
     {NULL,}
 };
 
@@ -10332,6 +10335,7 @@ INT ApCliTxDeAuth(
 
 
 #ifdef WSC_AP_SUPPORT
+
 #ifdef CON_WPS
 static  INT WscPushConcurrentPBCAction(
         IN      PRTMP_ADAPTER   pAd,
@@ -10990,7 +10994,8 @@ static void RemoveSpaces(RTMP_STRING *arg)
 	arg[count]='\0';
 }
 
-INT ShowPDMAProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+dddd
+INT ShowPDMAProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)ddddddd
 {
 #if defined(MT7615)
 #ifdef MT_FDB

@@ -16,6 +16,8 @@
 */
 #endif /* MTK_LICENSE */
 #include "rt_config.h"
+#include "rtmp.h"
+
 
 #define MCAST_WCID_TO_REMOVE 0	//Pat: TODO
 

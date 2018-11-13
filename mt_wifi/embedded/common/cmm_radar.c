@@ -28,6 +28,7 @@
 */
 #endif /* MTK_LICENSE */
 #include "rt_config.h"
+#include "rtmp.h"
 
 /*----- 802.11H -----*/
 

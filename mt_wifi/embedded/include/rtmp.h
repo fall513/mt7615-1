@@ -92,7 +92,10 @@
 struct _RTMP_RA_LEGACY_TB;
 
 typedef struct _RTMP_ADAPTER RTMP_ADAPTER;
-typedef struct _RTMP_ADAPTER *PRTMP_ADAPTER;
+//typedef struct _RTMP_ADAPTER *PRTMP_ADAPTER;
+#ifndef PRTMP_ADAPTER
+	#define PRTMP_ADAPTER struct _RTMP_ADAPTER *
+#endif
 
 typedef struct wifi_dev RTMP_WDEV;
 typedef struct wifi_dev *PRTMP_WDEV;

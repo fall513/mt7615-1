@@ -913,7 +913,7 @@ BOOLEAN MacTableDeleteEntry(RTMP_ADAPTER *pAd, USHORT wcid, UCHAR *pAddr)
 #ifdef CONFIG_AP_SUPPORT
 	BSS_STRUCT *mbss = NULL;
 #endif /*CONFIG_AP_SUPPORT*/
-	struct wifi_dev *wdev;
+	struct wifi_dev *wdev=0;
 	ADD_HT_INFO_IE *addht;
 	UCHAR i;
 	UCHAR brcm4ssCount = 0;
