@@ -132,14 +132,14 @@ typedef struct usb_ctrlrequest devctrlrequest;
 #define AP_PROFILE_PATH			"/etc/Wireless/iNIC/iNIC_ap.dat"
 #define AP_RTMP_FIRMWARE_FILE_NAME "/etc_ro/Wireless/iNIC/RT2860AP.bin"
 #else
-#define AP_PROFILE_PATH			"/etc/Wireless/RT2860AP/RT2860AP.dat"
-#define AP_RTMP_FIRMWARE_FILE_NAME "/etc/Wireless/RT2860AP/RT2860AP.bin"
+#define AP_PROFILE_PATH			"/etc_ro/Wireless/mt7615e.1.2G.dat"
+#define AP_RTMP_FIRMWARE_FILE_NAME "/etc_ro/Wireless/mt7615e.eeprom.bin"
 #endif
 
 
 #define AP_DRIVER_VERSION			"4.4.1.2"
 #ifdef MULTIPLE_CARD_SUPPORT
-#define CARD_INFO_PATH			"/etc/Wireless/RT2860AP/RT2860APCard.dat"
+#define CARD_INFO_PATH			"/etc_ro/Wireless/mt7615e.1.2G.dat"
 #endif /* MULTIPLE_CARD_SUPPORT */
 #endif /* RTMP_MAC_PCI */
 
@@ -156,9 +156,9 @@ typedef struct usb_ctrlrequest devctrlrequest;
 #define BF_GAIN_TABLE_FILE_NAME     "/tmp/.mt7615_SingleSKU_BF_Gain.dat"
 #define BF_SKU_TABLE_FILE_NAME      "/tmp/.mt7615_SingleSKU_BF.dat"
 #else
-#define SINGLE_SKU_TABLE_FILE_NAME	"/etc_ro/Wireless/RT2860AP/7615_SingleSKU.dat"
+#define SINGLE_SKU_TABLE_FILE_NAME	"/etc_ro/Wireless/mt7615e-sku.dat"
 #define BF_GAIN_TABLE_FILE_NAME     "/etc_ro/Wireless/RT2860AP/7615_BF_Gain_Table.dat"
-#define BF_SKU_TABLE_FILE_NAME      "/etc_ro/Wireless/RT2860AP/7615_SingleSKU_BF.dat"
+#define BF_SKU_TABLE_FILE_NAME      "/etc_ro/Wireless/mt7615e-sku-bf.dat"
 #endif
 #endif /* SINGLE_SKU_V2 */
 
