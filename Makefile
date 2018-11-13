@@ -1,57 +1,63 @@
+# All rights reserved.
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
-SOURCE:=${PWD}
+# need modify wifi.mk driver version
 PKG_NAME:=mt7615e
+PKG_VERSION:=MT7615_LinuxAP_V4.4.1.2_20170514
+PKG_SOURCE:=MT7615_LinuxAP_V4.4.1.2_20170514.tar.bz2
+PKG_SOURCE_URL:=http://localhost/
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)
 
 include $(INCLUDE_DIR)/package.mk
 
-define KernelPackage/mt7615e
-  CATEGORY:=Kernel modules
-  TITLE:=MTK MT7615e wifi AP driver
-  FILES:=$(PKG_BUILD_DIR)/mt_wifi_ap/mt7615e.ko
-  SUBMENU:=Wireless Drivers
+define Package/mt7615e
+  CATEGORY:=MTK Properties
+  TITLE:=MTK MT7615e wifi AP profile only
+  SUBMENU:=Drivers
+#  MENU:=1
 endef
 
-define KernelPackage/mt7615e/config
-	source "$(SOURCE)/config.in"
+define Package/mt7615e/description
+	@echo "TBD"
 endef
 
 define Build/Prepare
-#	make -C $(KERNEL_BUILD_DIR)/linux-$(LINUX_VERSION) M=$(PWD) modules ARCH="$(LINUX_KARCH)" CROSS_COMPILE="$(TARGET_CROSS)"
+	@echo "this package is built with kernel"
 endef
 
 define Build/Compile
-  -mv $(SOURCE)/mt_wifi $(PKG_BUILD_DIR)/mt_wifi
-  -mv $(SOURCE)/mt_wifi_ap $(PKG_BUILD_DIR)/mt_wifi_ap
-  cp $(PKG_BUILD_DIR)/mt_wifi/os/linux/Makefile.mt_wifi_ap $(PKG_BUILD_DIR)/mt_wifi_ap/Makefile
-  make -C $(PKG_BUILD_DIR)/mt_wifi/embedded build_tools
-	$(MAKE) -C "$(LINUX_DIR)" V=1 \
-		CROSS_COMPILE="$(TARGET_CROSS)" \
-		ARCH="$(LINUX_KARCH)" \
-		SUBDIRS="$(PKG_BUILD_DIR)/mt_wifi_ap" \
-		$(foreach c, $(PKG_KCONFIG),$(if $(CONFIG_MT7615E_$c),CONFIG_$(c)=$(CONFIG_MT7615E_$(c)))) \
-		modules
+	@echo "this package is built with kernel"
 endef
 
-define KernelPackage/mt7615e/install
+define Package/mt7615e/install
 	$(INSTALL_DIR) $(1)/lib/wifi/
+	$(INSTALL_DIR) $(1)/etc/wireless/mt7615e/
+	$(INSTALL_BIN) ./files/mt7615e-sku.dat $(1)/etc/wireless/mt7615e/
+	$(INSTALL_BIN) ./files/mt7615e-sku-bf.dat $(1)/etc/wireless/mt7615e/
+	echo $(PKG_VERSION) > $(1)/etc/wireless/mt7615e/version
+	$(INSTALL_BIN) ./files/mt7615e.inc $(1)/lib/wifi/
+	$(INSTALL_BIN) ./files/mt7615e*.sh $(1)/lib/wifi/
 
-	if [ "$$(CONFIG_MT7615E_RT_FIRST_CARD)" = "7615" ] || [ "$$(CONFIG_MT7615E_RT_FIRST_CARD)" = "7615e" ]; then \
-		$(INSTALL_DIR) $(1)/etc/wireless/mt7615e2/ ; \
-		$(INSTALL_BIN) ./files/mt7615e2.sh $(1)/lib/wifi/ ; \
-		$(INSTALL_BIN) ./files/mt7615e2.dat $(1)/etc/wireless/mt7615e2/ ; \
-		$(INSTALL_BIN) ./files/mt7615e*.bin $(1)/etc/wireless/mt7615e2/ ; \
-		echo $(PKG_SOURCE) > $(1)/etc/wireless/mt7615e2/version; \
+	if [ "$$(CONFIG_PACKAGE_mt7615e)" = "y" ]; then \
+		$(INSTALL_BIN) ./files/mt7615e.1.*.dat $(1)/etc/wireless/mt7615e/; \
+		$(INSTALL_BIN) ./files/mt7615e*.bin $(1)/etc/wireless/mt7615e/; \
 	fi
-	if [ "$$(CONFIG_MT7615E_RT_SECOND_CARD)" = "7615" ] || [ "$$(CONFIG_MT7615E_RT_SECOND_CARD)" = "7615e" ]; then \
-		$(INSTALL_DIR) $(1)/etc/wireless/mt7615e5/ ; \
-		$(INSTALL_BIN) ./files/mt7615e5.sh $(1)/lib/wifi/ ; \
-		$(INSTALL_BIN) ./files/mt7615e5.dat $(1)/etc/wireless/mt7615e5/ ; \
-		$(INSTALL_BIN) ./files/mt7615e*.bin $(1)/etc/wireless/mt7615e5/ ; \
-		echo $(PKG_SOURCE) > $(1)/etc/wireless/mt7615e5/version; \
+
+	if [ "$$(CONFIG_KCONFIG_SECOND_IF_MT7615E)" = "y" ]; then \
+		$(INSTALL_BIN) ./files/mt7615e.2.*.dat $(1)/etc/wireless/mt7615e/; \
+		$(INSTALL_BIN) ./files/mt7615e*.bin $(1)/etc/wireless/mt7615e/; \
+	fi
+
+	if [ "$$(CONFIG_KCONFIG_THIRD_IF_MT7615E)" = "y" ]; then \
+		$(INSTALL_BIN) ./files/mt7615e.3.*.dat $(1)/etc/wireless/mt7615e/; \
+		$(INSTALL_BIN) ./files/mt7615e.3.dat $(1)/etc/wireless/mt7615e/; \
+		$(INSTALL_BIN) ./files/mt7615e*.bin $(1)/etc/wireless/mt7615e/; \
 	fi
 endef
 
-$(eval $(call KernelPackage,mt7615e))
+$(eval $(call BuildPackage,mt7615e))
