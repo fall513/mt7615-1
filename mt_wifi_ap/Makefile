@@ -1,6 +1,6 @@
-EXTRA_CFLAGS = -Idrivers/net/wireless/mt_wifi/include \
-				-Idrivers/net/wireless/mt_wifi/embedded/include \
-				-Idrivers/net/wireless/mt_wifi/ate/include
+EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt7615/mt_wifi/include \
+				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/embedded/include \
+				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/ate/include
 
 ifeq ($(CONFIG_SUPPORT_OPENWRT),y)
 EXTRA_CFLAGS = -I$(src)/../src/include \
@@ -10,9 +10,9 @@ DRV_NAME = mt7628
 SRC_DIR = ../src/embedded
 obj-m += $(DRV_NAME).o
 else
-EXTRA_CFLAGS = -Idrivers/net/wireless/mt_wifi/include \
-				-Idrivers/net/wireless/mt_wifi/embedded/include \
-				-Idrivers/net/wireless/mt_wifi/ate/include
+EXTRA_CFLAGS = -Idrivers/net/wireless/ralink/mt7615/mt_wifi/include \
+				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/embedded/include \
+				-Idrivers/net/wireless/ralink/mt7615/mt_wifi/ate/include
 DRV_NAME = mt_wifi
 SRC_DIR = ../mt_wifi
 SRC_EMBEDDED_DIR = ../mt_wifi/embedded
@@ -149,10 +149,10 @@ asic_objs := $(SRC_DIR)/phy/phy.o
 ########################################################
 spec_objs += $(SRC_EMBEDDED_DIR)/common/ps.o
 
-ifeq ($(CONFIG_UAPSD),y)
+##ifeq ($(CONFIG_UAPSD),y)
     EXTRA_CFLAGS += -DUAPSD_SUPPORT -DUAPSD_DEBUG
     spec_objs += $(SRC_EMBEDDED_DIR)/common/uapsd.o
-endif
+##endif
 
 #ifeq ($(CONFIG_RLT_MAC),y)
 #	spec_objs += $(SRC_EMBEDDED_DIR)/common/ral_ps.o
@@ -162,11 +162,11 @@ endif
 #	spec_objs += $(SRC_EMBEDDED_DIR)/common/ral_ps.o
 #endif
 
-ifeq ($(CONFIG_MT_MAC),y)
+##ifeq ($(CONFIG_MT_MAC),y)
 	spec_objs += $(SRC_EMBEDDED_DIR)/common/mt_ps.o
 	spec_objs += $(SRC_EMBEDDED_DIR)/common/mt_io.o
 	spec_objs += $(SRC_EMBEDDED_DIR)/tx_rx/txs.o
-endif
+##endif
 
 # WSC
 ifeq ($(CONFIG_WSC_INCLUDED),y)
@@ -201,7 +201,7 @@ ifeq ($(CONFIG_WSC_INCLUDED),y)
 endif
 
 # VHT
-ifeq ($(CONFIG_DOT11_VHT_AC),y)
+##ifeq ($(CONFIG_DOT11_VHT_AC),y)
     EXTRA_CFLAGS += -DDOT11_VHT_AC
     EXTRA_CFLAGS += -DDOT11_VHT_R2
     spec_objs += $(SRC_EMBEDDED_DIR)/mgmt/mgmt_vht.o\
@@ -210,7 +210,7 @@ ifeq ($(CONFIG_DOT11_VHT_AC),y)
 	ifeq ($(CONFIG_WFA_VHT_R2_PF),y)
 		EXTRA_CFLAGS += -DWFA_VHT_R2_PF
 	endif
-endif
+##endif
 
 # WAPI
 ifeq ($(CONFIG_WAPI_SUPPORT),y)
@@ -305,11 +305,11 @@ ifeq ($(CONFIG_SMART_CARRIER_SENSE_SUPPORT),y)
     EXTRA_CFLAGS += -DSMART_CARRIER_SENSE_SUPPORT 
 endif
 
-ifeq ($(CONFIG_MT_DFS_SUPPORT),y)
+####ifeq ($(CONFIG_MT_DFS_SUPPORT),y)
     EXTRA_CFLAGS += -DMT_DFS_SUPPORT
 
        spec_objs += $(SRC_EMBEDDED_DIR)/common/cmm_rdm_mt.o
-endif
+####endif
 
 # FT
 ifeq ($(CONFIG_DOT11R_FT_SUPPORT),y)
@@ -488,10 +488,10 @@ ifeq ($(CONFIG_GREENAP_SUPPORT),y)
     ap_objs += $(SRC_DIR)/hw_ctrl/greenap.o
 endif
 
-ifeq ($(CONFIG_ATE_SUPPORT),y)
+##ifeq ($(CONFIG_ATE_SUPPORT),y)
     EXTRA_CFLAGS += -DCONFIG_ATE -DCONFIG_QA -DCONFIG_RT2880_ATE_CMD_NEW -DCONFIG_HW_HAL_OFFLOAD  #-DCSD_VERIFICATION 
     EXTRA_CFLAGS += -DINTERNAL_CAPTURE_SUPPORT  
-endif
+##endif
 
 ifeq ($(CONFIG_ICAP_SUPPORT),y)
 		EXTRA_CFLAGS += -DINTERNAL_CAPTURE_SUPPORT
@@ -679,7 +679,7 @@ ifeq ($(CONFIG_DBDC_MODE),y)
 EXTRA_CFLAGS += -DDBDC_MODE
 endif
 
-ifeq ($(CONFIG_CHIP_MT7615E),y)
+##ifeq ($(CONFIG_CHIP_MT7615E),y)
 EXTRA_CFLAGS += -DMT7615 -DMT_BBP -DMT_RF -DRTMP_RF_RW_SUPPORT -DMT_MAC -DRTMP_MAC_PCI -DRTMP_PCI_SUPPORT
 EXTRA_CFLAGS += -DMCS_LUT_SUPPORT -DA_BAND_SUPPORT
 EXTRA_CFLAGS += -DRTMP_EFUSE_SUPPORT
@@ -789,7 +789,7 @@ chip_objs += $(SRC_DIR)/chips/mt7615.o\
 		$(SRC_DIR)/os/linux/rt_rbus_pci_drv.o\
                 $(SRC_EMBEDDED_DIR)/hif/hif_pci.o\
                 $(SRC_DIR)/os/linux/pci_main_dev.o
-endif
+##endif  ##CONFIG_FIRST_IF_MT7615
 
 ifeq ($(CONFIG_FIRST_IF_MT7622),y)
 EXTRA_CFLAGS += -DMT7622 -DMT_BBP -DMT_RF -DRTMP_RBUS_SUPPORT -DRTMP_RF_RW_SUPPORT -DMT_MAC -DRTMP_MAC_PCI
@@ -869,12 +869,12 @@ $(DRV_NAME)-objs += $(SRC_DIR)/os/linux/rt_pci_rbus.o\
                     $(SRC_DIR)/os/linux/rt_rbus_pci_util.o\
                     #$(SRC_DIR)/os/linux/rbus_main_dev.o
 
-ifeq ($(CONFIG_ATE_SUPPORT),y)
+##ifeq ($(CONFIG_ATE_SUPPORT),y)
 $(DRV_NAME)-objs += $(SRC_DIR)/ate/ate_agent.o\
                     $(SRC_DIR)/ate/testmode_ioctl.o\
 		    $(SRC_DIR)/ate/mt_mac/mt_testmode.o\
  		    $(SRC_DIR)/ate/LoopBack.o
-endif
+##endif
 
 
 ifeq ($(CONFIG_TCP_RACK_SUPPORT),y)
