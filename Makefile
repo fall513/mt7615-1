@@ -6,7 +6,7 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
-PKG_DIR:=$(abspath $(lastword $(MAKEFILE_LIST)))
+PKG_DIR:=$(TOPDIR)/package/feeds/mt7615
 PKG_NAME:=mt7615e
 PKG_VERSION:=4.4.1.2
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)
