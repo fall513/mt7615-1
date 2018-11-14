@@ -6,6 +6,7 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
+PKG_DIR:=$(abspath $(lastword $(MAKEFILE_LIST)))
 PKG_NAME:=mt7615e
 PKG_VERSION:=4.4.1.2
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)
@@ -45,8 +46,8 @@ define KernelPackage/mt7615e/config
 endef
 
 define Build/Compile
-	cp $(SOURCE)/mt_wifi $(PKG_BUILD_DIR)
-	cp $(SOURCE)/mt_wifi_ap $(PKG_BUILD_DIR)
+	cp -rf $(PKG_DIR)/mt_wifi $(PKG_BUILD_DIR)
+	cp $(PKG_DIR)/mt_wifi_ap $(PKG_BUILD_DIR)
 	$(MAKE) -C "$(LINUX_DIR)" V=1 \
 		CROSS_COMPILE="$(TARGET_CROSS)" \
 		ARCH="$(LINUX_KARCH)" \
