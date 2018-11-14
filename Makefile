@@ -45,9 +45,13 @@ define KernelPackage/mt7615e/config
 	source "$(SOURCE)/config.in"
 endef
 
-define Build/Compile
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
 	cp -rf $(PKG_DIR)/mt_wifi $(PKG_BUILD_DIR)
-	cp $(PKG_DIR)/mt_wifi_ap $(PKG_BUILD_DIR)
+	cp -rf $(PKG_DIR)/mt_wifi_ap $(PKG_BUILD_DIR)
+endef
+
+define Build/Compile
 	$(MAKE) -C "$(LINUX_DIR)" V=1 \
 		CROSS_COMPILE="$(TARGET_CROSS)" \
 		ARCH="$(LINUX_KARCH)" \
