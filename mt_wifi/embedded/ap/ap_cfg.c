@@ -10994,8 +10994,7 @@ static void RemoveSpaces(RTMP_STRING *arg)
 	arg[count]='\0';
 }
 
-dddd
-INT ShowPDMAProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)ddddddd
+INT ShowPDMAProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
 #if defined(MT7615)
 #ifdef MT_FDB
