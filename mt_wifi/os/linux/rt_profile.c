@@ -25,7 +25,7 @@
  */
 #endif /* MTK_LICENSE */
 #include "rt_config.h"
-#include "rt_linux.h"
+#include "../../include/os/rt_linux.h"
 
 #ifdef RTMP_UDMA_SUPPORT
 #include "rt_udma.h"
