@@ -7,6 +7,7 @@ DRV_NAME = mt7615e
 EXTRA_CFLAGS = -I$(src)/../mt_wifi/include \
 				-I$(src)/../mt_wifi/embedded/include \
 				-I$(src)/../mt_wifi/ate/include
+EXTRA_CFLAGS += -Wno-error
 SRC_DIR = ../mt_wifi/embedded
 SRC_EMBEDDED_DIR = ../mt_wifi/embedded
 obj-m += $(DRV_NAME).o
