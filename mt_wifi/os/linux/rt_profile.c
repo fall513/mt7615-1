@@ -25,7 +25,6 @@
  */
 #endif /* MTK_LICENSE */
 #include "rt_config.h"
-#include "../../include/os/rt_linux.h"
 
 #ifdef RTMP_UDMA_SUPPORT
 #include "rt_udma.h"
@@ -50,6 +49,8 @@
 #include <linux/netdevice.h> 
 
 #define BSSID_WCID_TO_REMOVE 1
+
+extern int (*ra_sw_nat_hook_rx)(VOID *skb);
 
 struct dev_type_name_map{
 	INT type;
