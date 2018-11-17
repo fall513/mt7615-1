@@ -9,6 +9,7 @@ EXTRA_CFLAGS = -I$(src)/../mt_wifi/include \
 				-I$(src)/../mt_wifi/ate/include
 EXTRA_CFLAGS += -Wno-error=misleading-indentation
 EXTRA_CFLAGS += -Wno-error=date-time
+EXTRA_CFLAGS += -Wno-error=maybe-uninitialized
 SRC_DIR = ../mt_wifi/embedded
 SRC_EMBEDDED_DIR = ../mt_wifi/embedded
 obj-m += $(DRV_NAME).o
