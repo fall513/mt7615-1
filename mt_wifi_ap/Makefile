@@ -8,6 +8,7 @@ EXTRA_CFLAGS = -I$(KERNEL_BUILD_DIR)/$(DRV_NAME)/mt_wifi/include \
 				-I$(KERNEL_BUILD_DIR)/$(DRV_NAME)/mt_wifi/embedded/include \
 				-I$(KERNEL_BUILD_DIR)/$(DRV_NAME)/mt_wifi/ate/include
 SRC_DIR = ../mt_wifi/embedded
+SRC_EMBEDDED_DIR = ../mt_wifi/embedded
 obj-m += $(DRV_NAME).o
 else
 DRV_NAME = mt_wifi
