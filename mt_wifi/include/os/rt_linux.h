@@ -15,10 +15,6 @@
 #ifndef __RT_LINUX_H__
 #define __RT_LINUX_H__
 
-#ifdef VENDOR_FEATURE6_SUPPORT
-#include "arris_mod_api.h"
-#include "event_common.h"
-#endif
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/kernel.h>
@@ -88,6 +84,11 @@
 #include <linux/kthread.h>
 #endif /* KTHREAD_SUPPORT */
 
+
+#ifdef CONFIG_TX_DELAY
+#include <linux/hrtimer.h>
+#endif
+
 #include "os/rt_linux_cmm.h"
 
 #ifdef RT_CFG80211_SUPPORT
@@ -132,34 +133,24 @@ typedef struct usb_ctrlrequest devctrlrequest;
 #define AP_PROFILE_PATH			"/etc/Wireless/iNIC/iNIC_ap.dat"
 #define AP_RTMP_FIRMWARE_FILE_NAME "/etc_ro/Wireless/iNIC/RT2860AP.bin"
 #else
-#define AP_PROFILE_PATH			"/etc_ro/Wireless/mt7615e.1.2G.dat"
-#define AP_RTMP_FIRMWARE_FILE_NAME "/etc_ro/Wireless/mt7615e.eeprom.bin"
+#define AP_PROFILE_PATH			"/etc/Wireless/RT2860/RT2860AP.dat"
+#define AP_RTMP_FIRMWARE_FILE_NAME "/etc/Wireless/RT2860/RT2860AP.bin"
 #endif
 
 
-#define AP_DRIVER_VERSION			"4.4.1.2"
+#define AP_DRIVER_VERSION			"4.4.2.1"
 #ifdef MULTIPLE_CARD_SUPPORT
 #define CARD_INFO_PATH			"/etc/Wireless/RT2860AP/RT2860APCard.dat"
 #endif /* MULTIPLE_CARD_SUPPORT */
 #endif /* RTMP_MAC_PCI */
 
 
-#ifdef RTMP_MAC_SDIO
-#define AP_PROFILE_PATH			"/etc/Wireless/RT2870AP/RT2870AP.dat"
-#define AP_DRIVER_VERSION			"4.0.0.3"
-#endif /* RTMP_MAC_SDIO */
 
 
 #ifdef SINGLE_SKU_V2
-#ifdef VENDOR_FEATURE6_SUPPORT
-#define SINGLE_SKU_TABLE_FILE_NAME	"/tmp/.mt7615_SingleSKU.dat"
-#define BF_GAIN_TABLE_FILE_NAME     "/tmp/.mt7615_SingleSKU_BF_Gain.dat"
-#define BF_SKU_TABLE_FILE_NAME      "/tmp/.mt7615_SingleSKU_BF.dat"
-#else
-#define SINGLE_SKU_TABLE_FILE_NAME	"/etc_ro/Wireless/mt7615e-sku.dat"
+#define SINGLE_SKU_TABLE_FILE_NAME	"/etc_ro/Wireless/SingleSKU_mt7615e-sku.dat"
 #define BF_GAIN_TABLE_FILE_NAME     "/etc_ro/Wireless/RT2860AP/7615_BF_Gain_Table.dat"
-#define BF_SKU_TABLE_FILE_NAME      "/etc_ro/Wireless/mt7615e-sku-bf.dat"
-#endif
+#define BF_SKU_TABLE_FILE_NAME      "/etc_ro/Wireless/SingleSKU_mt7615e-sku-bf.dat"
 #endif /* SINGLE_SKU_V2 */
 
 #endif /* CONFIG_AP_SUPPORT */
@@ -674,9 +665,6 @@ struct os_cookie {
 #endif /* RTMP_MAC_PCI */
 
 
-#ifdef RTMP_MAC_SDIO
-	struct sdio_func *sdio_dev;
-#endif
 
 
 	struct device	*pDev;
@@ -688,6 +676,7 @@ struct os_cookie {
 	RTMP_NET_TASK_STRUCT cmd_rsp_event_task;
 	RTMP_NET_TASK_STRUCT mgmt_dma_done_task;
 	RTMP_NET_TASK_STRUCT ac0_dma_done_task;
+	RTMP_NET_TASK_STRUCT tr_done_task;
 #ifdef CONFIG_ATE
 	RTMP_NET_TASK_STRUCT ate_ac0_dma_done_task;
 #endif /* CONFIG_ATE */
@@ -796,7 +785,7 @@ typedef struct os_cookie	* POS_COOKIE;
 #else
 #define ASSERT(x)                                                               \
 {                                                                               \
-    if (!(x))	                                                                 \
+    if (!(x))                                                                   \
     {                                                                           \
         printk(KERN_WARNING __FILE__ ":%d assert " #x "failed\n", __LINE__);    \
         dump_stack();\
@@ -1157,68 +1146,14 @@ do {	\
 
 
 
-#ifdef RTMP_MAC_SDIO
-
-#define RTMP_IO_FORCE_READ32(_A, _R, _pV)		\
-do {	\
-	CmdIORead32((_A), mt_physical_addr_map((_A), (_R)), (_pV));	\
-} while (0)
-#define RTMP_IO_FORCE_WRITE32(_A, _R, _V)	\
-do {	\
-	CmdIOWrite32((_A), mt_physical_addr_map((_A), (_R)), (_V));	\
-} while (0)
-
-#define RTMP_IO_READ8(_A, _R, _pV)	\
-		do{}while(0)
-
-#define RTMP_IO_READ32(_A, _R, _pV)	\
-do {	\
-	CmdIORead32((_A), mt_physical_addr_map((_A), (_R)), (_pV));	\
-} while (0)
-
-#define RTMP_IO_WRITE32(_A, _R, _V)	\
-do {	\
-	CmdIOWrite32((_A), mt_physical_addr_map((_A), (_R)), (_V));	\
-} while (0)
-
-#define RTMP_IO_WRITE8(_A, _R, _V)	\
-		do{}while(0)
-#define RTMP_IO_WRITE16(_A, _R, _V)	\
-		do{}while(0)
-
-#define RTMP_SDIO_READ32(_A, _R, _pV)	\
-	MTSDIORead32((_A), (_R), _pV)
-
-#define RTMP_SDIO_WRITE32(_A, _R, _V)	\
-	MTSDIOWrite32((_A), (_R), _V)
-
-#define RTMP_SDIO_READ(_A, _R, _pV,_L)	\
-	MTSDIOMultiRead((_A),(_R),_pV,(_L))
-
-#define RTMP_SDIO_WRITE(_A, _R, _pV,_L)	\
-	MTSDIOMultiWrite((_A),(_R),_pV,(_L))
-
-#define RTMP_SYS_IO_READ32 	\
-		do{}while(0)
-#define RTMP_SYS_IO_WRITE32	\
-		do{}while(0)
-#endif /* RTMP_MAC_SDIO */
 
 
 #define MAC_IO_READ32(_A, _R, _pV)			RTMP_IO_READ32(_A, _R, _pV)
 #define MAC_IO_WRITE32(_A, _R, _V)			RTMP_IO_WRITE32(_A, _R, _V)
 
 
-#ifdef RTMP_MAC_SDIO
-#define HIF_IO_READ32(_A, _R, _pV)			RTMP_SDIO_READ32(_A, _R, _pV)
-#define HIF_IO_WRITE32(_A, _R, _V)			RTMP_SDIO_WRITE32(_A, _R, _V)
-#elif defined(RTMP_MAC_PCI) && defined(WHNAT_SUPPORT)
-#define HIF_IO_READ32(_A, _R, _pV)			pci_io_read32(_A,_R,_pV)
-#define HIF_IO_WRITE32(_A, _R, _V)			pci_io_write32(_A,_R,_V)
-#else
 #define HIF_IO_READ32(_A, _R, _pV)			RTMP_IO_READ32(_A, _R, _pV)
 #define HIF_IO_WRITE32(_A, _R, _V)			RTMP_IO_WRITE32(_A, _R, _V)
-#endif
 #define PHY_IO_READ32(_A, _R, _pV)			RTMP_IO_READ32(_A, _R, _pV)
 #define PHY_IO_WRITE32(_A, _R, _V)			RTMP_IO_WRITE32(_A, _R, _V)
 
@@ -1435,6 +1370,8 @@ extern void (*wf_fwd_access_schedule_active_hook) (void);
 extern void (*wf_fwd_access_schedule_halt_hook) (void);
 extern void (*wf_fwd_hijack_active_hook) (void);
 extern void (*wf_fwd_hijack_halt_hook) (void);
+extern void (*wf_fwd_bpdu_active_hook) (void);
+extern void (*wf_fwd_bpdu_halt_hook) (void);
 extern void (*wf_fwd_show_entry_hook) (void);
 extern void (*wf_fwd_delete_entry_hook) (unsigned char idx);
 extern void (*packet_source_show_entry_hook) (void);
@@ -1448,7 +1385,9 @@ extern int (*wf_fwd_search_mapping_table_hook) (struct sk_buff *skb, struct APCL
 extern void (*wf_fwd_delete_entry_inform_hook) (unsigned char *addr);
 extern bool (*wf_fwd_needed_hook) (void);
 extern void (*wf_fwd_add_entry_inform_hook) (unsigned char *addr);
-
+#ifdef WH_EZ_SETUP
+extern void (*wf_fwd_set_easy_setup_mode) (unsigned int easy_setup_mode);
+#endif
 
 extern void (*wf_fwd_probe_dev_hook) (struct net_device *net_dev_p );
 #endif /* CONFIG_WIFI_PKT_FWD */
@@ -1817,11 +1756,6 @@ extern int rausb_control_msg(VOID *dev,
 #endif /* RTMP_MAC_PCI */
 
 
-#ifdef RTMP_MAC_SDIO
-#ifdef CONFIG_AP_SUPPORT
-#define EEPROM_BIN_FILE_NAME  "/etc/Wireless/RT2870AP/e2p.bin"
-#endif /* CONFIG_AP_SUPPORT */
-#endif /* RTMP_MAC_SDIO */
 
 
 
@@ -1848,9 +1782,6 @@ void __exit rt_pci_cleanup_module(void);
 
 int multi_inf_adapt_reg(VOID *pAd);
 int multi_inf_get_idx(VOID *pAd);
-#ifdef INTELP6_SUPPORT
-struct pci_dev* rtmp_get_pci_dev(void *pAd);
-#endif
 #endif /* MULTI_INF_SUPPORT */
 
 struct device* rtmp_get_dev(void *ad);

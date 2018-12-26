@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,6 @@
     Who         When          What
     --------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
 #ifndef __AP_MUMIMO_RA_H__
 #define __AP_MUMIMO_RA_H__
 
@@ -59,7 +57,15 @@ enum {
    	MURA_TEST_ALGORITHM,
    	MURA_SOUNDING_PERIOD,
    	MURA_PLATFORM_TYPE,
-   	MURA_DISABLE_CN3_CN4,
+	MURA_DISABLE_CN3_CN4,
+   	MURA_MOBILITY_CTRL,
+   	MURA_MOBILITY_INTERVAL_CTRL,
+   	MURA_MOBILITY_SNR_CTRL,
+   	MURA_MOBILITY_THRESHOLD_CTRL,
+   	MURA_MOBILITY_SOUNDING_INTERVAL_COUNT,
+   	MURA_MOBILITY_MODE_CTRL,
+   	MURA_MOBILITY_LOG_CTRL,
+   	MURA_MOBILITY_TEST_CTRL,
 	MURA_MAX_COMMAND,
 };
 
@@ -303,10 +309,47 @@ typedef struct _CMD_SET_PLATFORM_TYPE {
 	UINT_8       ucReserved[3];
 } CMD_SET_PLATFORM_TYPE, *P_CMD_SET_PLATFORM_TYPE;
 
-typedef struct _CMD_SET_DISABLE_CN3_CN4{
-	UINT_8       ucDisableCn3Cn4;
+typedef struct _CMD_MURGA_SET_MOBILITY_TYPE {
+	BOOLEAN      fgMobilityType;
 	UINT_8       ucReserved[3];
-} CMD_SET_DISABLE_CN3_CN4, *P_CMD_SET_DISABLE_CN3_CN4;
+} CMD_MURGA_SET_MOBILITY_TYPE, *P_CMD_MURGA_SET_MOBILITY_TYPE;
+
+typedef struct _CMD_MURGA_SET_MOBILITY_INTERVAL {
+	UINT_16      u2MobilityInteral;
+	UINT_8       ucReserved[2];
+} CMD_MURGA_SET_MOBILITY_INTERVAL, *P_CMD_MURGA_SET_MOBILITY_INTERVAL;
+
+typedef struct _CMD_MURGA_SET_MOBILITY_SNR {
+	UINT_8       ucMobilitySNR;
+	UINT_8       ucReserved[3];
+} CMD_MURGA_SET_MOBILITY_SNR, *P_CMD_MURGA_SET_MOBILITY_SNR;
+
+typedef struct _CMD_MURGA_SET_MOBILITY_THRESHOLD {
+	UINT_8       ucMobilityThreshold;
+	UINT_8       ucReserved[3];
+} CMD_MURGA_SET_MOBILITY_THRESHOLD, *P_CMD_MURGA_SET_MOBILITY_THRESHOLD;
+
+typedef struct _CMD_MURGA_GET_MOBILITY_SND_INTERVAL {
+	BOOLEAN      fgMobilitySndIntvalCnt;
+	UINT_8       ucReserved[3];
+} CMD_MURGA_GET_MOBILITY_SND_INTERVAL, *P_CMD_MURGA_GET_MOBILITY_SND_INTERVAL;
+
+typedef struct _CMD_MURGA_SET_MOBILITY_MODE {
+	BOOLEAN      fgMULQPingPongEn;
+    BOOLEAN      fgMULQTriggerCalEn;
+    BOOLEAN      fgMobilityFlagForceEn;
+	UINT_8       ucReserved;
+} CMD_MURGA_SET_MOBILITY_MODE, *P_CMD_MURGA_SET_MOBILITY_MODE;
+
+typedef struct _CMD_MURGA_SET_MOBILITY_LOG {
+	BOOLEAN      fgMobilityLogEn;
+	UINT_8       ucReserved[3];
+} CMD_MURGA_SET_MOBILITY_LOG, *P_CMD_MURGA_SET_MOBILITY_LOG;
+
+typedef struct _CMD_MURGA_SET_MOBILITY_TEST {
+	BOOLEAN      fgMobilityTestEn;
+	UINT_8       ucReserved[3];
+} CMD_MURGA_SET_MOBILITY_TEST, *P_CMD_MURGA_SET_MOBILITY_TEST;
 
 typedef struct _EVENT_SHOW_ALGORITHM_STATE {
 	UINT_32                 u4EventId;
@@ -384,6 +427,13 @@ INT SetMuraFixedRateProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
 INT SetMuraFixedGroupRateProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
 INT SetMuraFixedSndParamProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
 INT SetMuraPlatformTypeProc(RTMP_ADAPTER *pAd);
-INT SetMuraDisableCN3CN4Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilityCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilityIntervalCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilitySNRCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilityThresholdCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilitySndCountProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilityModeCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilityLogCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+INT SetMuraMobilityTestCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
 
 #endif  /* __AP_MUMIMO_RA_H__ */

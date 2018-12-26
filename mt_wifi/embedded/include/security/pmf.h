@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -18,7 +17,6 @@
         IEEE P802.11w
 
  */
-#endif /* MTK_LICENSE */
 #ifndef __PMF_H
 #define __PMF_H
 #ifdef DOT11W_PMF_SUPPORT

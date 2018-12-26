@@ -7,7 +7,6 @@
      This file contains IOCTL for MU-MIMO specfic commands
  */
 
-#ifdef MTK_LICENSE
 /*******************************************************************************
  * Copyright (c) 2014 MediaTek Inc.
  * 
@@ -49,7 +48,7 @@
  * (ICC).
  * ******************************************************************************
  */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 #ifdef CFG_SUPPORT_MU_MIMO
 /* For debugging, Not for ATE */
@@ -178,9 +177,9 @@ INT ShowMuProfileProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
     }
 
     index = simple_strtol(pIdx, 0, 10);
+#ifdef RT_BIG_ENDIAN
     index = cpu2le32(index);
-    
-
+#endif
     // Allocate memory for msg
     msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(index));
     if (!msg) 
@@ -592,8 +591,9 @@ INT ShowGroupTblEntryProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
         goto error;
     }
     index = simple_strtol(pIndex, 0, 10);
+#ifdef RT_BIG_ENDIAN
     index = cpu2le32(index);
-  
+#endif  
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO, 
                             ("Index is: %d\n", index));
    
@@ -807,8 +807,9 @@ INT ShowClusterTblEntryProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
     }
 
     index = simple_strtol(pIndex, 0, 10);
+#ifdef RT_BIG_ENDIAN
     index = cpu2le32(index);
-
+#endif
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
                             ("Index is: %d\n", index)); 
 
@@ -1073,9 +1074,9 @@ INT SetCalculateInitMCSProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
         Ret = 0;
         goto error;
     }
-    
+#ifdef RT_BIG_ENDIAN
     index = cpu2le32(index);
-
+#endif
     msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(index));
     if (!msg) 
     { 
@@ -1338,8 +1339,9 @@ INT ShowCalcInitMCSProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
         goto error;
     }
     index = simple_strtol(pIndex, 0, 10);
+#ifdef RT_BIG_ENDIAN
     index = cpu2le32(index);
-   
+#endif  
     // Allocate memory for msg
     msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(index));
     if (!msg) 
@@ -1579,6 +1581,7 @@ INT SetTriggerSndProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
     AndesInitCmdMsg(msg, attr);
 #ifdef RT_BIG_ENDIAN
 	cmd = cpu2le32(cmd);
+	param.u2Reserved = cpu2le32(param.u2Reserved);
 #endif
     AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
     AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
@@ -1835,7 +1838,9 @@ INT SetTriggerMuTxProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
         }
 
         param.au4PayloadLength[index] = simple_strtol(pPayloadLength, 0, 10);
+#ifdef RT_BIG_ENDIAN
         param.au4PayloadLength[index] = cpu2le32(param.au4PayloadLength[index]);
+#endif
     }
 
     msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
@@ -2475,6 +2480,9 @@ static VOID ShowGroupTblEntryCallback(char *rsp_payload, UINT16 rsp_payload_len)
                                 (" %x", rsp_payload[ucI]));
     }
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("\n"));
+#ifdef RT_BIG_ENDIAN
+		pGentry->index = le2cpu32(pGentry->index);
+#endif
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
             ("group table index %d\n", pGentry->index));
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
@@ -2625,6 +2633,9 @@ static VOID ShowMaxGroupSearchCntCallback(char *rsp_payload,
                             (P_EVENT_MU_GET_MAX_GROUP_SEARCH_CNT)rsp_payload;
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("#################### %s\n", __FUNCTION__));
+#ifdef RT_BIG_ENDIAN
+	pGentry->value = le2cpu32(pGentry->value);
+#endif
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("max. group search cnt value: %x\n", pGentry->value));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2636,6 +2647,10 @@ static VOID ShowTxReqMinTimeCallback(char *rsp_payload, UINT16 rsp_payload_len)
                                 (P_EVENT_MU_GET_TXREQ_MIN_TIME)rsp_payload;
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("#################### %s\n", __FUNCTION__));
+	
+#ifdef RT_BIG_ENDIAN
+		pGentry->value = le2cpu16(pGentry->value);
+#endif
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("TxReqMinTime value: %x\n", pGentry->value));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2648,6 +2663,24 @@ static VOID ShowMuProfileTxStsCntCallback(char *rsp_payload,
                         (P_EVENT_MU_GET_MUPROFILE_TX_STATUS_CNT) rsp_payload;
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
                 ("#################### %s\n", __FUNCTION__));
+#ifdef RT_BIG_ENDIAN
+	pGentry->pfIndex = le2cpu16(pGentry->pfIndex);
+	pGentry->cn2used = le2cpu16(pGentry->cn2used);
+	pGentry->cn2rateDown = le2cpu16(pGentry->cn2rateDown);
+	pGentry->cn2deltaMcs = le2cpu16(pGentry->cn2deltaMcs);
+	pGentry->cn2TxFailCnt = le2cpu16(pGentry->cn2TxFailCnt);
+	pGentry->cn2TxSuccessCnt = le2cpu16(pGentry->cn2TxSuccessCnt);
+	pGentry->cn3used = le2cpu16(pGentry->cn3used);
+	pGentry->cn3rateDown = le2cpu16(pGentry->cn3rateDown);
+	pGentry->cn3deltaMcs = le2cpu16(pGentry->cn3deltaMcs);
+	pGentry->cn3TxFailCnt = le2cpu16(pGentry->cn3TxFailCnt);
+	pGentry->cn3TxSuccessCnt = le2cpu16(pGentry->cn3TxSuccessCnt);
+	pGentry->cn4used = le2cpu16(pGentry->cn4used);
+	pGentry->cn4rateDown = le2cpu16(pGentry->cn4rateDown);
+	pGentry->cn4deltaMcs = le2cpu16(pGentry->cn4deltaMcs);
+	pGentry->cn4TxFailCnt = le2cpu16(pGentry->cn4TxFailCnt);
+	pGentry->cn4TxSuccessCnt = le2cpu16(pGentry->cn4TxSuccessCnt);
+#endif
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
                 ("mu profile index: %x\n", pGentry->pfIndex));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2721,6 +2754,14 @@ static VOID ShowClusterTblEntryCallback(char *rsp_payload,
             ("#################### %s\n", __FUNCTION__));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("Cluster index %d\n", pGentry->index));
+#ifdef RT_BIG_ENDIAN
+	pGentry->gidUserMemberStatus[0] = le2cpu32(pGentry->gidUserMemberStatus[0]);
+	pGentry->gidUserMemberStatus[1] = le2cpu32(pGentry->gidUserMemberStatus[1]);
+	pGentry->gidUserPosition[0] = le2cpu32(pGentry->gidUserPosition[0]);
+	pGentry->gidUserPosition[1] = le2cpu32(pGentry->gidUserPosition[1]);
+	pGentry->gidUserPosition[2] = le2cpu32(pGentry->gidUserPosition[2]);
+	pGentry->gidUserPosition[3] = le2cpu32(pGentry->gidUserPosition[3]);
+#endif
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("GID User Membership Status [0] = %x\n", 
                     pGentry->gidUserMemberStatus[0]));
@@ -2744,6 +2785,9 @@ static VOID ShowTxopDefaultCallback(char *rsp_payload, UINT16 rsp_payload_len)
     P_EVENT_GET_TXOP_DEFAULT pGentry = (P_EVENT_GET_TXOP_DEFAULT)rsp_payload;
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("#################### %s\n", __FUNCTION__));
+#ifdef RT_BIG_ENDIAN
+		pGentry->value = le2cpu32(pGentry->value);
+#endif	
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("TXOP default value: %x\n", pGentry->value));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2757,6 +2801,10 @@ static VOID ShowSuLossThresholdCallback(char *rsp_payload,
                                 (P_EVENT_MU_GET_SU_LOSS_THRESHOLD)rsp_payload;
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("#################### %s\n", __FUNCTION__));
+	
+#ifdef RT_BIG_ENDIAN
+	pGentry->value = le2cpu32(pGentry->value);
+#endif	
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("su loss threshold value: %x\n", pGentry->value));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2770,6 +2818,10 @@ static VOID ShowMuGainThresholdCallback(char *rsp_payload,
                             (P_EVENT_MU_GET_MU_GAIN_THRESHOLD)rsp_payload;
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("#################### %s\n", __FUNCTION__));
+	
+#ifdef RT_BIG_ENDIAN
+	pGentry->value = le2cpu32(pGentry->value);
+#endif	
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("mu gain threshold value: %x\n", pGentry->value));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2781,6 +2833,10 @@ static VOID ShowStatusOfCommand(char *rsp_payload, UINT16 rsp_payload_len)
     P_EVENT_STATUS pGentry = (P_EVENT_STATUS)rsp_payload;
     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("#################### %s\n", __FUNCTION__));
+	
+#ifdef RT_BIG_ENDIAN
+	pGentry->status = le2cpu16(pGentry->status);
+#endif	
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("status: %x\n", pGentry->status));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2792,6 +2848,9 @@ static VOID ShowStatusOfHqaCommand(char *rsp_payload, UINT16 rsp_payload_len)
     P_EVENT_HQA_STATUS pGentry = (P_EVENT_HQA_STATUS)rsp_payload;
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("#################### %s\n", __FUNCTION__));
+#ifdef RT_BIG_ENDIAN
+	pGentry->status = le2cpu16(pGentry->status);
+#endif	
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("status: %x\n", pGentry->status));
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2874,7 +2933,6 @@ static VOID hqa_wifi_test_mu_get_init_mcs_callback(struct cmd_msg *msg,
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("%s: error !! event fill null!!\n", __FUNCTION__));
-        return;
     }
     if (msg->attr.rsp.wb_buf_in_calbk == NULL)
     {
@@ -3118,7 +3176,6 @@ static VOID hqa_wifi_test_mu_get_su_lq_callback(struct cmd_msg *msg,
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("%s: error !! event fill null!!\n", __FUNCTION__));
-        return;
     }
     if (msg->attr.rsp.wb_buf_in_calbk == NULL)
     {
@@ -3203,7 +3260,6 @@ static VOID hqa_wifi_test_mu_get_lq_callback(struct cmd_msg *msg,
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("%s: error !! event fill null!!\n", __FUNCTION__));
-        return;
     }
     if (msg->attr.rsp.wb_buf_in_calbk == NULL)
     {
@@ -3492,7 +3548,7 @@ hqa_wifi_test_mu_table_set (
 {
         INT Ret = 0;
         struct cmd_msg *msg = NULL;
-        UINT32 cmd = 0;
+        UINT32 cmd = (ptr->type == SU) ? MU_HQA_SET_SU_TABLE : MU_HQA_SET_MU_TABLE;
         P_CMD_HQA_SET_MU_METRIC_TABLE pMuParam = NULL;
         P_CMD_HQA_SET_SU_METRIC_TABLE pSuParam = NULL;
         UINT32 i = 0;
@@ -3505,7 +3561,6 @@ hqa_wifi_test_mu_table_set (
                 Ret = -1;
                 goto error;
         }
-        cmd = (ptr->type == SU) ? MU_HQA_SET_SU_TABLE : MU_HQA_SET_MU_TABLE;
 
         if (ptr->type == SU) {
                 os_alloc_mem(pAd, (UCHAR **)&pSuParam, sizeof(*pSuParam));
@@ -3593,7 +3648,6 @@ hqa_wifi_test_mu_table_set (
         AndesSendCmdMsg(pAd, msg);
 
 error:
-	if (ptr) {
         if (ptr->type == SU) {
                 if (pSuParam) {
                         os_free_mem(pSuParam);
@@ -3603,10 +3657,9 @@ error:
                         os_free_mem(pMuParam);
                 }
         }
-	}
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
-			("%s:(Ret = %d\n", __FUNCTION__, Ret));
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, 
+                ("%s:(Ret = %d\n", __FUNCTION__, Ret));
 
 	return Ret;
 }
@@ -3755,7 +3808,6 @@ static VOID hqa_wifi_test_mu_get_qd_callback(struct cmd_msg *msg,
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("%s: error !! event fill null!!\n", __FUNCTION__));
-        return;
     }
 
     if (msg->attr.rsp.wb_buf_in_calbk == NULL)
@@ -4654,35 +4706,30 @@ INT32 hqa_mu_set_speedup_lq(PRTMP_ADAPTER pAd, RTMP_STRING *arg)
 /* 1024:*/
 INT32 hqa_mu_set_mu_table(PRTMP_ADAPTER pAd, RTMP_STRING *arg)
 {
-    INT32 Ret = 0;
-    MU_STRUCT_MU_TABLE info;
-    UINT32 type = 0;
-    UCHAR *type_ptr = NULL;
-    UINT32 specific_metric_content = 0;
-    UINT32 length = 0;
-    UINT32 i = 0;
-    struct _CMD_HQA_SET_MU_METRIC_TABLE mu_metric_table;
-    struct _CMD_HQA_SET_SU_METRIC_TABLE su_metric_table;
+        INT32 Ret = 0;
+        MU_STRUCT_MU_TABLE info;
+        UINT32 type = 0;
+        UCHAR *type_ptr = NULL;
+        UINT32 specific_metric_content = 0;
+        UINT32 length = 0;
+        UINT32 i = 0;
+        struct _CMD_HQA_SET_MU_METRIC_TABLE mu_metric_table;
+        struct _CMD_HQA_SET_SU_METRIC_TABLE su_metric_table;
 
-    if (arg == NULL)
-    {
-        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-            ("%s: Invalid parameters\n", __FUNCTION__));
-        return -1;
-    }
-
-    type_ptr = strsep(&arg, ":");
-    if (type_ptr == NULL)
-    {
-        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-            ("%s: Invalid parameters\n", __FUNCTION__));
-        return -1;
-    }
-    type = simple_strtoul(type_ptr, 0, 10);
+        type_ptr = strsep(&arg, ":");
+        type = simple_strtoul(type_ptr, 0, 10);
 
     specific_metric_content = simple_strtoul(arg, 0, 10);
 
     specific_metric_content = cpu2le32(specific_metric_content);
+    
+   
+    if (type_ptr == NULL || arg == NULL)
+    {
+        MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+            ("%s: Invalid parameters\n", __FUNCTION__));
+        return -1;
+    }
 
     if (type == MU)
     {

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	ate_agent.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __ATE_AGENT_H__
 #define __ATE_AGENT_H__
 
@@ -68,6 +67,9 @@ INT32 SetATETxPower0(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
 INT32 SetATETxPower1(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
 INT32 SetATETxPower2(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
 INT32 SetATETxPower3(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
+#ifdef ABSOLUTE_POWER_TEST
+INT32 SetATEForceTxPower(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
+#endif /* ABSOLUTE_POWER_TEST */
 INT32 SetATETxPowerEvaluation(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
 INT32 SetATETxAntenna(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
 INT32 SetATERxAntenna(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);
@@ -142,7 +144,6 @@ INT32 ATEPayloadAlloc(struct _RTMP_ADAPTER *pAd, UINT32 Index);
 VOID EEReadAll(struct _RTMP_ADAPTER *pAd, UINT16 *Data);
 
 VOID rtmp_ate_init(struct _RTMP_ADAPTER *pAd);
-VOID RTMPCfgTssiGainFromEEPROM(struct _RTMP_ADAPTER *pAd);
 
 #ifdef SINGLE_SKU_V2
 INT32 SetATESingleSKUEn(struct _RTMP_ADAPTER *pAd, RTMP_STRING *Arg);

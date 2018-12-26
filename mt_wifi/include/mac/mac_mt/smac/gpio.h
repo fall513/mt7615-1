@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	gpio.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __GPIO_H__
 #define __GPIO_H__
 

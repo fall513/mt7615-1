@@ -353,6 +353,10 @@ typedef struct _SECURITY_CONFIG {
 	int acct_interim_interval;	
 	int acct_enable;
 #endif /*RADIUS_ACCOUNTING_SUPPORT*/
+#ifdef RADIUS_MAC_ACL_SUPPORT
+    RT_802_11_RADIUS_ACL RadiusMacAuthCache;
+    UINT32 RadiusMacAuthCacheTimeout;		
+#endif /* RADIUS_MAC_ACL_SUPPORT */
 #endif /* DOT1X_SUPPORT */
     INT PMKID_CacheIdx;
 #if defined(DOT1X_SUPPORT) || defined(WPA_SUPPLICANT_SUPPORT)

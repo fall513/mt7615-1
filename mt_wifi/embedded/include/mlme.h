@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -28,7 +27,6 @@
 	John Chang  2004-09-06      modified for RT2600
 
 */
-#endif /* MTK_LICENSE */
 #ifndef __MLME_H__
 #define __MLME_H__
 
@@ -64,7 +62,8 @@
 #define JAP		2
 #define JAP_W53	3
 #define JAP_W56	4
-#define MAX_RD_REGION 5
+#define CN		5
+#define MAX_RD_REGION 6
 #if defined(CONFIG_MULTI_CHANNEL) || defined(DOT11Z_TDLS_SUPPORT)
 #define BEACON_LOST_TIME           12 * OS_HZ    /* 2048 msec = 2 sec */
 #else
@@ -96,6 +95,7 @@
 #else
 #define MAX_CHANNEL_TIME            140       /* unit: msec, for single band scan */
 #endif /* PALLADIUM */
+#define ACTIVE_SCAN_TIME	    	60		/* Moderate active scan waiting for probe response time*/
 #define FAST_ACTIVE_SCAN_TIME	    30 		  /* Active scan waiting for probe response time */
 
 #define AUTO_CHANNEL_SEL_TIMEOUT		400		/* uint: msec */
@@ -588,23 +588,6 @@ typedef struct  GNU_PACKED _NEW_EXT_CHAN_IE{
 	UCHAR				NewExtChanOffset;
 } NEW_EXT_CHAN_IE, *PNEW_EXT_CHAN_IE;
 
-#ifdef DOT11U_INTERWORKING_IE_SUPPORT
-typedef struct GNU_PACKED _INTERWORKING_IE{
-#ifdef RT_BIG_ENDIAN
-	UCHAR	UESA:1;
-	UCHAR	ESR:1;
-	UCHAR	ASRA:1;
-	UCHAR	Internet:1;
-	UCHAR	AccessNwType:4;
-#else
-	UCHAR	AccessNwType:4;
-	UCHAR	Internet:1;
-	UCHAR	ASRA:1;
-	UCHAR	ESR:1;
-	UCHAR	UESA:1;
-#endif
-}INTERWORKING_IE, *PINTERWORKING_IE;
-#endif /* DOT11U_INTERWORKING_IE_SUPPORT */
 typedef struct GNU_PACKED _FRAME_802_11 {
     HEADER_802_11   Hdr;
     UCHAR            Octet[1];
@@ -911,10 +894,30 @@ struct _vendor_ie_cap {
     ULONG ra_cap;
     ULONG mtk_cap;
     ULONG brcm_cap;
+    ULONG quant_cap;
     BOOLEAN ldpc;
     BOOLEAN sgi;
     BOOLEAN is_rlt;
     BOOLEAN is_mtk;
+    BOOLEAN is_quant;
+#ifdef WH_EZ_SETUP
+	UINT ez_capability;
+#ifdef NEW_CONNECTION_ALGO
+	UCHAR open_group_id[OPEN_GROUP_MAX_LEN];
+	UCHAR open_group_id_len;
+	beacon_info_tag_t beacon_info;
+	BOOLEAN non_ez_beacon;
+#endif
+    BOOLEAN support_easy_setup;
+#endif /* WH_EZ_SETUP */
+#ifdef MWDS
+    BOOLEAN mtk_cap_found;
+    BOOLEAN support_mwds;
+#endif /* MWDS */
+#ifdef WH_EVENT_NOTIFIER
+    UCHAR custom_ie_len;
+    UCHAR custom_ie[CUSTOM_IE_TOTAL_LEN];
+#endif /* WH_EVENT_NOTIFIER */
 };
 
 /* EDCA configuration from AP's BEACON/ProbeRsp */
@@ -1159,6 +1162,18 @@ typedef struct _BSS_ENTRY{
 
 
 
+#ifdef WH_EZ_SETUP
+    unsigned char support_easy_setup;
+    unsigned int easy_setup_capability;
+    BOOLEAN     bConnectAttemptFailed;
+	BOOLEAN non_ez_beacon;
+#ifdef NEW_CONNECTION_ALGO
+    UCHAR open_group_id[OPEN_GROUP_MAX_LEN];
+    UCHAR open_group_id_len;
+    beacon_info_tag_t beacon_info;
+#endif
+#endif /* WH_EZ_SETUP */
+
 #if defined(DOT11R_FT_SUPPORT) || defined(DOT11K_RRM_SUPPORT)
 	BOOLEAN	 bHasMDIE;
 	FT_MDIE FT_MDIE;
@@ -1170,27 +1185,20 @@ typedef struct _BSS_ENTRY{
 	UINT8 CondensedPhyType;
 	UINT8 RSNI;
 #endif /* DOT11K_RRM_SUPPORT */
-#ifdef CUSTOMER_DCC_FEATURE
-	ULONG LastBeaconRxTimeT;
-    UCHAR  Snr[4];
-    CHAR   rssi[4];
-    UCHAR  vendorOUI0[3];
-    UCHAR  vendorOUI1[3];
-#endif
+#ifdef MWDS
+	BOOLEAN		bSupportMWDS; 		/* Determine If own MWDS capability */
+#endif /* MWDS */
 } BSS_ENTRY;
 
 typedef struct {
-    UCHAR          BssNr;
-    UCHAR          BssOverlapNr;
+    UCHAR           BssNr;
+    UCHAR           BssOverlapNr;
     BSS_ENTRY       BssEntry[MAX_LEN_OF_BSS_TABLE];
 } BSS_TABLE, *PBSS_TABLE;
 
 
 struct raw_rssi_info{
 	CHAR raw_rssi[4];
-#ifdef CUSTOMER_DCC_FEATURE
-	UCHAR raw_Snr[4];
-#endif
 	UCHAR raw_snr;
 	UCHAR Channel;
 };
@@ -1210,6 +1218,12 @@ typedef struct _MLME_QUEUE_ELEM {
 	ULONG Priv;
 	UCHAR RxPhyMode;
 } MLME_QUEUE_ELEM, *PMLME_QUEUE_ELEM;
+
+#ifdef WH_EZ_SETUP
+#define IMM_DISCONNECT	(BIT(15))	
+	/* If this bit is set in 'Priv' of MLME_QUEUE_ELEM, during disconenct request to MLME,
+		the request will be processed immediately*/
+#endif
 
 typedef struct _MLME_QUEUE {
 	ULONG Num;
@@ -1339,6 +1353,13 @@ typedef struct _MLME_AUX {
 	UINT32 AKMMap;
 	UINT32 PairwiseCipher;
 	UINT32 GroupCipher;
+#ifdef MWDS
+	BOOLEAN		bSupportMWDS; 		/* Determine If own MWDS capability */
+#endif /* MWDS */
+#ifdef WH_EZ_SETUP
+	BOOLEAN support_easy_setup;
+	UINT8 attempted_candidate_index; /* with respect to entries in SsidBssTab*/
+#endif /* WH_EZ_SETUP */
 } MLME_AUX, *PMLME_AUX;
 
 
@@ -1418,7 +1439,13 @@ typedef struct _MLME_DEAUTH_REQ_STRUCT {
     UCHAR        Addr[MAC_ADDR_LEN];
     USHORT       Reason;
 } MLME_DEAUTH_REQ_STRUCT, *PMLME_DEAUTH_REQ_STRUCT;
-
+#if (defined(WH_EZ_SETUP) && defined(EZ_NETWORK_MERGE_SUPPORT))
+typedef struct _MLME_BROADCAST_DEAUTH_REQ_STRUCT {
+    UCHAR        		Addr[MAC_ADDR_LEN];
+    USHORT       		Reason;
+	struct wifi_dev  	*wdev;
+} MLME_BROADCAST_DEAUTH_REQ_STRUCT, *PMLME_BROADCAST_DEAUTH_REQ_STRUCT;
+#endif
 typedef struct {
     ULONG      BssIdx;
 } MLME_JOIN_REQ_STRUCT;
@@ -1429,12 +1456,6 @@ typedef struct _MLME_SCAN_REQ_STRUCT {
     UCHAR      ScanType;
     UCHAR      SsidLen;
     CHAR       Ssid[MAX_LEN_OF_SSID];
-#ifdef CONFIG_AP_SUPPORT
-#ifdef CUSTOMER_DCC_FEATURE
-	UINT	   Channel;
-	UINT	   Timeout;
-#endif
-#endif	
 } MLME_SCAN_REQ_STRUCT, *PMLME_SCAN_REQ_STRUCT;
 
 typedef struct _MLME_START_REQ_STRUCT {
@@ -1611,10 +1632,6 @@ typedef struct _bcn_ie_list {
 	WIDE_BW_CH_SWITCH_ELEMENT wb_info;
 #endif /* DOT11_VHT_AC */
 	BOOLEAN  FromBcnReport;
-#ifdef CUSTOMER_DCC_FEATURE
-	UCHAR	VendorID0[3];
-	UCHAR	VendorID1[3];
-#endif
 }BCN_IE_LIST;
 
 VOID MlmeHandler(struct _RTMP_ADAPTER *pAd);

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,11 +11,13 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 
 
 #ifdef RTMP_MAC_PCI
 #include	"rt_config.h"
+
+static void tr_done_tasklet(unsigned long data);
 
 #ifdef BB_SOC
 __IMEM void rx_done_tasklet(unsigned long data);
@@ -88,6 +89,8 @@ NDIS_STATUS RtmpNetTaskInit(RTMP_ADAPTER *pAd)
 #endif /* CONFIG_FWOWN_SUPPORT */
 #endif /* MT_MAC */
 
+	RTMP_OS_TASKLET_INIT(pAd, &pObj->tr_done_task, tr_done_tasklet, (unsigned long)pAd);
+
 	RTMP_OS_TASKLET_INIT(pAd, &pObj->mgmt_dma_done_task, mgmt_dma_done_tasklet, (unsigned long)pAd);
 	RTMP_OS_TASKLET_INIT(pAd, &pObj->ac0_dma_done_task, ac0_dma_done_tasklet, (unsigned long)pAd);
 
@@ -142,6 +145,7 @@ void RtmpNetTaskExit(RTMP_ADAPTER *pAd)
 	RTMP_OS_TASKLET_KILL(&pObj->bmc_dma_done_task);
 #endif /* MT_MAC */
 
+	RTMP_OS_TASKLET_KILL(&pObj->tr_done_task);
 	RTMP_OS_TASKLET_KILL(&pObj->mgmt_dma_done_task);
 	RTMP_OS_TASKLET_KILL(&pObj->ac0_dma_done_task);
 #ifdef CONFIG_ATE
@@ -387,6 +391,53 @@ static void mgmt_dma_done_tasklet(unsigned long data)
 	RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
 }
 
+static VOID tr_done_tasklet(unsigned long data)
+{
+	PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)data;
+	unsigned long flags;
+	PCI_HIF_T *pci_hif = &pAd->PciHif;
+	UINT32 int_pending;
+	BOOLEAN	reschedule_rx0 = pAd->reschedule_rx0;
+	BOOLEAN reschedule_rx1 = pAd->reschedule_rx1;
+	POS_COOKIE pObj;
+
+	pObj = (POS_COOKIE) pAd->OS_Cookie;
+
+	RTMP_INT_LOCK(&pAd->LockInterrupt, flags);
+
+	if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_NIC_NOT_EXIST)) {
+		pci_hif->intDisableMask &= ~(MT_INT_RX_CMD | MT_INT_RX_DATA | MT_INT_RX_DLY);
+		RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
+		return;
+	}
+
+	int_pending = pci_hif->IntPending;
+	pci_hif->IntPending &= ~(MT_INT_RX_CMD | MT_INT_RX_DATA | MT_INT_RX_DLY);
+	RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
+
+	if (pAd->BATable.ba_timeout_check)
+		ba_timeout_flush(pAd);
+
+	if ((int_pending & MT_INT_RX_DATA) || reschedule_rx0) {
+		reschedule_rx0 = rtmp_rx_done_handle(pAd);
+		reschedule_rx1 = RxRing1DoneInterruptHandle(pAd);
+	} else if ((int_pending & MT_INT_RX_CMD) || reschedule_rx1) {
+		reschedule_rx1 = RxRing1DoneInterruptHandle(pAd);
+		reschedule_rx0 = rtmp_rx_done_handle(pAd);
+	}
+
+	RTMP_INT_LOCK(&pAd->LockInterrupt, flags);
+	if (reschedule_rx0 || reschedule_rx1) {
+		pAd->reschedule_rx0 = reschedule_rx0;
+		pAd->reschedule_rx1 = reschedule_rx1;
+		RTMP_OS_TASKLET_SCHE(&pObj->tr_done_task);
+		RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
+		return;
+	}
+
+	rt2860_int_enable(pAd, MT_INT_RX_CMD | MT_INT_RX_DATA | MT_INT_RX_DLY);
+	RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
+}
 
 #ifdef BB_SOC
 __IMEM void rx_done_tasklet(unsigned long data)
@@ -1565,6 +1616,9 @@ void RTMPHandleInterruptSerDump(RTMP_ADAPTER *pAd)
 	
 	MAC_IO_READ32(pAd, (0x20afc), &reg_tmp_val);
 	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s,::E  R	, 0x820f20fc=0x%08X\n", __FUNCTION__, reg_tmp_val));
+
+	/* Add the EDCCA Time for Debug */
+	Show_MibBucket_Proc(pAd,"");
 }
 #endif // ERR_RECOVERY
 
@@ -1577,8 +1631,8 @@ VOID RTMPHandleInterrupt(VOID *pAdSrc)
 	UINT32 StatusRegister = 0, EnableRegister = 0, stat_reg = 0, en_reg = 0;
 	POS_COOKIE pObj;
 	unsigned long flags=0;
-	UINT32 INT_RX_DATA = 0, INT_RX_CMD=0, TxCoherent = 0, RxCoherent = 0;
-	UINT32 INT_MGMT_DLY = 0, INT_HCCA_DLY = 0, INT_AC3_DLY = 0, INT_AC2_DLY = 0, INT_AC1_DLY = 0, INT_AC0_DLY = 0, INT_BMC_DLY = 0;
+	UINT32 INT_RX_DATA = 0, INT_RX_CMD=0, TxCoherent = 0, RxCoherent = 0, FifoStaFullInt = 0;
+	UINT32 INT_MGMT_DLY = 0, INT_HCCA_DLY = 0, INT_AC3_DLY = 0, INT_AC2_DLY = 0, INT_AC1_DLY = 0, INT_AC0_DLY = 0, INT_BMC_DLY = 0, INT_RX_DLY = 0;
 	UINT32 RadarInt = 0;
 #ifdef MT_MAC
 	UINT32 McuCommand = 0;
@@ -1588,10 +1642,6 @@ VOID RTMPHandleInterrupt(VOID *pAdSrc)
 
 #if (CFG_CPU_LOADING_DISABLE_TXDONE0 == 1)
     UINT32 IntSourceMajor = 0;
-#endif
-
-#if defined(RLT_MAC) || defined(RTMP_MAC)
-    UINT32 GPTimeOutInt = 0, TBTTInt = 0, PreTBTTInt = 0;
 #endif
 
 	pObj = (POS_COOKIE) pAd->OS_Cookie;
@@ -1619,46 +1669,33 @@ VOID RTMPHandleInterrupt(VOID *pAdSrc)
 	*/
 	/* if (!OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_DOZE)) */
 #ifdef MT_MAC
-	// TODO: shiang-7603
-	if (pAd->chipCap.hif_type == HIF_MT) {
-		HIF_IO_READ32(pAd,MT_INT_SOURCE_CSR,&IntSource);
 
-		if (IntSource & WF_MAC_INT_3)
-		{
-			RTMP_INT_LOCK(&pAd->LockInterrupt, flags);
-            RTMP_IO_READ32(pAd, HWISR3, &stat_reg);
-            RTMP_IO_READ32(pAd, HWIER3, &en_reg);
-            /* disable the interrupt source */
-			RTMP_IO_WRITE32(pAd, HWIER3, (~(stat_reg & en_reg)));
-            /* write 1 to clear */
-            RTMP_IO_WRITE32(pAd, HWISR3, stat_reg);
-	       	RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
-		}
-		HIF_IO_WRITE32(pAd,MT_INT_SOURCE_CSR,IntSource); /*write 1 to clear*/
+	HIF_IO_READ32(pAd,MT_INT_SOURCE_CSR,&IntSource);
+
+	if (IntSource & WF_MAC_INT_3)
+	{
+		RTMP_INT_LOCK(&pAd->LockInterrupt, flags);
+        RTMP_IO_READ32(pAd, HWISR3, &stat_reg);
+        RTMP_IO_READ32(pAd, HWIER3, &en_reg);
+        /* disable the interrupt source */
+		RTMP_IO_WRITE32(pAd, HWIER3, (~(stat_reg & en_reg)));
+        /* write 1 to clear */
+        RTMP_IO_WRITE32(pAd, HWISR3, stat_reg);
+       	RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
 	}
+	HIF_IO_WRITE32(pAd,MT_INT_SOURCE_CSR,IntSource); /*write 1 to clear*/
+
 #endif /* MT_MAC */
-
-#if defined(RLT_MAC) || defined(RTMP_MAC)
-	if (pAd->chipCap.hif_type == HIF_RLT || pAd->chipCap.hif_type == HIF_RTMP) {
-		HIF_IO_READ32(pAd, INT_SOURCE_CSR, &IntSource);
-		HIF_IO_WRITE32(pAd, INT_SOURCE_CSR, IntSource); /* write 1 to clear */
-	}
-#endif /* defined(RLT_MAC) || defined(RTMP_MAC) */
-/*	else
-		MTWF_LOG(DBG_CAT_HIF, CATHIF_PCI, DBG_LVL_TRACE, (">>>fOP_STATUS_DOZE<<<\n")); */
-
-//MTWF_LOG(DBG_CAT_HIF, CATHIF_PCI, DBG_LVL_OFF, ("%s():IntSource=0x%x\n", __FUNCTION__, IntSource));
 
 	if (!RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_START_UP))
 		return;
 
 	if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_HALT_IN_PROGRESS)) {
 #ifdef MT_MAC
-		if (pAd->chipCap.hif_type == HIF_MT)
-		{
-			/* Fix Rx Ring FULL lead DMA Busy, when DUT is in reset stage */
-        		IntSource = IntSource & (MT_INT_CMD | MT_INT_RX | WF_MAC_INT_3);
-		}
+
+	/* Fix Rx Ring FULL lead DMA Busy, when DUT is in reset stage */
+		IntSource = IntSource & (MT_INT_CMD | MT_INT_RX | WF_MAC_INT_3);
+
 
 		if (!IntSource)
 		    return;
@@ -1666,9 +1703,10 @@ VOID RTMPHandleInterrupt(VOID *pAdSrc)
     }
 
 #ifdef MT_MAC
-	if (pAd->chipCap.hif_type == HIF_MT) {
+	{
 		INT_RX_DATA = MT_INT_RX_DATA;
 		INT_RX_CMD = MT_INT_RX_CMD;
+		INT_RX_DLY = MT_INT_RX_DLY;
 		INT_MGMT_DLY = MT_INT_MGMT_DLY;
 		INT_HCCA_DLY = MT_INT_CMD;
 		INT_AC3_DLY = MT_INT_AC3_DLY;
@@ -1691,50 +1729,6 @@ VOID RTMPHandleInterrupt(VOID *pAdSrc)
 		FwClrOwnInt = MT_FW_CLR_OWN_INT;
 	}
 #endif /* MT_MAC*/
-#ifdef RLT_MAC
-	if (pAd->chipCap.hif_type == HIF_RLT) {
-		INT_RX_DATA = RLT_INT_RX_DATA;
-		INT_RX_CMD = RLT_INT_RX_CMD;
-		TxCoherent = RLT_TxCoherent;
-		RxCoherent = RLT_RxCoherent;
-		FifoStaFullInt = RLT_FifoStaFullInt;
-		INT_MGMT_DLY = RLT_INT_MGMT_DLY;
-		INT_HCCA_DLY = RLT_INT_HCCA_DLY;
-		INT_AC3_DLY = RLT_INT_AC3_DLY;
-		INT_AC2_DLY = RLT_INT_AC2_DLY;
-		INT_AC1_DLY = RLT_INT_AC1_DLY;
-		INT_AC0_DLY = RLT_INT_AC0_DLY;
-		PreTBTTInt = RLT_PreTBTTInt;
-		TBTTInt = RLT_TBTTInt;
-		GPTimeOutInt = RLT_GPTimeOutInt;
-		RadarInt = RLT_RadarInt;
-		AutoWakeupInt = RLT_AutoWakeupInt;
-	}
-#endif /* RLT_MAC*/
-#ifdef RTMP_MAC
-	if (pAd->chipCap.hif_type == HIF_RTMP) {
-		INT_RX_DATA = RTMP_INT_RX;
-		TxCoherent = RTMP_TxCoherent;
-		RxCoherent = RTMP_RxCoherent;
-		FifoStaFullInt = RTMP_FifoStaFullInt;
-		INT_MGMT_DLY = RTMP_INT_MGMT_DLY;
-		INT_HCCA_DLY = RTMP_INT_HCCA_DLY;
-		INT_AC3_DLY = RTMP_INT_AC3_DLY;
-		INT_AC2_DLY = RTMP_INT_AC2_DLY;
-		INT_AC1_DLY = RTMP_INT_AC1_DLY;
-		INT_AC0_DLY = RTMP_INT_AC0_DLY;
-		PreTBTTInt = RTMP_PreTBTTInt;
-		TBTTInt = RTMP_TBTTInt;
-		GPTimeOutInt = RTMP_GPTimeOutInt;
-		RadarInt = RTMP_RadarInt;
-		AutoWakeupInt = RTMP_AutoWakeupInt;
-		//McuCommand = RTMP_McuCommand;
-	}
-#endif /* RTMP_MAC */
-
-#ifdef  INF_VR9_HW_INT_WORKAROUND
-redo:
-#endif
 
 	pAd->bPCIclkOff = FALSE;
 
@@ -1829,14 +1823,6 @@ redo:
 		pAd->INTAC0CNT++;
 
 	}
-#if defined(RTMP_MAC) || defined(RLT_MAC)
-	if (IntSource & PreTBTTInt){
-		pAd->INTPreTBTTCNT++;
-	}
-	if (IntSource & TBTTInt){
-		pAd->INTTBTTIntCNT++;
-	}
-#endif
 
 #ifdef CONFIG_AP_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
@@ -1965,7 +1951,8 @@ redo:
 		MTWF_LOG(DBG_CAT_HIF, CATHIF_PCI, DBG_LVL_ERROR, (">>>TxCoherent<<<\n"));
 		RTMPHandleRxCoherentInterrupt(pAd);
 //+++Add by shiang for debug
-		rt2860_int_disable(pAd, TxCoherent);
+		IntSourceMajor |= TxCoherent;
+
 //---Add by shiang for debug
 	}
 
@@ -1974,21 +1961,36 @@ redo:
 		MTWF_LOG(DBG_CAT_HIF, CATHIF_PCI, DBG_LVL_ERROR, (">>>RxCoherent<<<\n"));
 		RTMPHandleRxCoherentInterrupt(pAd);
 //+++Add by shiang for debug
-		rt2860_int_disable(pAd, RxCoherent);
+		IntSourceMajor |= RxCoherent;
 //---Add by shiang for debug
 	}
 
 	RTMP_INT_LOCK(&pAd->LockInterrupt, flags);
+	if (IntSource & FifoStaFullInt)
+	{
+		if ((pAd->PciHif.intDisableMask & FifoStaFullInt) == 0)
+		{
+			IntSourceMajor |= FifoStaFullInt;
+			RTMP_OS_TASKLET_SCHE(&pObj->fifo_statistic_full_task);
+		}
+		pAd->PciHif.IntPending |= FifoStaFullInt;
+	}
 
 	if (IntSource & INT_MGMT_DLY)
 	{
 		pAd->TxDMACheckTimes = 0;
 		if ((pAd->PciHif.intDisableMask & INT_MGMT_DLY) ==0)
 		{
-			rt2860_int_disable(pAd, INT_MGMT_DLY);
+			IntSourceMajor |= INT_MGMT_DLY;
 			RTMP_OS_TASKLET_SCHE(&pObj->mgmt_dma_done_task);
 		}
 		pAd->PciHif.IntPending |= INT_MGMT_DLY ;
+	}
+
+
+	if (IntSource & INT_RX_DLY) {
+		if ((!(IntSource & INT_RX_CMD)) && (!(IntSource & INT_RX_DATA)))
+			IntSource &= ~INT_RX_DLY;
 	}
 
 	if (IntSource & INT_RX_DATA)
@@ -1998,20 +2000,19 @@ redo:
 #ifdef CUT_THROUGH_DBG
 		pAd->IsrRxCnt++;
 #endif
+		IntSourceMajor |= INT_RX_DATA;
+
 		if ((pAd->PciHif.intDisableMask & INT_RX_DATA) == 0)
 		{
 #ifdef UAPSD_SUPPORT
 			UAPSD_TIMING_RECORD_START();
 			UAPSD_TIMING_RECORD(pAd, UAPSD_TIMING_RECORD_ISR);
 #endif /* UAPSD_SUPPORT */
-
-#if (CFG_CPU_LOADING_DISABLE_TXDONE0 == 1)
-            IntSourceMajor |= INT_RX_DATA;
-#else
-			rt2860_int_disable(pAd, INT_RX_DATA);
-#endif
-			RTMP_OS_TASKLET_SCHE(&pObj->rx_done_task);
 		}
+
+		if (!(IntSource & INT_RX_DLY))
+			IntSource |= INT_RX_DLY;
+
 		pAd->PciHif.IntPending |= INT_RX_DATA;
 	}
 
@@ -2023,27 +2024,30 @@ redo:
 #ifdef CUT_THROUGH_DBG
 		pAd->IsrRx1Cnt++;
 #endif
-		if ((pAd->PciHif.intDisableMask & INT_RX_CMD) == 0)
-		{
-#if (CFG_CPU_LOADING_DISABLE_TXDONE0 == 1)
-            IntSourceMajor |= INT_RX_CMD;
-#else
-			/* mask INT_R1 */
-			rt2860_int_disable(pAd, INT_RX_CMD);
-#endif
-			RTMP_OS_TASKLET_SCHE(&pObj->rx1_done_task);
-		}
+
+		IntSourceMajor |= INT_RX_CMD;
+
+		if (!(IntSource & INT_RX_DLY))
+			IntSource |= INT_RX_DLY;
+
 		pAd->PciHif.IntPending |= INT_RX_CMD;
 	}
 #endif /* CONFIG_ANDES_SUPPORT */
 
+	if (IntSource & INT_RX_DLY) {
+		if ((pAd->PciHif.intDisableMask & INT_RX_DLY) == 0)
+			RTMP_OS_TASKLET_SCHE(&pObj->tr_done_task);
+
+		IntSourceMajor |= INT_RX_DLY;
+		pAd->PciHif.IntPending |= MT_INT_RX_DLY;
+	}
 
 	if (IntSource & INT_HCCA_DLY)
 	{
 		pAd->TxDMACheckTimes = 0;
 		if ((pAd->PciHif.intDisableMask & INT_HCCA_DLY) == 0)
 		{
-			rt2860_int_disable(pAd, INT_HCCA_DLY);
+			IntSourceMajor |= INT_HCCA_DLY;
 			RTMP_OS_TASKLET_SCHE(&pObj->hcca_dma_done_task);
 		}
 		pAd->PciHif.IntPending |= INT_HCCA_DLY;
@@ -2054,7 +2058,7 @@ redo:
 		pAd->TxDMACheckTimes = 0;
 		if ((pAd->PciHif.intDisableMask & INT_AC3_DLY) == 0)
 		{
-			rt2860_int_disable(pAd, INT_AC3_DLY);
+			IntSourceMajor |= INT_AC3_DLY;
 			RTMP_OS_TASKLET_SCHE(&pObj->ac3_dma_done_task);
 		}
 		pAd->PciHif.IntPending |= INT_AC3_DLY;
@@ -2065,7 +2069,7 @@ redo:
 		pAd->TxDMACheckTimes = 0;
 		if ((pAd->PciHif.intDisableMask & INT_AC2_DLY) == 0)
 		{
-			rt2860_int_disable(pAd, INT_AC2_DLY);
+			IntSourceMajor |= INT_AC2_DLY;
 			RTMP_OS_TASKLET_SCHE(&pObj->ac2_dma_done_task);
 		}
 		pAd->PciHif.IntPending |= INT_AC2_DLY;
@@ -2078,7 +2082,7 @@ redo:
 
 		if ((pAd->PciHif.intDisableMask & INT_AC1_DLY) == 0)
 		{
-			rt2860_int_disable(pAd, INT_AC1_DLY);
+			IntSourceMajor |= INT_AC1_DLY;
 			RTMP_OS_TASKLET_SCHE(&pObj->ac1_dma_done_task);
 		}
 	}
@@ -2109,13 +2113,9 @@ redo:
 		}
 	}
 
-#if (CFG_CPU_LOADING_DISABLE_TXDONE0 == 1)
-    rt2860_int_disable(pAd, IntSourceMajor);
-#endif
-
 #ifdef MT_MAC
 #if defined(MT7615) || defined(MT7622)
-    if (pAd->chipCap.hif_type == HIF_MT) {
+    {
         if (IntSource & McuCommand)
         {
             UINT32 value;
@@ -2125,8 +2125,7 @@ redo:
 #ifdef ERR_RECOVERY
             if (value & ERROR_DETECT_MASK)
             {
-                rt2860_int_disable(pAd, McuCommand);
-
+				IntSourceMajor |= McuCommand;
                 /* updated ErrRecovery Status. */
                 pAd->ErrRecoveryCtl.status = value;
 
@@ -2140,7 +2139,7 @@ redo:
 #ifdef CONFIG_FWOWN_SUPPORT
             if ((value & MT_MCU_CMD_CLEAR_FW_OWN) == MT_MCU_CMD_CLEAR_FW_OWN)
             {
-                rt2860_int_disable(pAd, McuCommand);
+                IntSourceMajor |= McuCommand;
 
 				/* Clear MCU CMD status*/
 				RTMP_IO_WRITE32(pAd, MT_MCU_CMD_CSR, (value & ~MT_MCU_CMD_CLEAR_FW_OWN));
@@ -2156,7 +2155,7 @@ redo:
 
 #ifdef CONFIG_FWOWN_SUPPORT
         if (IntSource & FwClrOwnInt) {
-            rt2860_int_disable(pAd, FwClrOwnInt);
+            IntSourceMajor |= FwClrOwnInt;
             /* Interrupt handler */
             MTWF_LOG(DBG_CAT_HIF, CATHIF_PCI, DBG_LVL_OFF, ("%s::DriverOwn = TRUE\n", __FUNCTION__));
             pAd->bDrvOwn = TRUE;
@@ -2167,15 +2166,10 @@ redo:
 #endif /* defined(MT7615) || defined(MT7622) */
 #endif /* MT_MAC */
 
+#if (CFG_CPU_LOADING_DISABLE_TXDONE0 == 1)
+		rt2860_int_disable(pAd, IntSourceMajor);
+#endif
 	RTMP_INT_UNLOCK(&pAd->LockInterrupt, flags);
-
-#if defined(RTMP_MAC) || defined(RLT_MAC)
-	if (IntSource & PreTBTTInt)
-		RTMPHandlePreTBTTInterrupt(pAd);
-
-	if (IntSource & TBTTInt)
-		RTMPHandleTBTTInterrupt(pAd);
-#endif /* defined(RTMP_MAC) || defined(RLT_MAC) */
 
 #ifdef CONFIG_AP_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
@@ -2196,20 +2190,6 @@ redo:
 	}
 #endif /* CONFIG_AP_SUPPORT */
 
-
-#ifdef  INF_VR9_HW_INT_WORKAROUND
-	/*
-		We found the VR9 Demo board provide from Lantiq at 2010.3.8 will miss interrup sometime caused of Rx-Ring Full
-		and our driver no longer receive any packet after the interrupt missing.
-		Below patch was recommand by Lantiq for temp workaround.
-		And shall be remove in next VR9 platform.
-	*/
-	IntSource = 0x00000000L;
-	RTMP_IO_READ32(pAd, INT_SOURCE_CSR, &IntSource);
-	RTMP_IO_WRITE32(pAd, INT_SOURCE_CSR, IntSource);
-	if (IntSource != 0)
-		goto redo;
-#endif
 
 	return;
 }
@@ -2376,7 +2356,7 @@ NDIS_STATUS mt_pci_chip_cfg(RTMP_ADAPTER *pAd, USHORT  id)
 	ret = NDIS_STATUS_FAILURE;
 
 #ifdef CONFIG_FWOWN_SUPPORT
-    if ((id == NIC7615_PCIe_DEVICE_ID) || (id == NIC7637_PCIe_DEVICE_ID))
+    if ((id == NIC7615_PCIe_DEVICE_ID) || (id == NIC7611_PCIe_DEVICE_ID) || (id == NIC7637_PCIe_DEVICE_ID))
     {
         DriverOwn(pAd);
     }
@@ -2384,6 +2364,7 @@ NDIS_STATUS mt_pci_chip_cfg(RTMP_ADAPTER *pAd, USHORT  id)
 
     if ((id == NIC7603_PCIe_DEVICE_ID)
         || (id == NIC7615_PCIe_DEVICE_ID)
+        || (id == NIC7611_PCIe_DEVICE_ID)
         || (id == NIC7637_PCIe_DEVICE_ID)
     )
     {
@@ -2474,11 +2455,7 @@ VOID RTMPInitPCIeDevice(RT_CMD_PCIE_INIT *pConfig, VOID *pAdSrc)
 	pConfig->pci_init_succeed = TRUE;
     }
 #endif /* */
-#ifdef INTELP6_SUPPORT
-#ifdef MULTI_INF_SUPPORT
-	multi_inf_adapt_reg((VOID *) pAd);
-#endif /* MULTI_INF_SUPPORT */
-#endif
+
     if (pAd->infType != RTMP_DEV_INF_UNKNOWN)
         RtmpRaDevCtrlInit(pAd, pAd->infType);
 }
@@ -2487,20 +2464,6 @@ VOID RTMPInitPCIeDevice(RT_CMD_PCIE_INIT *pConfig, VOID *pAdSrc)
 
 #endif /* RTMP_MAC_PCI */
 
-#ifdef INTELP6_SUPPORT
-#ifdef MULTI_INF_SUPPORT
-struct pci_dev* rtmp_get_pci_dev(void *ad)
-{
-	struct pci_dev *pdev = NULL;
-#ifdef RTMP_PCI_SUPPORT
-	RTMP_ADAPTER *pAd = (RTMP_ADAPTER*)ad;
-	POS_COOKIE obj = (POS_COOKIE)pAd->OS_Cookie;
-	pdev = obj->pci_dev;
-#endif
-	return pdev;
-}
-#endif
-#endif
 
 struct device* rtmp_get_dev(void *ad)
 {

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,6 @@
 	YF Luo		06-28-2012		Init version
 		        12-26-2013		Integration of NXTC
 */
-#endif /* MTK_LICENSE */
 #define RTMP_MODULE_OS
 
 #include "rt_config.h"

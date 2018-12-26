@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,6 @@
 	Module Name:
 	hdev_ctrl.c
 */
-#endif /* MTK_LICENSE */
 #include	"rt_config.h"
 #include "hdev/hdev.h"
 
@@ -676,10 +674,7 @@ INT32 HcUpdateChannel(RTMP_ADAPTER *pAd,UCHAR Channel)
     	
     		}
     	}
-    }    
-#ifdef CUSTOMER_DCC_FEATURE
-	pAd->CommonCfg.Channel = Channel;
-#endif
+    }
     
 	return ret;
 }
@@ -781,14 +776,6 @@ INT32 HcUpdateCsaCntByChannel(RTMP_ADAPTER *pAd,UCHAR Channel)
 
 	DlListForEach(pObj, &pHdev->DevObjList, struct _HD_DEV_OBJ, list) {
         wdev = pAd->wdev_list[pObj->Idx];
-#ifdef CUSTOMER_DCC_FEATURE
-		if((pAd->Dot11_H.RDMode != RD_SWITCHING_MODE) && (pAd->CommonCfg.channelSwitch.CHSWMode == CHANNEL_SWITCHING_MODE))
-		{
-			wdev->csa_count = pAd->CommonCfg.channelSwitch.CHSWPeriod;
-			UpdateBeaconHandler(pAd, wdev, IE_CHANGE);
-		}
-		else
-#endif
         if (pAd->Dot11_H.RDMode != RD_SILENCE_MODE)
         {
             pAd->Dot11_H.wdev_count++;
@@ -1289,16 +1276,15 @@ VOID HcCrossChannelCheck(RTMP_ADAPTER *pAd,struct wifi_dev *wdev,UCHAR Channel)
 		return ;
 	if(Channel <=14 && WChannel <=14)
 		return;
+			/*is mixed mode, change default channel and */
+			if(!WMODE_5G_ONLY(PhyMode)	|| !WMODE_2G_ONLY(PhyMode))
+			{
 
-	/*is mixed mode, change default channel and */
-	if(!WMODE_5G_ONLY(PhyMode)	|| !WMODE_2G_ONLY(PhyMode))
-	{
-
-		/*update wdev channel to new band*/
-		wdev->channel = Channel;
-		/*need change to other band*/
-		HcAcquireRadioForWdev(pAd,wdev);
-	}
+				/*update wdev channel to new band*/
+				wdev->channel = Channel;
+				/*need change to other band*/
+				HcAcquireRadioForWdev(pAd,wdev);
+			}
 
 	return ;
 }
@@ -1470,35 +1456,37 @@ VOID RxTrackingInit(struct wifi_dev *wdev)
     return;
 }
 
-VOID TaTidRecAndCmp(struct _RTMP_ADAPTER *pAd, struct _RXD_BASE_STRUCT *rx_base, UINT16 SN, UCHAR Tid)
+VOID TaTidRecAndCmp(struct _RTMP_ADAPTER *pAd, struct _RXD_BASE_STRUCT *rx_base, UINT16 SN)
 {
     struct wifi_dev *wdev = NULL;
     RX_TRACKING_T *pTracking = NULL;
     RX_TA_TID_SEQ_MAPPING *pTaTidSeqMapEntry = NULL;
     UCHAR Widx = rx_base->RxD2.RxDWlanIdx;
-    UCHAR MuarIdx = 0;
+    UCHAR Tid = rx_base->RxD2.RxDTid;
+    UCHAR MuarIdx = rx_base->RxD1.RxDBssidIdx;
     UCHAR BandIdx = 0;
     UINT32 cr_value = 0;
     UINT32 cr_addr_0 = 0;
     UINT32 cr_addr_1 = 0;
     struct _STA_TR_ENTRY *tr_entry = NULL;
 
-    if (Widx >= MAX_LEN_OF_MAC_TABLE)
+    if (Widx > MAX_LEN_OF_MAC_TABLE)
         return;
 
     wdev = WdevSearchByWcid(pAd, Widx);
 
-    if (!wdev)
-	return;
-    
+    if (wdev == NULL)
+        wdev = WdevSearchByOmacIdx(pAd, MuarIdx);
+
+    if (wdev == NULL)
+        return;
+
     if ((wdev->wdev_type != WDEV_TYPE_APCLI) &&
             (wdev->wdev_type != WDEV_TYPE_STA))
     {
         return;
     }
 
-    tr_entry = &pAd->MacTab.tr_entry[Widx];
-    MuarIdx = wdev->bss_info_argument.ucBssIndex;
     pTracking = &wdev->rx_tracking;
     pTaTidSeqMapEntry = &pTracking->LastRxWlanIdx;
 
@@ -1553,6 +1541,7 @@ VOID TaTidRecAndCmp(struct _RTMP_ADAPTER *pAd, struct _RXD_BASE_STRUCT *rx_base,
                 }
 #endif
             }
+            tr_entry = &pAd->MacTab.tr_entry[Widx];
             cr_value = (tr_entry->Addr[0] |
                         (tr_entry->Addr[1] << 8) |
                         (tr_entry->Addr[2] << 16) |

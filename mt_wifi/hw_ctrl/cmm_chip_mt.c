@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #include "rt_config.h"
 
@@ -659,17 +658,6 @@ VOID PDMAResetAndRecovery(RTMP_ADAPTER *pAd)
 	RTMPRingCleanUp(pAd, QID_BMC);
 	RTMPRingCleanUp(pAd, QID_RX);
 
-#ifdef VENDOR_FEATURE6_SUPPORT
-// Start - Triggered from PDMAWatchDog. Log and try to recover.
-	if(pAd->TxDMAResetCount >= 3)
-	{
-		UCHAR event_msg[100] = {0};
-		ARRISMOD_CALL(arris_event_send_hook, ATOM_HOST, WLAN_EVENT, ASIC_RELOAD_EVENT, "MT7615", strlen("MT7615"));
-		snprintf(event_msg, sizeof(event_msg), "MT7615 - Hardware error detected - recovery was attempted.\n");
-		ARRISMOD_CALL(arris_event_send_hook, ATOM_HOST, WLAN_LOG_SAVE_CONSOLE, 0, event_msg, strlen(event_msg));
-		return;
-	}
-#endif
 //	AsicEnableBssSync(pAd, pAd->CommonCfg.BeaconPeriod);//Carter check this.
 
 	/* Enable PDMA */

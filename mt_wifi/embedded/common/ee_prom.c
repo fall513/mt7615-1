@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #include	"rt_config.h"
 
@@ -206,21 +205,6 @@ BOOLEAN rtmp_ee_prom_read16(RTMP_ADAPTER *pAd, UINT16 Offset, UINT16 *pValue)
 
 	EEpromCleanup(pAd);
 
-#ifdef ANT_DIVERSITY_SUPPORT
-	/*
-		Antenna and EEPROM access are both using EESK pin,
-		Therefor we should avoid accessing EESK at the same time
-		Then restore antenna after EEPROM access
-		AntDiversity of RT5390 is independence internal circuit, so doesn't need protect.
-	*/
-	if ((pAd->NicConfig2.field.AntDiversity)
-		)
-	{
-		pAd->EepromAccess = FALSE;
-		AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
-	}
-#endif /* ANT_DIVERSITY_SUPPORT */
-
 	*pValue = data;
 
 	if ((IsEmpty == 0xffff) || (IsEmpty == 0x0000))
@@ -279,19 +263,6 @@ int rtmp_ee_prom_write16(RTMP_ADAPTER *pAd, USHORT Offset, UINT16 Data)
 	EWDS(pAd);
 
 	EEpromCleanup(pAd);
-
-#ifdef ANT_DIVERSITY_SUPPORT
-	/* Antenna and EEPROM access are both using EESK pin */
-	/* Therefor we should avoid accessing EESK at the same time*/
-	/* Then restore antenna after EEPROM access*/
-	/* AntDiversity of RT5390 is independence internal circuit, so doesn't need protect. */
-	if ((pAd->NicConfig2.field.AntDiversity)
-		)
-	{
-		pAd->EepromAccess = FALSE;
-		AsicSetRxAnt(pAd, pAd->RxAnt.Pair1PrimaryRxAnt);
-	}
-#endif /* ANT_DIVERSITY_SUPPORT */
 
 	return NDIS_STATUS_SUCCESS;
 	

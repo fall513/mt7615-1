@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -27,7 +26,7 @@
     Hank Huang  2015/07/13      initial version
     --------    ----------      ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+    
 #ifndef __REDUCE_TCPACK_H__
 #define __REDUCE_TCPACK_H__
 

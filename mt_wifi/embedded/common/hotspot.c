@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 #include "mcu/mt_cmd.h"
 
@@ -91,7 +90,7 @@ VOID HSCtrlRemoveAllIE(PHOTSPOT_CTRL pHSCtrl)
 	if (pHSCtrl->P2PIELen && pHSCtrl->P2PIE)
 	{
 		os_free_mem(pHSCtrl->P2PIE);
-		pHSCtrl->P2PIE = NULL;
+		pHSCtrl->HSIndicationIE = NULL;
 		pHSCtrl->P2PIELen = 0;
 	}
 
@@ -120,7 +119,7 @@ VOID HSCtrlRemoveAllIE(PHOTSPOT_CTRL pHSCtrl)
 	{
 		os_free_mem(pHSCtrl->QosMapSetIE);
 		pHSCtrl->QosMapSetIE = NULL;
-		pHSCtrl->QosMapSetIELen = 0;
+		pHSCtrl->AdvertisementProtoIELen = 0;
 	}
 
 	if (pHSCtrl->RoamingConsortiumIELen && pHSCtrl->RoamingConsortiumIE)
@@ -860,22 +859,30 @@ BOOLEAN HotSpotEnable(
 
 		for (APIndex = 0; APIndex < MAX_MBSSID_NUM(pAd); APIndex++)
 		{
-			if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr3, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
+			/* 
+			according to 802.11-2012, public action frame may have Wildcard BSSID in addr3, 
+			use addr1(DA) for searching instead.
+			*/
+			if (MAC_ADDR_EQUAL(GASFrame->Hdr.Addr1, pAd->ApCfg.MBSSID[APIndex].wdev.bssid))
 			{
 				pHSCtrl = &pAd->ApCfg.MBSSID[APIndex].HotSpotCtrl;
+				if(pHSCtrl->HotSpotEnable != TRUE)
+				{
+					MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+						("%s, %u [Disable] %02X:%02X:%02X:%02X:%02X:%02X\n"
+						, __FUNCTION__, __LINE__,PRINT_MAC(GASFrame->Hdr.Addr1)));
+				}
 				break;
 			}
 		}
 
 		if (!pHSCtrl)
 		{
-			MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s Can not find Peer Control\n", __FUNCTION__));
+			MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+				("%s Can not find Peer Control DA=%02X:%02X:%02X:%02X:%02X:%02X\n"
+				, __FUNCTION__,PRINT_MAC(GASFrame->Hdr.Addr1)));
 				return FALSE;
 		}
-	}
-	else {
-		MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s - can't recognize Type %d\n", __FUNCTION__,Type));
-		return FALSE;
 	}
 #endif /* CONFIG_AP_SUPPORT */
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
 	Name		Date			Modification logs
 	JuemingChen 06-09-11		Initial
 */
-#endif /* MTK_LICENSE */
+
 #ifndef	__WSC_TLV_H__
 #define	__WSC_TLV_H__
 

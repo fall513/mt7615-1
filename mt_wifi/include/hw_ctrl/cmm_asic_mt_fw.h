@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -17,7 +16,7 @@
  ***************************************************************************
 
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __CMM_ASIC_MT_FW_H__
 #define __CMM_ASIC_MT_FW_H__
@@ -101,7 +100,6 @@ VOID MtSetIgnorePsmByFw(
 
 VOID mt_wtbltlv_debug(struct _RTMP_ADAPTER *pAd, UCHAR ucWcid, UCHAR ucCmdId, UCHAR ucAtion);
 
-VOID update_wtbl_vht_info(struct _RTMP_ADAPTER *pAd, UCHAR wcid, struct _wtbl_vht_info *vht_info);
 
 VOID MtAsicUpdateProtectByFw (
         struct _RTMP_ADAPTER *pAd, MT_PROTECT_CTRL_T *ProtectCtrl);

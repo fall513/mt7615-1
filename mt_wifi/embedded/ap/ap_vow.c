@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,7 @@
 	Module Name:
 	ap_vow.c
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 #include "mcu/mt_cmd.h"
 
@@ -1165,6 +1164,9 @@ VOID vow_init_misc(PRTMP_ADAPTER pad)
 	}
 	for(i=0; i<VOW_WATF_LEVEL_NUM; i++)
 		vow_set_sta(pad, VOW_ALL_STA, ENUM_VOW_DRR_CTRL_FIELD_AIRTIME_QUANTUM_L0 + i);
+
+	/*enable bad node detection */
+	vow_set_bad_node(pad, ENUM_AT_PROC_BAD_NODE_FEATURE_CTRL);
 	
 }
 
@@ -4161,8 +4163,29 @@ INT show_vow_sta_conf(
         rv = sscanf(arg, "%d", &sta);
         if ((rv > 0) && (sta < MAX_LEN_OF_MAC_TABLE))
         {
-            UINT32 pri, q;
+            UINT32 pri, q, val, val1, val2;
             CHAR* pri_str[] = {"No change.", "To BE.", "To BK."};
+
+			val = 0x80200000;
+
+            val |= sta;
+            RTMP_IO_WRITE32(pAd, 0x8388, val);
+            RTMP_IO_READ32(pAd, 0x8350, &val1);
+			
+
+			pAd->vow_sta_cfg[sta].group = (val1 & 0xf);
+			pAd->vow_sta_cfg[sta].ac_change_rule = ((val1 & 0x30) >> 4);
+			pAd->vow_sta_cfg[sta].dwrr_quantum[WMM_AC_BK] = ((val1 & 0xc0) >> 6);
+			pAd->vow_sta_cfg[sta].dwrr_quantum[WMM_AC_BE] = ((val1 & 0x300) >> 8);
+			pAd->vow_sta_cfg[sta].dwrr_quantum[WMM_AC_VI] = ((val1 & 0xc00) >> 10);
+			pAd->vow_sta_cfg[sta].dwrr_quantum[WMM_AC_VO] = ((val1 & 0x3000) >> 12);
+
+
+			RTMP_IO_READ32(pAd, 0x8380, &val2);
+			pAd->vow_cfg.vow_sta_dwrr_quantum[0]= (val2 & 0xff);
+			pAd->vow_cfg.vow_sta_dwrr_quantum[1]= ((val2 & 0xff00) >> 8);
+			pAd->vow_cfg.vow_sta_dwrr_quantum[2]= ((val2 & 0xff0000) >> 16);
+			pAd->vow_cfg.vow_sta_dwrr_quantum[3]= ((val2 & 0xff000000) >> 24);
 
             MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s: ************ sta%d ***********\n", __FUNCTION__, sta));
             /* group */
@@ -5160,18 +5183,6 @@ VOID vow_display_info_periodic(
 
 			vow_tx_time[i] += tx_diff_time;
 			vow_rx_time[i] += rx_diff_time;
-#ifdef CUSTOMER_DCC_FEATURE
-			{
-				PMAC_TABLE_ENTRY pEntry = NULL;
-				if(VALID_UCAST_ENTRY_WCID(pAd, i))
-			    pEntry = &pAd->MacTab.Content[i];
-				if(IS_ENTRY_CLIENT(pEntry) && (pEntry->Sst == SST_ASSOC) && pEntry->pMbss)
-				{
-					pEntry->ChannelUseTime += tx_diff_time + rx_diff_time;
-					pEntry->pMbss->ChannelUseTime += tx_diff_time + rx_diff_time;
-				}
-			}
-#endif
 
 			vow_last_tx_time[i] = tx_sum;
 			vow_last_rx_time[i] = rx_sum;

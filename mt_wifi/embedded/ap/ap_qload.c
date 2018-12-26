@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+ 
 /****************************************************************************
  
     Abstract:
@@ -279,10 +278,10 @@ VOID QBSS_LoadInit(RTMP_ADAPTER *pAd)
 {
 	UINT32 IdBss;
 	QLOAD_CTRL *pQloadCtrl = HcGetQloadCtrl(pAd);
-	
+
 	/* check whether any BSS enables WMM feature */
 	for(IdBss=0; IdBss<pAd->ApCfg.BssidNum; IdBss++)
-	{			
+	{
 		if ((pAd->ApCfg.MBSSID[IdBss].wdev.bWmmCapable)
 #ifdef DOT11K_RRM_SUPPORT
 			|| (IS_RRM_ENABLE(pAd, IdBss))
@@ -297,7 +296,6 @@ VOID QBSS_LoadInit(RTMP_ADAPTER *pAd)
 				continue;
 			if (pQloadCtrl->FlgQloadEnable)
 				continue;
-
 			pQloadCtrl->FlgQloadEnable = TRUE;
 			if (pQloadCtrl->FlgQloadEnable == TRUE)
 			{
@@ -550,10 +548,12 @@ Note:
 	function is using.
 ========================================================================
 */
-UINT32 QBSS_LoadElementAppend(RTMP_ADAPTER *pAd, UINT8 *pBeaconBuf, QLOAD_CTRL *pQloadCtrl)
+UINT32 QBSS_LoadElementAppend(RTMP_ADAPTER *pAd, UINT8 *pBeaconBuf)
 {
 	ELM_QBSS_LOAD load, *pLoad = &load;
 	ULONG ElmLen;
+	QLOAD_CTRL *pQloadCtrl = HcGetQloadCtrl(pAd);
+
 
 	/* check whether channel busy time calculation is enabled */
 	if (pQloadCtrl->FlgQloadEnable == 0)
@@ -831,16 +831,9 @@ Note:
 ========================================================================
 */
 VOID QBSS_LoadStatusClear(
- 	IN		RTMP_ADAPTER	*pAd,
- 	IN		UCHAR 			Channel)
+ 	IN		RTMP_ADAPTER	*pAd)
 {
 	QLOAD_CTRL *pQloadCtrl = HcGetQloadCtrl(pAd);
-
-	if(pAd->CommonCfg.dbdc_mode == 0)	
-		pQloadCtrl = HcGetQloadCtrl(pAd);
-	else
-		pQloadCtrl = (Channel > 14)? HcGetQloadCtrlByRf(pAd,RFIC_5GHZ) : HcGetQloadCtrlByRf(pAd,RFIC_24GHZ);
-		
 #ifdef QLOAD_FUNC_BUSY_TIME_STATS
 	/* clear busy time statistics */
 	NdisZeroMemory(pQloadCtrl->QloadBusyCountPri, sizeof(pQloadCtrl->QloadBusyCountPri));
@@ -927,8 +920,7 @@ Note:
 */
 INT Set_QloadClr_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
-	QBSS_LoadStatusClear(pAd,1);
-	QBSS_LoadStatusClear(pAd,36);
+	QBSS_LoadStatusClear(pAd);
 	return TRUE;
 }
 

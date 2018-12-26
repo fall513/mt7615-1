@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,6 @@
 	Module Name:
 	meta_agent.c
 */
-#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 typedef enum _WIFI_SUB_TEST_STATE

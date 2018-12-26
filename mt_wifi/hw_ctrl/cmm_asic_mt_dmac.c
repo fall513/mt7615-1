@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,6 @@
 	Who			When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #elif defined (COMPOS_TESTMODE_WIN)
@@ -167,29 +165,6 @@ UINT32 MtAsicGetPhyErrCnt(RTMP_ADAPTER *pAd)
 
 UINT32 MtAsicGetCCACnt(RTMP_ADAPTER *pAd)
 {
-#ifdef CUSTOMER_DCC_FEATURE
-	UINT32 	PD_CNT, MDRDY_CNT, CCKFalseCCACount, OFDMFalseCCACount;	
-	UINT32	False_cca_count, CrValue;
-
-	//FALSE CCA Count	
-	HW_IO_READ32(pAd, RO_BAND0_PHYCTRL_STS0, &CrValue); //PD count
-	PD_CNT = CrValue;
-	HW_IO_READ32(pAd, RO_BAND0_PHYCTRL_STS5, &CrValue); // MDRDY count
-	MDRDY_CNT = CrValue;
-
-	CCKFalseCCACount = ( PD_CNT & 0xffff) - (MDRDY_CNT & 0xffff);
-	OFDMFalseCCACount = ((PD_CNT & 0xffff0000 ) >> 16) - ((MDRDY_CNT & 0xffff0000 ) >> 16) ;
-	False_cca_count = CCKFalseCCACount + OFDMFalseCCACount;
-
-	//reset PD and MDRDY count
-	HW_IO_READ32(pAd, PHY_BAND0_PHYMUX_5, &CrValue);
-	CrValue &= 0xff8fffff;
-	HW_IO_WRITE32(pAd, PHY_BAND0_PHYMUX_5, CrValue); //Reset
-	CrValue |= 0x500000; 
-	HW_IO_WRITE32(pAd, PHY_BAND0_PHYMUX_5, CrValue); //Enable
-	
-	return False_cca_count;
-#endif
 	return 0;
 }
 
@@ -1182,7 +1157,19 @@ INT MtAsicSetWmmParam(RTMP_ADAPTER *pAd,UCHAR idx, UINT32 AcNum, UINT32 EdcaType
 {
 	MT_EDCA_CTRL_T EdcaParam;
 	P_TX_AC_PARAM_T pAcParam;
-	UCHAR index =(idx*4)+AcNum;
+    UCHAR index = 0;
+
+
+    /* Could write any queue by FW */
+    if ((AcNum < 4) && (idx < 4)) {
+        index = (idx * 4) + AcNum;
+    }
+    else {
+        MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+                ("%s(): Non-WMM Queue, WmmIdx/QueIdx=%d/%d!\n",
+                __FUNCTION__, idx, AcNum));
+        index = AcNum;
+    }
 
 	os_zero_mem(&EdcaParam,sizeof(MT_EDCA_CTRL_T));
 	EdcaParam.ucTotalNum = 1;
@@ -1236,15 +1223,15 @@ VOID MtAsicSetEdcaParm(RTMP_ADAPTER *pAd, PEDCA_PARM pEdcaParm)
 	P_TX_AC_PARAM_T pAcParam;
 	UINT32 ac=0,index=0;
 
-	os_zero_mem(&EdcaParam,sizeof(MT_EDCA_CTRL_T));
+	os_zero_mem(&EdcaParam, sizeof(MT_EDCA_CTRL_T));
 
-	if ((pEdcaParm != NULL)  &&  (pEdcaParm->bValid != FALSE))
+	if ((pEdcaParm != NULL) && (pEdcaParm->bValid != FALSE))
 	{
 		EdcaParam.ucTotalNum = CMD_EDCA_AC_MAX;
 
 		for ( ac=0; ac < CMD_EDCA_AC_MAX;  ac++)
 		{
-			index =( pEdcaParm->WmmSet)*4+ac;
+			index =(pEdcaParm->WmmSet)*4+ac;
 			pAcParam = &EdcaParam.rAcParam[ac];
 			pAcParam->ucVaildBit = CMD_EDCA_ALL_BITS;
 			pAcParam->ucAcNum =  wmm_aci_2_hw_ac_queue[index];
@@ -4555,21 +4542,6 @@ INT MtAsicSetRtsSignalTA(RTMP_ADAPTER *pAd, UINT8 BandIdx, BOOLEAN Enable)
 }
 #endif /* DOT11_VHT_AC */
 
-INT MtAsicRTSOnOff(struct _RTMP_ADAPTER *ad,UCHAR band_idx, UINT32 rts_num, UINT32 rts_len, BOOLEAN rts_en)
-{
-	UINT32 cr;
-	UINT32 value;
-	/*adjust cts/rts rate*/
-	cr = (band_idx == BAND1) ? TMAC_PCR1 : TMAC_PCR;
-	value = (rts_en == TRUE) ? TMAC_PCR_AUTO_RATE : TMAC_PCR_FIX_OFDM_6M_RATE;
-	MAC_IO_WRITE32(ad,cr,value);
-	/*adjust rts rts threshold*/
-	cr = (band_idx == BAND1) ? AGG_PCR2 : AGG_PCR1;
-	value = RTS_THRESHOLD(rts_len) | RTS_PKT_NUM_THRESHOLD(rts_num);
-	MAC_IO_WRITE32(ad,cr,value);
-	return 0;
-}
-
 INT MtAsicAMPDUEfficiencyAdjust(struct _RTMP_ADAPTER *ad,UCHAR	wmm_idx, UCHAR aifs_adjust)
 {
 	UINT32 cr;
@@ -4583,5 +4555,20 @@ INT MtAsicAMPDUEfficiencyAdjust(struct _RTMP_ADAPTER *ad,UCHAR	wmm_idx, UCHAR ai
 
 	MAC_IO_WRITE32(ad,cr,value);
 
+	return 0;
+}
+
+INT MtAsicRTSOnOff(struct _RTMP_ADAPTER *ad,UCHAR band_idx, UINT32 rts_num, UINT32 rts_len, BOOLEAN rts_en)
+{
+	UINT32 cr;
+	UINT32 value;
+	/*adjust cts/rts rate*/
+	cr = (band_idx == BAND1) ? TMAC_PCR1 : TMAC_PCR;
+	value = (rts_en == TRUE) ? TMAC_PCR_AUTO_RATE : TMAC_PCR_FIX_OFDM_6M_RATE;
+	MAC_IO_WRITE32(ad,cr,value);
+	/*adjust rts rts threshold*/
+	cr = (band_idx == BAND1) ? AGG_PCR2 : AGG_PCR1;
+	value = RTS_THRESHOLD(rts_len) | RTS_PKT_NUM_THRESHOLD(rts_num);
+	MAC_IO_WRITE32(ad,cr,value);
 	return 0;
 }

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	--------	----------		----------------------------------------------
 	Name		Date			Modification logs
 */
-#endif /* MTK_LICENSE */
+
 #ifndef	__WPA_H__
 #define	__WPA_H__
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,13 +24,22 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __CHLIST_H__
 #define __CHLIST_H__
 
 #include "rtmp_type.h"
 #include "rtmp_def.h"
 
+#define CH_GROUP_BAND0		(1<<0)
+#define CH_GROUP_BAND1		(1<<1)
+#define CH_GROUP_BAND2		(1<<2)
+#define CH_GROUP_BAND3		(1<<3)
+
+typedef struct _CH_GROUP_DESC {
+	UCHAR FirstChannel;
+	UCHAR NumOfCh;
+}CH_GROUP_DESC, *PCH_GROUP_DESC;
 
 typedef struct _CH_DESC {
 	UCHAR FirstChannel;
@@ -44,7 +52,6 @@ typedef struct _COUNTRY_REGION_CH_DESC {
 	PCH_DESC pChDesc;
 }COUNTRY_REGION_CH_DESC, *PCOUNTRY_REGION_CH_DESC;
 
-#ifdef EXT_BUILD_CHANNEL_LIST
 #define ODOR			0
 #define IDOR			1
 #define BOTH			2
@@ -59,20 +66,12 @@ typedef struct _CH_DESP {
 
 typedef struct _CH_REGION {
 	UCHAR CountReg[3];
-	UCHAR DfsType;			/* 0: CE, 1: FCC, 2: JAP, 3:JAP_W53, JAP_W56 */
-	CH_DESP *pChDesp;
+	UCHAR op_class_region;	/* 0: CE, 1: FCC, 2: JAP, 3:JAP_W53, JAP_W56  5:CN*/
     BOOLEAN edcca_on;
+	CH_DESP *pChDesp;
 } CH_REGION, *PCH_REGION;
 
 extern CH_REGION ChRegion[];
-#endif /* EXT_BUILD_CHANNEL_LIST */
-
-typedef struct _COUNTRY_PROP {
-	UCHAR CountReg[3];
-	UCHAR DfsType;			/* 0: CE, 1: FCC, 2: JAP, 3:JAP_W53, JAP_W56 */
-	BOOLEAN edcca_on;
-} COUNTRY_PROP, *PCOUNTRY_PROP;
-
 
 typedef struct _CH_FREQ_MAP_{
 	UINT16		channel;
@@ -94,6 +93,13 @@ extern int CH_HZ_ID_MAP_NUM;
 BOOLEAN GetEDCCASupport(
 	IN PRTMP_ADAPTER pAd);
 
+PCH_REGION GetChRegion(
+	IN PUCHAR CountryCode);
+
+BOOLEAN CheckCountryCodeSanity(
+	IN UCHAR* country_code);
+
+
 #ifdef EXT_BUILD_CHANNEL_LIST
 VOID BuildChannelListEx(
 	IN PRTMP_ADAPTER pAd);
@@ -105,7 +111,7 @@ VOID BuildBeaconChList(
 	OUT	PULONG pBufLen);
 #endif /* EXT_BUILD_CHANNEL_LIST */
 
-UCHAR GetCountryRegionFromCountryCode(PRTMP_ADAPTER pAd);
+UCHAR GetCountryRegionFromCountryCode(UCHAR* country_code);
 
 #ifdef DOT11_N_SUPPORT
 BOOLEAN ExtChCheck(PRTMP_ADAPTER pAd, UCHAR Channel, UCHAR Direction);
@@ -114,6 +120,8 @@ UCHAR N_SetCenCh(RTMP_ADAPTER *pAd, UCHAR channel,UCHAR ht_bw);
 BOOLEAN N_ChannelGroupCheck(RTMP_ADAPTER *pAd, UCHAR channel);
 
 #endif /* DOT11_N_SUPPORT */
+
+INT8 get_max_vht_bw_by_region(struct wifi_dev *wdev);
 
 UINT8 GetCuntryMaxTxPwr(
 	IN PRTMP_ADAPTER pAd,
@@ -149,5 +157,13 @@ INT32 ChannelFreqToGroup(
 	IN UINT32 ChannelFreq);
 
 	
+BOOLEAN MTChGrpValid(
+    IN PRTMP_ADAPTER pAd);
+
+void MTSetChGrp(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
+
+BOOLEAN MTChGrpChannelChk(
+    IN PRTMP_ADAPTER pAd,
+    IN UCHAR ch);	
 #endif /* __CHLIST_H__ */
 

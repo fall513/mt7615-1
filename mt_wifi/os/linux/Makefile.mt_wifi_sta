@@ -74,6 +74,7 @@ cmm_objs := $(SRC_EMBEDDED_DIR)/common/action.o\
 		$(SRC_EMBEDDED_DIR)/common/spectrum.o\
 		$(SRC_EMBEDDED_DIR)/common/rtmp_timer.o\
 		$(SRC_EMBEDDED_DIR)/common/rt_channel.o\
+		$(SRC_EMBEDDED_DIR)/common/op_class.o\
 		$(SRC_EMBEDDED_DIR)/common/rt_os_util.o\
 		$(SRC_EMBEDDED_DIR)/common/scan.o\
 		$(SRC_EMBEDDED_DIR)/common/sys_log.o\
@@ -404,22 +405,6 @@ endif
 ifeq ($(CONFIG_RTMP_FLASH_SUPPORT),y)
     EXTRA_CFLAGS += -DRTMP_FLASH_SUPPORT
 endif
-
-#ifeq ($(CONFIG_PRE_CAL_TRX_SET1_SUPPORT),y)
-    EXTRA_CFLAGS += -DPRE_CAL_TRX_SET1_SUPPORT
-#endif
-
-#ifeq ($(CONFIG_RLM_CAL_CACHE_SUPPORT),y)
-    EXTRA_CFLAGS += -DRLM_CAL_CACHE_SUPPORT
-#endif
-
-#ifeq ($(CONFIG_PRE_CAL_TRX_SET2_SUPPORT),y)
-    EXTRA_CFLAGS += -DPRE_CAL_TRX_SET2_SUPPORT
-#endif
-
-#ifeq ($(CONFIG_PA_TRIM_SUPPORT),y)
-    EXTRA_CFLAGS += -DPA_TRIM_SUPPORT
-#endif
 
 ifeq ($(CONFIG_RTMP_TEMPERATURE_TX_ALC),y)
     EXTRA_CFLAGS += -DRTMP_TEMPERATURE_TX_ALC

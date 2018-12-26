@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
 	Paul Lin	06-08-08		Initial
 	JuemingChen 06-10-30        Do modifications and Add APIs for AP
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 #ifdef WSC_INCLUDED
@@ -1559,7 +1558,7 @@ int BuildMessageM4(
 	UCHAR				KDK[32];
 	UCHAR				Plain[128]; /*, IV_EncrData[144];//IV len 16,EncrData len 128 */
 	UCHAR				*IV_EncrData = NULL;/*IV len 16,EncrData len 128 */
-	UINT				PlainLen = 0, EncrLen;
+	INT					PlainLen = 0, EncrLen;
 	UCHAR				*pHash=NULL;
 #ifdef WSC_V2_SUPPORT
 	PWSC_TLV			pWscTLV = &pWscControl->WscV2Info.ExtraTlv;
@@ -1747,7 +1746,7 @@ int BuildMessageM5(
 	INT				    HmacLen;
 	UCHAR				Plain[128]; /*, IV_EncrData[144];//IV len 16,EncrData len 128 */
 	UCHAR				*IV_EncrData = NULL;/*IV len 16,EncrData len 128 */
-	UINT				PlainLen=0, EncrLen;
+	INT					PlainLen=0, EncrLen;
 #ifdef WSC_V2_SUPPORT
 	PWSC_TLV			pWscTLV = &pWscControl->WscV2Info.ExtraTlv;
 #endif /* WSC_V2_SUPPORT */
@@ -1883,7 +1882,7 @@ int BuildMessageM6(
 	UCHAR				KDK[32];
 	UCHAR				Plain[128]; /*, IV_EncrData[144];//IV len 16,EncrData len 128 */
 	UCHAR				*IV_EncrData = NULL;/*IV len 16,EncrData len 128 */
-	UINT				PlainLen = 0, EncrLen;
+	INT					PlainLen = 0, EncrLen;
 #ifdef WSC_V2_SUPPORT
 	PWSC_TLV			pWscTLV = &pWscControl->WscV2Info.ExtraTlv;
 #endif /* WSC_V2_SUPPORT */

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -19,7 +18,7 @@
 	Module Name:
 	wsc_v2.c
 */
-#endif /* MTK_LICENSE */
+
 #include    "rt_config.h"
 
 #ifdef WSC_V2_SUPPORT

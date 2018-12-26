@@ -1,9 +1,12 @@
 #include "rt_config.h"
 
-#define BRCM_VENDOR_VHT_TYPE		0x04
 
 ULONG build_vendor_ie(struct _RTMP_ADAPTER *pAd, 
-        struct wifi_dev *wdev, UCHAR *frame_buffer)
+        struct wifi_dev *wdev, UCHAR *frame_buffer
+#ifdef WH_EZ_SETUP
+		, UCHAR SubType
+#endif
+		)
 {
     struct _ralink_ie ra_ie;
     ULONG ra_ie_len = 0;
@@ -68,6 +71,35 @@ ULONG build_vendor_ie(struct _RTMP_ADAPTER *pAd,
 
 #ifdef MT_MAC
     if (pAd->chipCap.hif_type == HIF_MT) {
+
+#ifdef WH_EZ_SETUP
+		/*
+			To prevent old device has trouble to parse MTK vendor IE,
+			insert easy setup IE first.
+		*/
+		if (IS_EZ_SETUP_ENABLED(wdev) && 
+			((SubType == SUBTYPE_BEACON) || (SubType == SUBTYPE_PROBE_RSP))) {
+			vendor_ie_len += ez_build_beacon_ie(wdev, (frame_buffer + vendor_ie_len));
+		} else {
+			if (ez_is_triband())
+			{
+				if (!IS_EZ_SETUP_ENABLED(wdev) && ((SubType == SUBTYPE_BEACON) || (SubType == SUBTYPE_PROBE_RSP)))
+				{
+					ULONG tmp_len = 0;
+#ifdef EZ_MOD_SUPPORT
+					ez_triband_insert_tlv(wdev->sys_handle, EZ_TAG_NON_EZ_BEACON, 
+						frame_buffer + vendor_ie_len,
+						&tmp_len);
+#else
+					ez_insert_tlv(EZ_TAG_NON_EZ_BEACON, 
+						NULL, 0, frame_buffer + vendor_ie_len, &tmp_len);
+#endif
+					vendor_ie_len += tmp_len;
+				}
+			}
+		}
+#endif /* WH_EZ_SETUP */
+
         NdisZeroMemory(&mtk_ie, sizeof(struct _mediatek_ie));
         NdisZeroMemory(&mtk_vht_ie, sizeof(struct _mediatek_vht_ie));
         mtk_vht_ie_len = sizeof(mtk_vht_cap) + sizeof(mtk_vht_op) + sizeof(mtk_vht_txpwr_env);
@@ -89,7 +121,16 @@ ULONG build_vendor_ie(struct _RTMP_ADAPTER *pAd,
                 && WMODE_CAP(wdev->PhyMode, WMODE_GN)) {
             mtk_ie.cap0 |= MEDIATEK_256QAM_CAP;
         }
-
+        
+#ifdef MWDS
+        if(wdev->bSupportMWDS) {
+            mtk_ie.cap0 |= MEDIATEK_MWDS_CAP;
+        }
+#endif /* MWDS */
+#ifdef STA_FORCE_ROAM_SUPPORT
+				if(pAd->en_force_roam_supp)
+					mtk_ie.cap0 |= MEDIATEK_CLI_ENTRY;
+#endif /* MWDS */
         MakeOutgoingFrame((frame_buffer + vendor_ie_len),
                 &mtk_ie_len, sizeof(struct _mediatek_ie), &mtk_ie,
                 END_OF_ARGS);
@@ -106,6 +147,17 @@ ULONG build_vendor_ie(struct _RTMP_ADAPTER *pAd,
          //       (frame_buffer+vendor_ie_len-mtk_ie_len), (mtk_ie.ie_hdr.len + 2));
 
         vendor_ie_len += mtk_vht_ie_len;
+
+#ifdef WH_EVENT_NOTIFIER
+        if(wdev->custom_vie.ie_hdr.len > 0)
+        {
+            ULONG custom_vie_len;
+            ULONG total_custom_vie_len = sizeof(struct Custom_IE_Header) + wdev->custom_vie.ie_hdr.len;
+            MakeOutgoingFrame((frame_buffer + vendor_ie_len),
+                        &custom_vie_len, total_custom_vie_len, (UCHAR*)&wdev->custom_vie, END_OF_ARGS);
+            vendor_ie_len += custom_vie_len;
+        }
+#endif /* WH_EVENT_NOTIFIER */
     }
 #endif /* MT_MAC */
 
@@ -121,27 +173,44 @@ VOID check_vendor_ie(struct _RTMP_ADAPTER *pAd,
     UCHAR ralink_oui[] = {0x00, 0x0c, 0x43};
     UCHAR mediatek_oui[] = {0x00, 0x0c, 0xe7};
     UCHAR broadcom_oui[] = {0x00, 0x90, 0x4c};
+    UCHAR quantenna_oui[] = {0x00, 0x26, 0x86};
     //UCHAR broadcom_fixed_pattern[] = {0x04, 0x08};
 
     if (NdisEqualMemory(info_elem->Octet, ralink_oui, 3) 
             && (info_elem->Len == 7))
     {
         vendor_ie->ra_cap = (ULONG)info_elem->Octet[3];
-	vendor_ie->is_rlt = TRUE;
-	vendor_ie->ldpc = TRUE;
+		vendor_ie->is_rlt = TRUE;
+        vendor_ie->ldpc = TRUE;
         vendor_ie->sgi = TRUE;
         //hex_dump ("recv. vendor_ie: Ralink_OUI", (UCHAR *)info_elem, (info_elem->Len + 2));
     }
     else if (NdisEqualMemory(info_elem->Octet, mediatek_oui, 3)
             && (info_elem->Len >= 7))
     {
-        vendor_ie->mtk_cap = (ULONG)info_elem->Octet[3];
-	vendor_ie->is_mtk = TRUE;
-	if (info_elem->Len > 7) {
+		vendor_ie->mtk_cap = (ULONG)info_elem->Octet[3];
+		vendor_ie->is_mtk = TRUE;
+
+#ifdef WH_EZ_SETUP        // Rakesh: Parse Easy setup IE only if easy enabled on own, acceptable??
+	    if ((IS_ADPTR_EZ_SETUP_ENABLED(pAd)) && (info_elem->Octet[3] & MEDIATEK_EASY_SETUP)) {
+			ez_vendor_ie_parse(vendor_ie, info_elem);
+	    }
+        else 
+#endif /* WH_EZ_SETUP */
+		if (info_elem->Len > 7) {
 
             /* have MTK VHT IEs */
             vendor_ie->ldpc = TRUE;
             vendor_ie->sgi = TRUE;
+#ifdef MWDS
+            /* We can't be covered by easy setup customized mtk ie. */
+            vendor_ie->mtk_cap_found = TRUE;
+            if (MWDS_SUPPORT(vendor_ie->mtk_cap)) {
+                vendor_ie->support_mwds = TRUE;
+            } else {
+                vendor_ie->support_mwds = FALSE;
+            }
+#endif /* MWDS */
         }
         else {
             vendor_ie->ldpc = FALSE;
@@ -153,32 +222,24 @@ VOID check_vendor_ie(struct _RTMP_ADAPTER *pAd,
             //&& NdisEqualMemory(info_elem->Octet+3, broadcom_fixed_pattern, 2))
         )
     {
-   	VHT_CAP_IE *vht_cap_ie;
-    	UCHAR type, eid, eid_len;
-        vendor_ie->brcm_cap |= BROADCOM_256QAM_CAP;
+        vendor_ie->brcm_cap = BROADCOM_256QAM_CAP;
         vendor_ie->ldpc = TRUE;
         vendor_ie->sgi = TRUE;
         //hex_dump ("recv. vendor_ie: Broadcom_OUI", (UCHAR *)info_elem, (info_elem->Len + 2));
-
-		if (info_elem->Len == 19) {
-			type = *(info_elem->Octet+3);
-			eid = *(info_elem->Octet+5);
-			eid_len = *(info_elem->Octet+6);
-
-			if ((type == BRCM_VENDOR_VHT_TYPE) &&
-				(eid == IE_VHT_CAP) &&
-				(eid_len == sizeof(VHT_CAP_IE))) {
-				vht_cap_ie = (VHT_CAP_IE *)(info_elem->Octet+7);
-				//dump_vht_cap(pAd, vht_cap_ie);
-
-				if ((vht_cap_ie->mcs_set.tx_mcs_map.mcs_ss4 != VHT_MCS_CAP_NA)) {
-					//printk("bad brcm 4x4 AP\n");
-					vendor_ie->brcm_cap |= BROADCOM_2G_4SS_CAP;
-					//printk("vendor_ie->brcm_cap = %ld\n",vendor_ie->brcm_cap);
-				}
-			}
-		}
     }
+    else if (NdisEqualMemory(info_elem->Octet, quantenna_oui, 3))
+    {
+        vendor_ie->is_quant = TRUE;
+    }
+#ifdef WH_EVENT_NOTIFIER
+    else if(pAd->ApCfg.EventNotifyCfg.CustomOUILen && 
+            (info_elem->Len >= pAd->ApCfg.EventNotifyCfg.CustomOUILen) &&
+            NdisEqualMemory(info_elem->Octet, pAd->ApCfg.EventNotifyCfg.CustomOUI,pAd->ApCfg.EventNotifyCfg.CustomOUILen))
+    {
+        vendor_ie->custom_ie_len = info_elem->Len;
+        NdisMoveMemory(vendor_ie->custom_ie, info_elem->Octet, info_elem->Len);
+    }
+#endif /* WH_EVENT_NOTIFIER */
     else 
     {
         //printk ("Other Vendor IE: OUI: %02x %02x %02x\n", 

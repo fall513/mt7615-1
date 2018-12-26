@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __ASIC_CTRL_H__
 #define __ASIC_CTRL_H__
@@ -49,23 +48,41 @@ struct _RX_BLK;
 #define MINIMUM_POWER_VALUE		       -127
 #define TX_STREAM_PATH		              4
 
-#ifdef NR_PD_DETECTION
+#ifdef LINK_TEST_SUPPORT
 #define CHANNEL_BAND_2G                   0
 #define CHANNEL_BAND_5G                   1
 
 #define CMW_RSSI_SOURCE_BBP               0
 #define CMW_RSSI_SOURCE_WTBL              1
-#define CMW_DBDC_BAND0_MODE               0
-#define CMW_DBDC_BAND1_MODE               1
-#define CMW_MODE_DONT_CARE                0xFF
 
 #define CMW_RCPI_MA_1_1                   1
 #define CMW_RCPI_MA_1_2                   2
 #define CMW_RCPI_MA_1_4                   4
 #define CMW_RCPI_MA_1_8                   8
-#endif /* NR_PD_DETECTION */
 
-#include "rtmp.h"
+#define TX_DEFAULT_CSD_STATE              0
+#define TX_ZERO_CSD_STATE				  1
+#define TX_UNDEFINED_CSD_STATE			  0xFF
+
+#define TX_DEFAULT_POWER_STATE            0
+#define TX_BOOST_POWER_STATE			  1
+#define TX_UNDEFINED_POWER_STATE		  0xFF
+
+#define TX_DEFAULT_BW_STATE               0
+#define TX_SWITCHING_BW_STATE			  1
+#define TX_UNDEFINED_BW_STATE		      0xFF
+
+#define TX_DEFAULT_RXSTREAM_STATE         0
+#define TX_SIGNLE_RXSTREAM_STATE		  1
+#define TX_UNDEFINED_RXSTREAM_STATE       0xFF
+
+#define TX_DEFAULT_MAXIN_STATE            0
+#define TX_SPECIFIC_ACR_STATE		      1
+#define TX_UNDEFINED_RXFILTER_STATE       0xFF
+
+#define CMW_POWER_UP_RATE_NUM             13
+#define CMW_POWER_UP_CATEGORY_NUM         4
+#endif /* LINK_TEST_SUPPORT */
 
 VOID AsicNotSupportFunc(struct _RTMP_ADAPTER *pAd, const RTMP_STRING *caller);
 
@@ -257,6 +274,10 @@ INT32 AsicTxBfTxApplyCtrl(
     BOOLEAN              fgITxBf, 
     BOOLEAN              fgMuTxBf,
     BOOLEAN              fgPhaseCali);
+
+INT32 AsicTxBfeeHwCtrl(
+	RTMP_ADAPTER *pAd,
+    BOOLEAN   fgBfeeHwCtrl);
 
 INT32 AsicTxBfApClientCluster(
 	struct _RTMP_ADAPTER *pAd,
@@ -455,8 +476,8 @@ BOOLEAN AsicMcastEntryDelete(struct _RTMP_ADAPTER *pAd, PUCHAR GrpAddr, UINT8 Bs
 
 VOID RssiUpdate(struct _RTMP_ADAPTER *pAd);
 
-INT AsicRtsOnOff(struct wifi_dev *wdev, BOOLEAN rts_en);
 INT AsicAmpduEfficiencyAdjust(struct wifi_dev *wdev, UCHAR	aifs_adjust);
+INT AsicRtsOnOff(struct wifi_dev *wdev, BOOLEAN rts_en);
 
 typedef struct _RTMP_ARCH_OP {
 	UINT32 (*archGetCrcErrCnt)(struct _RTMP_ADAPTER *pAd);
@@ -598,7 +619,6 @@ typedef struct _RTMP_ARCH_OP {
 	INT (*archSetDbdcCtrl)(struct _RTMP_ADAPTER *pAd,struct _BCTRL_INFO_T *pBctrInfo);
 	INT (*archGetDbdcCtrl)(struct _RTMP_ADAPTER *pAd,struct _BCTRL_INFO_T *pBctrInfo);
 #endif
-	VOID (*archUpdateWtblVhtInfo)(struct _RTMP_ADAPTER *pAd, UCHAR wcid, struct _wtbl_vht_info *vht_info);
 
 VOID (*archUpdateBcnToAsicMethod)(struct _RTMP_ADAPTER *pAd, INT apidx, ULONG FrameLen, ULONG UpdatePos);
 
@@ -629,19 +649,20 @@ VOID (*archUpdateBcnToAsicMethod)(struct _RTMP_ADAPTER *pAd, INT apidx, ULONG Fr
 
 	BOOLEAN (*archMcastEntryDelete)(RTMP_ADAPTER *pAd, PUCHAR GrpAddr, UINT8 BssIdx, PUCHAR MemberAddr, PNET_DEV dev, UINT8 WlanIndex);
 #endif
-	INT (*asic_rts_on_off)(struct _RTMP_ADAPTER *ad, UCHAR band_idx, UINT32 rts_num, UINT32 rts_len, BOOLEAN rts_en);
-
 	INT (*asic_ampdu_efficiency_on_off)(struct _RTMP_ADAPTER *ad, UCHAR	wmm_idx, UCHAR aifs_adjust);
+	INT (*asic_rts_on_off)(struct _RTMP_ADAPTER *ad, UCHAR band_idx, UINT32 rts_num, UINT32 rts_len, BOOLEAN rts_en);
 }RTMP_ARCH_OP;
 
-#ifdef NR_PD_DETECTION
-VOID CMWRcpiSet(struct _RTMP_ADAPTER *pAd, UCHAR Wcid, UINT8 AntIdx, INT8 cRCPI);
-VOID NRPDDetectCtrl(struct _RTMP_ADAPTER *pAd);
-VOID NRTxDetecCtrl(struct _RTMP_ADAPTER *pAd);
-VOID NRPDACRCtrl(struct _RTMP_ADAPTER *pAd);
-VOID CMWLinkCtrl(struct _RTMP_ADAPTER *pAd);
-UINT8 CMWRSSICheck(RTMP_ADAPTER *pAd, INT8 *cRSSI, UCHAR ucRSSIThManual, UINT8 ucRSSISource, UINT8 ucMode);
-UINT8 CMWRSSIComp(RTMP_ADAPTER *pAd, INT8 *cRSSI, UCHAR ucRSSIThManual, UINT8 ucStart, UINT8 ucEnd);
-#endif /* NR_PD_DETECTION */
+#ifdef LINK_TEST_SUPPORT
+VOID LinkTestRcpiSet(struct _RTMP_ADAPTER *pAd, UCHAR Wcid, UINT8 AntIdx, CHAR cRcpi);
+VOID LinkTestTimeSlotHandler(struct _RTMP_ADAPTER *pAd);
+VOID LinkTestRxStreamCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgCmwLinkStatus, CHAR cMaxRssi, CHAR *cRssi, struct _MAC_TABLE_ENTRY *pEntry, UINT8 ucBandIdx);
+VOID LinkTestTxBwCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgCmwLinkStatus);
+VOID LinkTestTxCsdCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgCmwLinkStatus);
+VOID LinkTestTxPowerCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgCmwLinkStatus);
+VOID LinkTestAcrCtrl(struct _RTMP_ADAPTER *pAd, BOOLEAN fgCmwLinkStatus, CHAR cMaxRssi, UINT8 ucBandIdx);
+UINT8 LinkTestRssiCheck(struct _RTMP_ADAPTER *pAd, CHAR *cRssi, UCHAR ucRSSIThManual, UINT8 ucRSSISource, UINT8 ucBandIdx);
+UINT8 LinkTestRssiComp(struct _RTMP_ADAPTER *pAd, CHAR *cRssi, UCHAR ucRSSIThManual, UINT8 ucStart, UINT8 ucEnd);
+#endif /* LINK_TEST_SUPPORT */
 
 #endif /* __ASIC_CTRL_H_ */

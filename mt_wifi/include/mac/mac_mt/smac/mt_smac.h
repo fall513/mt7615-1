@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __MT_SMAC_H__
 #define __MT_SMAC_H__
 
@@ -59,9 +58,6 @@
 #ifndef COMPOS_WIN
 #endif /* COMPOS_WIN */
 
-#ifdef RTMP_MAC_SDIO
-#include "mac/mac_mt/mt_mac_sdio.h"
-#endif /* RTMP_MAC_SDIO */
 
 
 /*

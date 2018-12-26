@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,7 @@
 	Module Name:
 	ate.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __ATE_H__
 #define __ATE_H__
 #include "LoopBack.h"
@@ -105,16 +104,29 @@ INT32 ATEExit(struct _RTMP_ADAPTER *pAd);
 
 #define MAX_TEST_PKT_LEN        1496
 #define MIN_TEST_PKT_LEN        25
-#define MAX_TEST_BKCR_NUM       20
+#define MAX_TEST_BKCR_NUM       30
 
-#define HT_AMPDU_MAX_LEN        65000
-#define VHT_MPDU_MAX_LEN        6700 // 11454
-#define MPDU_DEFAULT_LEN        4096
-#define MSDU_MAX_LEN            2304
-#define MSDU_MIN_LEN            22
-#define MAC_HDR_DEFAULT_LEN     24
-#define MAC_HDR_QOS_LEN         26
+/* For packet tx time, in unit of byte */
+#define MAX_HT_AMPDU_LEN        65000
+#define MAX_VHT_MPDU_LEN        6700    //11454
+#define DEFAULT_MPDU_LEN        4096
+#define MAX_MSDU_LEN            2304
+#define MIN_MSDU_LEN            22
+#define DEFAULT_MAC_HDR_LEN     24
+#define QOS_MAC_HDR_LEN         26
 
+/* For ipg and duty cycle, in unit of us */
+#define SIG_EXTENSION           6
+#define DEFAULT_SLOT_TIME       9
+#define DEFAULT_SIFS_TIME       10
+#define MAX_SIFS_TIME           127     /* ICR has 7-bit only */ /* For the ATCR/TRCR limitation 8-bit/9-bit only*/
+#define MAX_AIFSN               0xF
+#define MIN_AIFSN               0x1
+#define MAX_CW                  0x10
+#define MIN_CW                  0x0
+#define NORMAL_CLOCK_TIME       50      /* in uint of ns */
+#define DEFAULT_TXV_TOUT_TIME   1500    /* in uint of ns */
+#define BBP_PROCESSING_TIME     1500    /* in uint of ns */
 
 #if defined(MT7615)
 #define ATE_TESTPKT_LEN	13311	//Setting max packet length to 13311 on MT7615
@@ -150,13 +162,14 @@ struct _RX_BLK;
 #define TESTMODE_SEM_DOWN_TRYLOCK( _psem) down_trylock( _psem)
 #define TESTMODE_SEM_UP(_psem) up( _psem)
 #endif
-typedef enum _TESTMODE_MODE{
+
+typedef enum _TESTMODE_MODE {
 	HQA_VERIFY,
 	ATE_LOOPBACK,
 	MODE_NUM
 } TESTMODE_MODE;
 
-typedef enum _MPS_PARAM_TYPE{
+typedef enum _MPS_PARAM_TYPE {
 	MPS_SEQDATA,
 	MPS_PHYMODE,
 	MPS_PATH,
@@ -184,6 +197,9 @@ typedef struct _ATE_OPERATION {
 	INT32 (*SetTxPower1)(struct _RTMP_ADAPTER *pAd, struct _ATE_TXPOWER TxPower);
     INT32 (*SetTxPower2)(struct _RTMP_ADAPTER *pAd, struct _ATE_TXPOWER TxPower);
     INT32 (*SetTxPower3)(struct _RTMP_ADAPTER *pAd, struct _ATE_TXPOWER TxPower);
+#ifdef ABSOLUTE_POWER_TEST	
+	INT32 (*SetTxForceTxPower)(struct _RTMP_ADAPTER *pAd, UINT8 ucBandIdx, INT8 cTxPower, UINT8 ucPhyMode, UINT8 ucTxRate, UINT8 ucBW);
+#endif /* ABSOLUTE_POWER_TEST */
 	INT32 (*SetTxPowerX)(struct _RTMP_ADAPTER *pAd, struct _ATE_TXPOWER TxPower);
 	INT32 (*SetTxAntenna)(struct _RTMP_ADAPTER *pAd, UINT32 Ant, UINT32 band_idx);
 	INT32 (*SetRxAntenna)(struct _RTMP_ADAPTER *pAd, UINT32 Ant, UINT32 band_idx);
@@ -194,8 +210,9 @@ typedef struct _ATE_OPERATION {
 	INT32 (*SetDutyCycle)(struct _RTMP_ADAPTER *pAd, UINT32 value, UINT32 band_idx);
 	INT32 (*SetPktTxTime)(struct _RTMP_ADAPTER *pAd, UINT32 value, UINT32 band_idx);
 	INT32 (*SampleRssi)(struct _RTMP_ADAPTER *pAd, struct _RX_BLK *pRxBlk);
-    INT32 (*SetAIFS)(struct _RTMP_ADAPTER *pAd, CHAR Value);
+	INT32 (*SetIPG)(struct _RTMP_ADAPTER *pAd, UINT32 BandIdx);
 	INT32 (*SetSlotTime)(struct _RTMP_ADAPTER *pAd, UINT32 SlotTime, UINT32 SifsTime, UINT32 BandIdx);
+    INT32 (*SetAIFS)(struct _RTMP_ADAPTER *pAd, CHAR Value);
     INT32 (*SetPowerDropLevel)(struct _RTMP_ADAPTER *pAd, UINT32 PowerDropLevel, UINT32 BandIdx);
     INT32 (*SetTSSI)(struct _RTMP_ADAPTER *pAd, CHAR WFSel, CHAR Setting);
 	INT32 (*LowPower)(struct _RTMP_ADAPTER *pAd, UINT32 Control);
@@ -253,7 +270,7 @@ typedef struct _ATE_IF_OPERATION {
 	INT32 (*ate_leave)(struct _RTMP_ADAPTER *pAd);
 } ATE_IF_OPERATION;
 
-typedef struct _HQA_MPS_SETTING{
+typedef struct _HQA_MPS_SETTING {
 	UINT32 phy;
 	UINT32 pkt_len;
 	UINT32 pkt_cnt;
@@ -262,7 +279,7 @@ typedef struct _HQA_MPS_SETTING{
 	UINT32 pkt_bw;
 } HQA_MPS_SETTING;
 
-typedef enum _TEST_BK_CR_TYPE{
+typedef enum _TEST_BK_CR_TYPE {
 	TEST_EMPTY_BKCR = 0,
 	TEST_MAC_BKCR,
 	TEST_HIF_BKCR,
@@ -272,7 +289,7 @@ typedef enum _TEST_BK_CR_TYPE{
 	TEST_BKCR_TYPE_NUM,
 } TEST_BK_CR_TYPE;
 
-typedef struct _TESTMODE_BK_CR{
+typedef struct _TESTMODE_BK_CR {
 	ULONG offset;
 	UINT32 val;
 	TEST_BK_CR_TYPE type;
@@ -298,7 +315,7 @@ typedef struct _ATE_RDD_LOG {
 	UINT8 aucBuffer[ATE_RDD_LOG_SIZE];
 } ATE_RDD_LOG, *PATE_RDD_LOG;
 
-#define ATE_RECAL_LOG_SIZE (CAL_ALL_LEN>>3)
+#define ATE_RECAL_LOG_SIZE (CAL_ALL_LEN >> 3)
 typedef struct _ATE_LOG_RECAL {
 	UINT32 cal_idx;
 	UINT32 cal_type;
@@ -322,12 +339,14 @@ enum {
 	ATE_LOG_DUMP,
 	ATE_LOG_CTRL_NUM,
 };
+
 #define fATE_LOG_RXV				(1 << ATE_LOG_RXV)
 #define fATE_LOG_RDD				(1 << ATE_LOG_RDD)
 #define fATE_LOG_RE_CAL				(1 << ATE_LOG_RE_CAL)
 #define fATE_LOG_RXINFO				(1 << ATE_LOG_RXINFO)
 #define fATE_LOG_TXDUMP				(1 << ATE_LOG_TXDUMP)
 #define fATE_LOG_TEST				(1 << ATE_LOG_TEST)
+
 typedef struct _ATE_LOG_DUMP_ENTRY {
 	UINT32 log_type;
 	UINT8 un_dumped;
@@ -335,7 +354,7 @@ typedef struct _ATE_LOG_DUMP_ENTRY {
 		struct _ATE_RXV_LOG rxv;
 		struct _ATE_RDD_LOG rdd;
 		struct _ATE_LOG_RECAL re_cal;
-	}log;
+	} log;
 } ATE_LOG_DUMP_ENTRY;
 
 typedef struct _ATE_LOG_DUMP_CB { 
@@ -354,7 +373,7 @@ typedef struct _ATE_LOG_DUMP_CB {
 } ATE_LOG_DUMP_CB;
 
 #define ATE_MPS_ITEM_RUNNING	(1<<0)
-typedef struct _HQA_MPS_CB{
+typedef struct _HQA_MPS_CB {
 	NDIS_SPIN_LOCK lock;
 	UINT32 mps_cnt;
 	UINT32 band_idx;
@@ -364,18 +383,20 @@ typedef struct _HQA_MPS_CB{
 	HQA_MPS_SETTING *mps_setting;
 } HQA_MPS_CB;
 
-typedef struct _ATE_PFMU_INFO{
+typedef struct _ATE_PFMU_INFO {
 	UCHAR wcid;
 	UCHAR bss_idx;
 	UCHAR up;
 	UCHAR addr[MAC_ADDR_LEN];
 } ATE_PFMU_INFO;
-#define ATE_RXV_SIZE 9
-#define ATE_ANT_NUM 4
-typedef struct _ATE_RX_STATISTIC{
+
+#define ATE_RXV_SIZE    9
+#define ATE_ANT_NUM     4
+
+typedef struct _ATE_RX_STATISTIC {
+	INT32 FreqOffsetFromRx;
 	UINT32 RxTotalCnt[TESTMODE_BAND_NUM];
 	UINT32 NumOfAvgRssiSample;
-	UINT32 FreqOffsetFromRx;
 	UINT32 RxMacFCSErrCount;
 	UINT32 RxMacMdrdyCount;
 	UINT32 RxMacFCSErrCount_band1;
@@ -399,8 +420,19 @@ typedef struct _ATE_RX_STATISTIC{
 	UINT32 RXVRSSI;
 } ATE_RX_STATISTIC;
 
+typedef struct _ATE_IPG_PARAM {
+    UINT32 ipg;         /* The target idle time */
+    UINT8 sig_ext;      /* Only OFDM/HT/VHT need to consider sig_ext */
+    UINT16 slot_time;
+    UINT16 sifs_time;
+	UINT8 ac_num;       /* 0: AC_BK, 1: AC_BE, 2: AC_VI, 3: AC_VO */
+	UINT8 aifsn;
+	UINT16 cw;
+    UINT16 txop;
+} ATE_IPG_PARAM;
+
 #ifdef DBDC_MODE
-typedef struct _BAND_INFO{
+typedef struct _BAND_INFO {
 	UCHAR *pate_pkt;	/* Buffer for TestPkt */
 	PNDIS_PACKET pkt_skb;
 	UINT32 is_alloc_skb;
@@ -432,7 +464,6 @@ typedef struct _BAND_INFO{
 	UINT32 TxDoneCount;	/* Tx DMA Done */
 	UINT32 TxedCount;
 	UINT32 RFFreqOffset;
-	UINT32 IPG;
 	UINT32 thermal_val;
 	UINT32 duty_cycle;
 	UINT32 pkt_tx_time;
@@ -443,6 +474,7 @@ typedef struct _BAND_INFO{
     UINT8 pkt_need_qos;
     UINT8 pkt_need_amsdu;
     UINT8 pkt_need_ampdu;
+    ATE_IPG_PARAM ipg_param;
 #ifdef TXBF_SUPPORT
 	UCHAR eTxBf;
 	UCHAR iTxBf;
@@ -495,13 +527,6 @@ typedef struct _ATE_CTRL {
 #ifdef DBDC_MODE
 	struct _BAND_INFO band_ext[1];
 #endif
-#ifdef RTMP_MAC_SDIO
-	UCHAR *pAtePacket;
-	UCHAR agg_num;
-	ULONG frame_len;/* Length of test frame acutally */
-	UINT32 txed_pg;/* test packet pages transmited this time */
-	UINT16 tx_pg;	/* Page resource supposed to transmit to SDIO bus this time */
-#endif /* RTMP_MAC_SDIO */
 	UCHAR *pate_pkt;	/* Buffer for TestPkt */
 	PNDIS_PACKET pkt_skb;
 	UINT32 is_alloc_skb;
@@ -518,7 +543,7 @@ typedef struct _ATE_CTRL {
 	UCHAR Ch_Band;
 	UCHAR ControlChl;
 	UCHAR PriSel;
-    UINT32 OutBandFreq;	
+	UINT32 OutBandFreq;
 	UCHAR Nss;
 	UCHAR BW;
 	UCHAR PerPktBW;
@@ -536,7 +561,6 @@ typedef struct _ATE_CTRL {
 	UINT32 TxDoneCount;	/* Tx DMA Done */
 	UINT32 TxedCount;
 	UINT32 RFFreqOffset;
-	UINT32 IPG;
 	UINT32 thermal_val;
 	UINT32 duty_cycle;
 	UINT32 pkt_tx_time;
@@ -547,6 +571,7 @@ typedef struct _ATE_CTRL {
     UINT8 pkt_need_qos;
     UINT8 pkt_need_amsdu;
     UINT8 pkt_need_ampdu;
+	ATE_IPG_PARAM ipg_param;
 #ifdef TXBF_SUPPORT
     BOOLEAN fgEBfEverEnabled;
     BOOLEAN fgBw160;

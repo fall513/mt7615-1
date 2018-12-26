@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -15,7 +14,7 @@
  * way altering	the	source code	is stricitly prohibited, unless	the	prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 	Abstract:
 
@@ -64,6 +63,8 @@ typedef struct _RRM_CONFIG
 	//UINT8	PeerMeasurementType;
 	BOOLEAN bPeerReqLCI;
 	BOOLEAN bPeerReqCIVIC;
+	RRM_EN_CAP_IE rrm_capabilities;
+	RRM_EN_CAP_IE max_rrm_capabilities;
 } RRM_CONFIG, *PRRM_CONFIG;
 
 typedef union _RRM_BCN_REQ_CAP

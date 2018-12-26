@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
 	--------    ----------    ----------------------------------------------
 	Shiang     2009/11/04
 */
-#endif /* MTK_LICENSE */
+
 #include	"rt_config.h"
 
 #ifdef TXBF_SUPPORT
@@ -466,6 +465,11 @@ VOID txSndgSameMcs(
 	*/
 	MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+	if (ADAPT_RATE_TABLE(pTable))
+		step = 10;
+	else
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 		step = 5;
 	for (i=1; i<=TableSize; i++)
 	{
@@ -544,6 +548,11 @@ VOID txSndgOtherGroup(
 	}
 	/* copied from txSndgSameMcs() */
 	MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
+#ifdef NEW_RATE_ADAPT_SUPPORT
+	if (ADAPT_RATE_TABLE(pTable))
+		step = 10;
+	else
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 		step = 5;
 	for (i=1; i<=TableSize; i++)
 	{
@@ -610,6 +619,11 @@ UINT convertSnrToThroughput(
 	UCHAR	rateIdx[24], step, tableSize;
 	UCHAR mcs;
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+	if (ADAPT_RATE_TABLE(pTable))
+		step = 10;
+	else
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 		step = 5;
 	tableSize = RATE_TABLE_SIZE(pTable);
 	for (i=0; i<24; i++)
@@ -960,6 +974,28 @@ VOID handleHtcField(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 		/* legalMfb smoothing */
 		MlmeSelectTxRateTable(pAd, pEntry, &pTable, &TableSize, &InitTxRateIdx);
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+		if (ADAPT_RATE_TABLE(pTable))
+		{
+			for (i=1; i<=RATE_TABLE_SIZE(pTable); i++)
+			{
+				if (legalMfb == pTable[i*10+2])
+				{
+					legalMfbIdx = pTable[i*10];
+					pLegalMfbRS3S = (RTMP_RA_GRP_TB *) &pTable[i*10];
+					pLegalMfbRS = (RTMP_RA_LEGACY_TB *) &pTable[i*10];
+					break;
+				}
+			}
+			/* pLegalMfbRS3S may be null if pLegalMfbRS3S is not found!!! */
+			if (pEntry->lastLegalMfb == pTable[(pLegalMfbRS3S->downMcs+1)*10+2] ||pEntry->lastLegalMfb == pTable[(pLegalMfbRS3S->upMcs1+1)*10+2]
+			    ||pEntry->lastLegalMfb == pTable[(pLegalMfbRS3S->upMcs2+1)*10+2] ||pEntry->lastLegalMfb == pTable[(pLegalMfbRS3S->upMcs3+1)*10+2])
+			    smoothMfb = pEntry->lastLegalMfb;
+			else
+				smoothMfb = legalMfb;
+		}
+		else 
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 		{
 			for (i=1; i<=RATE_TABLE_SIZE(pTable); i++)
 			{
@@ -979,6 +1015,10 @@ VOID handleHtcField(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 			
 			if (smoothMfb != pEntry->lastLegalMfb && smoothMfb != pTable[(pEntry->CurrTxRateIndex+1)*10+2])
 			{/* if mfb changes and mfb is different from current mcs: means channel change */
+#ifdef NEW_RATE_ADAPT_SUPPORT
+				if ((ADAPT_RATE_TABLE(pTable)))
+					MlmeSetMcsGroup(pAd, pEntry);
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 				pEntry->CurrTxRateIndex = legalMfbIdx;
 				MlmeClearTxQuality(pEntry);/* clear all history, same as train up, purpose??? */
 				NdisAcquireSpinLock(&pEntry->fLastChangeAccordingMfbLock);

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,13 +13,12 @@
 	Module Name:
 	single_sku.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __CMM_SINGLE_SKU_H__
 #define __CMM_SINGLE_SKU_H__
 
 
 // TODO: shiang-usw, integrate these data structures to a single one!
-
 #define	SINGLE_SKU_TABLE_LENGTH		(SINGLE_SKU_TABLE_CCK_LENGTH+SINGLE_SKU_TABLE_OFDM_LENGTH+(SINGLE_SKU_TABLE_HT_LENGTH*2)+SINGLE_SKU_TABLE_VHT_LENGTH)
 
 #define SINGLE_SKU_TABLE_EFFUSE_ADDRESS 0x12C

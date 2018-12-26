@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,6 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 #define FLG_IS_OUTPUT 1
@@ -78,7 +76,10 @@ INT ApAllowToSendPacket(
 	if (MAC_ADDR_IS_GROUP(pSrcBufVA))
 	{
 		*pWcid = wdev->tr_tb_idx;
-
+#ifdef MWDS
+        /* If we check an ethernet source move to this device, we should remove it. */
+        MWDSProxyEntryDelete(pAd, wdev->func_idx, (pSrcBufVA + MAC_ADDR_LEN));
+#endif /* MWDS */
 		if (wdev->PortSecured != WPA_802_1X_PORT_SECURED)
 			return FALSE;
 		else
@@ -89,6 +90,15 @@ INT ApAllowToSendPacket(
 		pEntry = MacTableLookup(pAd, pSrcBufVA);
 		if (pEntry && (pEntry->Sst == SST_ASSOC))
 		{
+ #ifdef WH_EVENT_NOTIFIER
+            if(IS_ENTRY_CLIENT(pEntry)
+#ifdef MWDS
+               && !IS_MWDS_OPMODE_AP(pEntry)
+#endif /* MWDS */
+               )
+                  pEntry->tx_state.PacketCount++;
+#endif /* WH_EVENT_NOTIFIER */ 
+
 			*pWcid = (UCHAR)pEntry->wcid;
 			return TRUE;
 		}
@@ -105,6 +115,23 @@ INT ApAllowToSendPacket(
 			}
 		}
 #endif /* CLIENT_WDS */
+
+#ifdef MWDS
+        if (pEntry == NULL) {
+            UCHAR Wcid;
+            /* If we check an ethernet source move to this device, we should remove it. */
+            MWDSProxyEntryDelete(pAd, wdev->func_idx, (pSrcBufVA + MAC_ADDR_LEN));
+            if (MWDSProxyLookup(pAd, wdev->func_idx, pSrcBufVA, FALSE, &Wcid)) {
+                if (VALID_WCID(Wcid))
+                    pEntry = &pAd->MacTab.Content[Wcid];
+
+                if (pEntry && (pEntry->Sst == SST_ASSOC)){
+                    *pWcid = Wcid;
+                    return TRUE;
+                }
+            }
+        }
+#endif /* MWDS */
 	}
 
 	return FALSE;
@@ -585,6 +612,35 @@ static inline VOID APBuildCache802_11Header(
 	}
 	else
 #endif /* WDS_SUPPORT || CLIENT_WDS */
+#ifdef MWDS
+	if(TX_BLK_TEST_FLAG(pTxBlk, fTX_bMWDSFrame))
+	{
+		pHeader80211->FC.ToDs = 1;
+		pHeader80211->FC.FrDs = 1;
+		if(pTxBlk->pMacEntry)
+		{
+#ifdef APCLI_SUPPORT
+			if(IS_MWDS_OPMODE_APCLI(pTxBlk->pMacEntry))
+			{
+				COPY_MAC_ADDR(pHeader80211->Addr1, APCLI_ROOT_BSSID_GET(pAd, pTxBlk->Wcid)); /* to AP2 */
+				COPY_MAC_ADDR(pHeader80211->Addr2, pTxBlk->pApCliEntry->wdev.if_addr);	
+			}
+			else
+#endif /* APCLI_SUPPORT */
+			if(IS_MWDS_OPMODE_AP(pTxBlk->pMacEntry))
+			{
+				COPY_MAC_ADDR(pHeader80211->Addr1, pTxBlk->pMacEntry->Addr);/* to AP2 */
+				COPY_MAC_ADDR(pHeader80211->Addr2, pAd->CurrentAddress); /* from AP1 */
+			}
+			COPY_MAC_ADDR(pHeader80211->Addr3, pTxBlk->pSrcBufHeader);	/* DA */
+			COPY_MAC_ADDR(pHeader80211->Octet, pTxBlk->pSrcBufHeader + MAC_ADDR_LEN);/* ADDR4 = SA */
+			pTxBlk->MpduHeaderLen += MAC_ADDR_LEN; 
+		}
+		else
+			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s pTxBlk->pMacEntry == NULL!\n", __FUNCTION__));
+	}
+	else
+#endif /* MWDS */
 #ifdef APCLI_SUPPORT
 	if(IS_ENTRY_APCLI(pMacEntry) || IS_ENTRY_REPEATER(pMacEntry))
 	{	/* The addr3 of Ap-client packet is Destination Mac address. */
@@ -728,6 +784,37 @@ static inline VOID APBuildCommon802_11Header(RTMP_ADAPTER *pAd, TX_BLK *pTxBlk)
 
 	wifi_hdr->Frag = 0;
 	wifi_hdr->FC.MoreData = TX_BLK_TEST_FLAG(pTxBlk, fTX_bMoreData);
+
+
+#ifdef MWDS
+	if(TX_BLK_TEST_FLAG(pTxBlk, fTX_bMWDSFrame))
+	{
+		wifi_hdr->FC.ToDs = 1;
+		wifi_hdr->FC.FrDs = 1;
+		if(pTxBlk->pMacEntry)
+		{
+#ifdef APCLI_SUPPORT
+			if(IS_MWDS_OPMODE_APCLI(pTxBlk->pMacEntry))
+			{
+				COPY_MAC_ADDR(wifi_hdr->Addr1, APCLI_ROOT_BSSID_GET(pAd, pTxBlk->Wcid)); /* to AP2 */
+				COPY_MAC_ADDR(wifi_hdr->Addr2, pTxBlk->pApCliEntry->wdev.if_addr);	
+			}
+			else
+#endif /* APCLI_SUPPORT */
+			if(IS_MWDS_OPMODE_AP(pTxBlk->pMacEntry))
+			{
+				COPY_MAC_ADDR(wifi_hdr->Addr1, pTxBlk->pMacEntry->Addr);/* to AP2 */
+				COPY_MAC_ADDR(wifi_hdr->Addr2, pAd->CurrentAddress); /* from AP1 */
+			}
+			COPY_MAC_ADDR(wifi_hdr->Addr3, pTxBlk->pSrcBufHeader);	/* DA */
+			COPY_MAC_ADDR(wifi_hdr->Octet, pTxBlk->pSrcBufHeader + MAC_ADDR_LEN);/* ADDR4 = SA */
+			pTxBlk->MpduHeaderLen += MAC_ADDR_LEN; 
+		}
+		else
+			MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s pTxBlk->pMacEntry == NULL!\n", __FUNCTION__));
+	}
+	else
+#endif /* MWDS*/
 
 #ifdef APCLI_SUPPORT
 	if (TX_BLK_TEST_FLAG(pTxBlk, fTX_bApCliPacket))
@@ -2728,7 +2815,6 @@ MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("<--%s(%d): ##########Fail#
 	/*
 		Kick out Tx
 	*/
-	pTxBlk->QueIdx= HcGetTxRingIdx(pAd, &pTxBlk->pMbss->wdev);
 	HAL_KickOutTx(pAd, pTxBlk, pTxBlk->QueIdx);
 }
 
@@ -2971,9 +3057,10 @@ static VOID APNdpaFrameTx(RTMP_ADAPTER *pAd, TX_BLK *pTxBlk)
 		// TODO: shiang-lock, fix ME!!
 		MiniportMMRequest(pAd, 0, buf, frm_len);
 		MlmeFreeMemory( buf);
-	}
+	
 
-	pMacEntry->TxSndgType = SNDG_TYPE_DISABLE;
+		pMacEntry->TxSndgType = SNDG_TYPE_DISABLE;
+	}
 }
 #endif /* VHT_TXBF_SUPPORT */
 
@@ -3425,16 +3512,14 @@ BOOLEAN APCheckVaildDataFrame(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 
 INT APRxPktAllow(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 {
-#ifndef CUSTOMER_DCC_FEATURE
 	RXINFO_STRUC *pRxInfo = pRxBlk->pRxInfo;
-#endif
 	FRAME_CONTROL *pFmeCtrl = (FRAME_CONTROL *)pRxBlk->FC;
 	MAC_TABLE_ENTRY *pEntry = NULL;
 	INT hdr_len = 0;
 
 	pEntry = PACInquiry(pAd, pRxBlk->wcid);
 
-#if defined(WDS_SUPPORT) || defined(CLIENT_WDS)
+#if defined(WDS_SUPPORT) || defined(CLIENT_WDS) || defined(MWDS)
 	if ((pFmeCtrl->FrDs == 1) && (pFmeCtrl->ToDs == 1))
 	{
 #ifdef CLIENT_WDS
@@ -3450,6 +3535,69 @@ INT APRxPktAllow(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 			CliWds_ProxyTabUpdate(pAd, pEntry->Aid, pRxBlk->Addr4);
 		}
 #endif /* CLIENT_WDS */
+#ifdef MWDS
+		if(!pEntry)
+			pEntry = MacTableLookup(pAd, pRxBlk->Addr2);
+        
+		if(pEntry && IS_MWDS_OPMODE_AP(pEntry))
+        {
+            MAC_TABLE_ENTRY *pMovedEntry = NULL;
+            UINT16 ProtoType = 0;
+            UINT32 ARPSenderIP = 0;
+            UCHAR *Pos = (pRxBlk->pData + 12);
+            BOOLEAN bTAMatchSA = MAC_ADDR_EQUAL(pEntry->Addr, pRxBlk->Addr4);
+
+	    	//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,
+			//    ("APRxPktAllow: wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x Recvd MWDS Pkt\n",
+			//    pEntry->wdev->wdev_idx,pEntry->wdev->wdev_type,pEntry->wdev->func_idx);
+
+			/*if((((PUCHAR)pRxBlk->pData)[4])& 0x1 == 0x1)
+			{
+				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,("APRxPktAllow: MWDS Pkt=> wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x \nEth Hdr: Dest[%02x-%02x-%02x-%02x-%02x-%02x] Source[%02x-%02x-%02x-%02x-%02x-%02x] Type[%02x-%02x]\n",
+				pEntry->wdev->wdev_idx,pEntry->wdev->wdev_type,pEntry->wdev->func_idx,
+				((PUCHAR)pRxBlk->pData)[4],((PUCHAR)pRxBlk->pData)[5],((PUCHAR)pRxBlk->pData)[6],((PUCHAR)pRxBlk->pData)[7],((PUCHAR)pRxBlk->pData)[8],((PUCHAR)pRxBlk->pData)[9],
+				((PUCHAR)pRxBlk->pData)[10],((PUCHAR)pRxBlk->pData)[11],((PUCHAR)pRxBlk->pData)[12],((PUCHAR)pRxBlk->pData)[13],((PUCHAR)pRxBlk->pData)[14],((PUCHAR)pRxBlk->pData)[15],
+				((PUCHAR)pRxBlk->pData)[16],((PUCHAR)pRxBlk->pData)[17]));
+			}*/
+
+            ProtoType = OS_NTOHS(*((UINT16*)Pos));
+            if(ProtoType == 0x0806) /* ETH_P_ARP */
+                NdisCopyMemory(&ARPSenderIP, (Pos + 16), 4);
+
+            /* 
+                           It means this source entry has moved to another one and hidden behind it. 
+                           So delete this source entry! 
+                    */
+            if(!bTAMatchSA) /* TA isn't same with SA case*/
+            {
+                pMovedEntry = MacTableLookup(pAd, pRxBlk->Addr4);
+                if(pMovedEntry
+#ifdef AIR_MONITOR
+                    && !IS_ENTRY_MONITOR(pMovedEntry)
+#endif /* AIR_MONITOR */
+                    && IS_ENTRY_CLIENT(pMovedEntry)
+                    )
+                {
+                     MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+                        ("APRxPktAllow: AP found a entry(%02X:%02X:%02X:%02X:%02X:%02X) who has moved to another side! Delete it from MAC table.\n",
+                        PRINT_MAC(pMovedEntry->Addr)));
+                     
+#ifdef WH_EVENT_NOTIFIER
+                    {
+                        EventHdlr pEventHdlrHook = NULL;
+                        pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_STA_LEAVE);
+                        if(pEventHdlrHook && pMovedEntry->wdev)
+                            pEventHdlrHook(pAd, pMovedEntry->wdev, pMovedEntry->Addr, pMovedEntry->wdev->channel);
+                    }
+#endif /* WH_EVENT_NOTIFIER */
+                    MacTableDeleteEntry(pAd, pMovedEntry->wcid, pMovedEntry->Addr);
+                }
+            }
+			MWDSProxyTabUpdate(pAd, pEntry->func_tb_idx, pEntry->wcid, pRxBlk->Addr4, ARPSenderIP);
+        }
+        else
+            pEntry = NULL;
+#endif /* MWDS */
 
 #ifdef WDS_SUPPORT
 		if (!pEntry)
@@ -3483,6 +3631,7 @@ INT APRxPktAllow(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 
 		if (pEntry)
 		{
+#ifdef WDS_SUPPORT
 #ifdef STATS_COUNT_SUPPORT
 			RT_802_11_WDS_ENTRY *pWdsEntry = &pAd->WdsTab.WdsEntry[pEntry->func_tb_idx];
 
@@ -3492,7 +3641,7 @@ INT APRxPktAllow(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 			if(IS_MULTICAST_MAC_ADDR(pRxBlk->Addr3))
 				INC_COUNTER64(pWdsEntry->WdsCounter.MulticastReceivedFrameCount);
 #endif /* STATS_COUNT_SUPPORT */
-
+#endif /* WDS_SUPPORT */
 			RX_BLK_SET_FLAG(pRxBlk, fRX_WDS);
 			hdr_len = LENGTH_802_11_WITH_ADDR4;
 			return hdr_len;
@@ -3500,14 +3649,14 @@ INT APRxPktAllow(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk)
 
 		return FALSE;
 	}
-#endif /* defined(WDS_SUPPORT) || defined(CLIENT_WDS) */
+#endif /* defined(WDS_SUPPORT) || defined(CLIENT_WDS) || defined(MWDS) */
 
 	if (!pEntry) {
 #ifdef IDS_SUPPORT
 		if ((pFmeCtrl->FrDs == 0) && (pRxBlk->wcid == RESERVED_WCID)) /* not in RX WCID MAC table */
 			pAd->ApCfg.RcvdMaliciousDataCount++;
 #endif /* IDS_SUPPORT */
-printk("%s(): pEntry is NULL!\n", __FUNCTION__);
+        printk("%s(): pEntry is NULL!\n", __FUNCTION__);
 		return FALSE;
 	}
 
@@ -3523,6 +3672,26 @@ printk("%s(): pEntry is NULL!\n", __FUNCTION__);
 
 		return FALSE;
 	}
+
+#ifdef MWDS
+    if (((pFmeCtrl->FrDs == 0) && (pFmeCtrl->ToDs == 1))) {
+		if((pFmeCtrl->SubType != SUBTYPE_DATA_NULL) && (pFmeCtrl->SubType != SUBTYPE_QOS_NULL)) {
+        	if(pEntry && IS_MWDS_OPMODE_AP(pEntry)){
+            	return FALSE;
+        	}
+			else{
+				/*if((((PUCHAR)pRxBlk->pData)[4])& 0x1 == 0x1)
+				{
+				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,("APRxPktAllow: Non MWDS Pkt=> wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x \nEth Hdr: Dest[%02x-%02x-%02x-%02x-%02x-%02x] Source[%02x-%02x-%02x-%02x-%02x-%02x] Type[%02x-%02x]\n",
+				pEntry->wdev->wdev_idx,pEntry->wdev->wdev_type,pEntry->wdev->func_idx,
+				((PUCHAR)pRxBlk->pData)[0],((PUCHAR)pRxBlk->pData)[1],((PUCHAR)pRxBlk->pData)[2],((PUCHAR)pRxBlk->pData)[3],((PUCHAR)pRxBlk->pData)[4],((PUCHAR)pRxBlk->pData)[5],
+				((PUCHAR)pRxBlk->pData)[6],((PUCHAR)pRxBlk->pData)[7],((PUCHAR)pRxBlk->pData)[8],((PUCHAR)pRxBlk->pData)[9],((PUCHAR)pRxBlk->pData)[10],((PUCHAR)pRxBlk->pData)[11],
+				((PUCHAR)pRxBlk->pData)[12],((PUCHAR)pRxBlk->pData)[13]));
+				}*/
+			}
+		}
+	}
+#endif /* MWDS */
 
 	/* check if Class2 or 3 error */
 	if (APChkCls2Cls3Err(pAd, pRxBlk)) {
@@ -3551,12 +3720,11 @@ printk("%s(): pEntry is NULL!\n", __FUNCTION__);
 //---Add by shiang for debug
 
 	if(pAd->ApCfg.BANClass3Data == TRUE) {
-printk("%s(): BanClass3Data\n", __FUNCTION__);
+        printk("%s(): BanClass3Data\n", __FUNCTION__);
 		return FALSE;
 	}
 
 #ifdef STATS_COUNT_SUPPORT
-#ifndef CUSTOMER_DCC_FEATURE
 	/* Increase received byte counter per BSS */
 	if (pFmeCtrl->FrDs == 0 && pRxInfo->U2M)
 	{
@@ -3567,11 +3735,21 @@ printk("%s(): BanClass3Data\n", __FUNCTION__);
 			pMbss->RxCount ++;
 		}
 	}
-#endif
+
 	/* update multicast counter */
         if (IS_MULTICAST_MAC_ADDR(pRxBlk->Addr3))
                 INC_COUNTER64(pAd->WlanCounters[0].MulticastReceivedFrameCount);
 #endif /* STATS_COUNT_SUPPORT */
+
+ #ifdef WH_EVENT_NOTIFIER
+    if(pEntry && IS_ENTRY_CLIENT(pEntry)
+ #ifdef MWDS
+       && !IS_MWDS_OPMODE_AP(pEntry)
+ #endif /* MWDS */
+       && ((pFmeCtrl->SubType != SUBTYPE_DATA_NULL) && (pFmeCtrl->SubType != SUBTYPE_QOS_NULL))
+        )
+        pEntry->rx_state.PacketCount++;
+#endif /* WH_EVENT_NOTIFIER */  
 
 	hdr_len = LENGTH_802_11;
 	RX_BLK_SET_FLAG(pRxBlk, fRX_STA);
@@ -3643,7 +3821,12 @@ INT APRxFowardHandle(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, PNDIS_PACKET pPac
 	PNDIS_PACKET pForwardPacket;
 	BSS_STRUCT *pMbss;
 	struct wifi_dev *dst_wdev = NULL;
-
+    INT Ret;
+    UCHAR wcid;
+#ifdef MWDS
+    UCHAR *pSrcAddr = NULL;
+#endif /* MWDS */
+ 
 	if (wdev->func_idx >= HW_BEACON_MAX_NUM)
 	{
 		MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s():Invalid func_idx(%d), type(%d)!\n",
@@ -3704,17 +3887,41 @@ INT APRxFowardHandle(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, PNDIS_PACKET pPac
 					(wdev->VLAN_VID != dst_wdev->VLAN_VID))
 					to_os = FALSE;
 			}
+#ifdef WH_EVENT_NOTIFIER
+            if(to_air && IS_ENTRY_CLIENT(pEntry)
+#ifdef MWDS
+               && !IS_MWDS_OPMODE_AP(pEntry)
+#endif /* MWDS */
+               )
+                 pEntry->tx_state.PacketCount++;
+#endif /* WH_EVENT_NOTIFIER */
 		}
+#ifdef MWDS
+		else if(!pEntry && MWDSProxyLookup(pAd, wdev->func_idx, pHeader802_3, FALSE, &wcid))
+		{
+			if (VALID_WCID(wcid))
+				pEntry = &pAd->MacTab.Content[wcid];
+            
+			if(pEntry && 
+               (pEntry->Sst == SST_ASSOC) && 
+                pEntry->wdev && 
+                IS_MWDS_OPMODE_AP(pEntry))
+            {
+                to_os = FALSE;
+				to_air = TRUE;
+                dst_wdev = pEntry->wdev;
+            }
+		}
+#endif /* MWDS */	
 	}
 
 	if (to_air)
 	{
-		UCHAR wcid;	
 		pForwardPacket = DuplicatePacket(wdev->if_dev, pPacket);
 #ifdef RTMP_UDMA_SUPPORT
 		if(to_os)
 		{
-#if defined (CONFIG_WIFI_PKT_FWD)
+#if defined(CONFIG_WIFI_PKT_FWD) || defined(CONFIG_WIFI_PKT_FWD_MODULE)
 			if (wf_fwd_needed_hook != NULL && wf_fwd_needed_hook() == TRUE)
 				set_wf_fwd_cb(pAd, pPacket, wdev);
 #endif /* CONFIG_WIFI_PKT_FWD */
@@ -3747,7 +3954,6 @@ INT APRxFowardHandle(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, PNDIS_PACKET pPac
 		if (wdev->tx_pkt_ct_handle && !check_if_fragment(wdev, pForwardPacket)) {
 			UCHAR que_idx = 0, user_prio = QID_AC_BE;
 			STA_TR_ENTRY *tr_entry = &pAd->MacTab.tr_entry[wcid];
-			INT Ret;
 
 			if (!pAd->chipCap.BATriggerOffload)
 			{
@@ -3757,15 +3963,43 @@ INT APRxFowardHandle(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, PNDIS_PACKET pPac
 					return to_os;
 				}
 			}
-			
+#ifdef WH_EZ_SETUP
+			//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,("APRxFowardHandle: wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x\nEth Hdr: Dest[%02x-%02x-%02x-%02x-%02x-%02x] Source[%02x-%02x-%02x-%02x-%02x-%02x] Type[%02x-%02x]\n",
+			//	wdev->wdev_idx,wdev->wdev_type,wdev->func_idx,
+			//	((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[0],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[1],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[2],
+			//	((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[3],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[4],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[5],
+			//	((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[6],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[7],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[8],
+			//	((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[9],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[10],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[11],
+			//	((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[12],((PUCHAR)GET_OS_PKT_DATAPTR(pForwardPacket))[13]));
+#endif
 			Ret = wdev->tx_pkt_ct_handle(pAd, pForwardPacket, que_idx, user_prio);
+#ifdef MWDS
+			/* send bc/mc frame back to the same bss */
+			if ((pHeader802_3[0] & 0x01))
+			{
+			    pSrcAddr = pHeader802_3 + MAC_ADDR_LEN;
+			    if(ISMWDSValid(pAd, wdev->func_idx))
+			    	MWDSSendClonePacket(pAd, wdev->func_idx, pPacket, pSrcAddr);
+			}
+#endif /* MWDS */
 		} else if(wdev->tx_pkt_handle) {
 #ifdef REDUCE_TCP_ACK_SUPPORT
 			ReduceAckUpdateDataCnx(pAd, pForwardPacket);
 			if (ReduceTcpAck(pAd, pForwardPacket) == FALSE)
 #endif
 			{
+#ifndef MWDS
 				wdev->tx_pkt_handle(pAd, pForwardPacket);
+#else
+				Ret = wdev->tx_pkt_handle(pAd, pForwardPacket);
+				/* send bc/mc frame back to the same bss */
+				if ((pHeader802_3[0] & 0x01) && (Ret == NDIS_STATUS_SUCCESS))
+				{
+				    pSrcAddr = pHeader802_3 + MAC_ADDR_LEN;
+			        if(ISMWDSValid(pAd, wdev->func_idx))
+				   		 MWDSSendClonePacket(pAd, wdev->func_idx, pPacket, pSrcAddr);
+				}
+#endif /* MWDS */
 			}
 		
 			RTMPDeQueuePacket(pAd, FALSE, WMM_NUM_OF_AC, WCID_ALL, MAX_TX_PROCESS);

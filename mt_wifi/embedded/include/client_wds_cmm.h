@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -21,7 +20,7 @@
 
 	Abstract:
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __CLIENT_WDS_CMM_H__
 #define __CLIENT_WDS_CMM_H__
 

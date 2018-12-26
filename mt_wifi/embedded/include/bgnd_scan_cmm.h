@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -18,7 +17,7 @@
 
 
  */
-#endif /* MTK_LICENSE */
+
  #ifndef __BGND_SCAN_CMM_H__
 #define __BGND_SCAN_CMM_H__
 #define BGND_SCAN_MACHINE_BASE	0
@@ -36,10 +35,13 @@
 #define BGND_RDD_REQ				4
 #define BGND_RDD_CNCL				5
 #define BGND_RDD_TIMEOUT               		6
-#define BGND_CH_SW_ANN				7
-#define BGND_PARTIAL_SCAN			8
-#define BGND_SCAN_DONE				9
-#define BGND_SCAN_MAX_MSG			10
+#define BGND_OUTBAND_RADAR_FOUND               	7
+#define BGND_OUTBAND_SWITCH               	8
+#define BGND_CH_SW_ANN				9
+#define BGND_PARTIAL_SCAN			10
+#define BGND_SCAN_DONE				11
+#define BGND_DEDICATE_RDD_REQ			12
+#define BGND_SCAN_MAX_MSG			13
 
 #define BGND_SCAN_FUNC_SIZE    (BGND_SCAN_MAX_STATE * BGND_SCAN_MAX_MSG)
 

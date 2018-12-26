@@ -2,8 +2,8 @@
 /* AUTO GEN PLEASE DO NOT MODIFY IT */ 
 
 
-UCHAR BFBackoffvalue_1[] = "! Single SKU Max Power Table (unit is 1 dBm)                                                   	"
-"! 2.4G Channel                                                   	"
+UCHAR BFBackoffvalue_1[] = "!! Single SKU Max Power Table (unit is 1 dBm)                                                   	"
+"!! 2.4G Channel                                                   	"
 "Band: 2.4G MaxPower_4T MaxPower_3T MaxPower_2T                                                	"
 "Ch1 25 25 25                                                	"
 "Ch2 25 25 25                                                	"
@@ -20,7 +20,7 @@ UCHAR BFBackoffvalue_1[] = "! Single SKU Max Power Table (unit is 1 dBm)        
 "Ch13 25 25 25                                                	"
 "Ch14 25 25 25                                                	"
 "                                                   	"
-"! 5G Channel                                                   	"
+"!! 5G Channel                                                   	"
 "Band: 5G MaxPower_4T MaxPower_3T MaxPower_2T                                                	"
 "Ch184 25 25 25                                                	"
 "Ch188 25 25 25                                                	"

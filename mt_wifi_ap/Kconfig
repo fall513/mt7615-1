@@ -1,5 +1,9 @@
+config MT7615_AP
+	tristate "MT7615 AP support"
+	select MT_AP_SUPPORT
+
 config MT_AP_SUPPORT
-	tristate "Ralink RT2860 802.11n AP support"
+	tristate
 #	depends on NET_RADIO 
 	select WIRELESS_EXT
 	select WEXT_SPY
@@ -43,6 +47,12 @@ config MAC_REPEATER_SUPPORT
 	depends on APCLI_SUPPORT
 	depends on RALINK_RT6352 || RALINK_MT7620 || RALINK_MT7603E || MT_AP_SUPPORT
 	default y
+
+config MWDS
+    bool "Mixed WDS(MWDS)"
+    depends on MT_AP_SUPPORT
+    select APCLI_SUPPORT
+    default n
 
 config MUMIMO_SUPPORT
         bool "MU-MIMO Support"
@@ -134,9 +144,19 @@ config BAND_STEERING
 	depends on MT_AP_SUPPORT
 	default n
 
+config RADIO_LINK_SELECTION
+        bool "RADIO_LINK_SELECTION"
+        depends on MT_AP_SUPPORT
+        default n
+
 config LED_CONTROL_SUPPORT
         bool "LED Control Support"
         default y
+
+config GPIO_CONTROL_SUPPORT
+	bool "GPIO Control Support"
+	depends on MT_AP_SUPPORT
+	default n
 
 config RADIUS_ACCOUNTING_SUPPORT
 	bool "Radius Accounting Support"
@@ -147,6 +167,41 @@ config GREENAP_SUPPORT
 	bool "GreenAP Support"
 	depends on MT_AP_SUPPORT
 	default y
+
+config ROAMING_ENHANCE_SUPPORT
+	bool "Roaming Enhance Support"
+	depends on MT_AP_SUPPORT
+	depends on APCLI_SUPPORT
+	default n
+
+config EASY_SETUP_SUPPORT
+	bool "Whole Home Coverage - Easy Setup"
+	depends on MT_AP_SUPPORT
+	default n    
+
+config EASY_MODULE_SUPPORT
+	bool "Whole Home Coverage - Easy Setup Module Support"
+	depends on EASY_SETUP_SUPPORT
+	default n    
+config EVENT_NOTIFIER_SUPPORT
+	bool "Whole Home Coverage - Event Notifier"
+	depends on MT_AP_SUPPORT
+	default n
+
+config AIR_MONITOR
+        bool "Air Monitor"
+        depends on MT_AP_SUPPORT
+        default n
+
+config WNM_SUPPORT
+        bool "802.11v WNM Support"
+        depends on MT_AP_SUPPORT
+        default n
+		
+config STA_FORCE_ROAM_SUPPORT
+        bool "Station Force Roam Support"
+        depends on MT_AP_SUPPORT
+        default n
 
 config LINUX_NET_TXQ_SUPPORT
 	bool "NET TX Queue Support"

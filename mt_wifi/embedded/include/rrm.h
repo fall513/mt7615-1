@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -15,7 +14,7 @@
  * way altering	the	source code	is stricitly prohibited, unless	the	prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 	Abstract:
 
@@ -433,6 +432,24 @@ VOID RRM_PeerNeighborReqAction(
 VOID RRM_PeerMeasureRepAction(
 	IN PRTMP_ADAPTER pAd, 
 	IN MLME_QUEUE_ELEM *Elem);
+
+	
+void init_rrm_capabilities(PRRM_CONFIG pRrmCfg, BSS_STRUCT *pMBss);
+
+int set_rrm_capabilities(RTMP_ADAPTER *pAd, UINT8 *rrm_capabilities);
+
+int rrm_MsgHandle(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq);
+
+int RRM_EnqueueBcnReqAction(
+	IN PRTMP_ADAPTER pAd,
+	IN UINT8 IfIdx,
+	IN p_bcn_req_data_t p_bcn_req_data);
+
+int Set_Dot11kRRM_Enable(RTMP_ADAPTER *pAd, UINT8 enable);
+
+int rrm_send_beacon_req(RTMP_ADAPTER *pAd, p_bcn_req_data_t p_bcn_req_data);
+
+void RRM_measurement_report_to_host(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem);
 
 #endif /* DOT11K_RRM_SUPPORT */
 

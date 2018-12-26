@@ -438,6 +438,12 @@ obj_cmm += \
 endif		
 #endif // CONFIG_HOTSPOT //
 
+#ifdef WH_EZ_SETUP
+ifeq ($(HAS_WH_EASY_SETUP),y)
+obj_cmm += \
+		$(RT28xx_EMBED_RPATH)/easy_setup/ez_hooks.o
+endif		
+#endif // WH_EZ_SETUP //
 
 ###############################################################################
 #
@@ -466,6 +472,7 @@ obj_ap += \
 
 ifeq ($(HAS_MU_MIMO_SUPPORT),y)
 obj_ap += $(RT28xx_EMBED_RPATH)/ap/ap_mumimo.o
+obj_ap += $(RT28xx_EMBED_RPATH)/ap/ap_mura.o
 endif
 
 ifeq ($(HAS_IDS_SUPPORT),y)
@@ -495,6 +502,17 @@ ifeq ($(OSABL),NO)
 obj_ap += \
     $(RT28xx_EMBED_RPATH)/ap/ap_mbss_inf.o\
 	$(RT28xx_RPATH)/os/linux/ap_ioctl.o
+endif
+
+ifeq ($(HAS_MWDS),y)
+obj_ap += \
+    $(RT28xx_EMBED_RPATH)/common/mwds.o \
+    $(RT28xx_EMBED_RPATH)/common/routing_tab.o
+endif
+
+ifeq ($(HAS_WH_EVENT_NOTIFIER),y)
+obj_ap += \
+    $(RT28xx_EMBED_RPATH)/common/event_notifier.o
 endif
 
 #ifdef APCLI_SUPPORT
@@ -782,37 +800,6 @@ endif
 endif
 
 install:
-ifeq ($(PLATFORM),INTELP6)
-	rm -rf $(BUILD_DEST)/etc/Wireless/7615AP/
-	mkdir -p $(BUILD_DEST)/etc/
-	mkdir -p $(BUILD_DEST)/etc/Wireless/
-	mkdir -p $(BUILD_DEST)/etc/Wireless/7615AP/ 
-	cp $(RT28xx_EMBEDDED_DIR)/conf/mt76xx_5.dat $(BUILD_DEST)/etc/Wireless/7615AP/
-	cp $(RT28xx_EMBEDDED_DIR)/conf/mt76xx_24.dat $(BUILD_DEST)/etc/Wireless/7615AP/
-	cp $(RT28xx_EMBEDDED_DIR)/RT30xxEEPROM.bin $(BUILD_DEST)/etc/Wireless/7615AP/
-	#cp $(RT28xx_DIR)/arris_patch/new/SingleSKU.dat $(BUILD_DEST)/etc/Wireless/7615AP/ #ARRIS ADD
-	chmod 777 $(BUILD_DEST)/etc/Wireless/7615AP/ -Rf
-	
-	rm -rf $(FSROOT)/etc/Wireless/7615AP/
-	mkdir -p $(FSROOT)/etc/
-	mkdir -p $(FSROOT)/etc/Wireless/
-	mkdir -p $(FSROOT)/etc/Wireless/7615AP/ 
-	cp $(RT28xx_EMBEDDED_DIR)/conf/mt76xx_5.dat $(FSROOT)/etc/Wireless/7615AP/
-	cp $(RT28xx_EMBEDDED_DIR)/conf/mt76xx_24.dat $(FSROOT)/etc/Wireless/7615AP/
-	cp $(RT28xx_EMBEDDED_DIR)/RT30xxEEPROM.bin $(FSROOT)/etc/Wireless/7615AP/
-	#cp $(RT28xx_DIR)/arris_patch/new/SingleSKU.dat $(FSROOT)/etc/Wireless/7615AP/ #ARRIS ADD
-	chmod 777 $(BUILD_DEST)/etc/Wireless/7615AP -Rf
-	
-ifeq ($(RT28xx_MODE),AP)
-ifeq ($(PLATFORM),INTELP6)
-	install -d $(BUILD_DEST)/lib/modules/wifi/
-	install -m 644 -c $(addsuffix .ko,$(MOD_NAME)) $(BUILD_DEST)/lib/modules/wifi/
-	
-	install -d $(FSROOT)/lib/modules/wifi/
-	install -m 644 -c $(addsuffix .ko,$(MOD_NAME)) $(FSROOT)/lib/modules/wifi/
-endif
-endif
-else
 	rm -rf $(DAT_PATH)
 	$(shell [ ! -f /etc/Wireless ] && mkdir /etc/Wireless)
 	mkdir $(DAT_PATH)
@@ -821,7 +808,6 @@ else
 	install -m 644 -c $(addsuffix .ko,$(MOD_NAME)) $(LINUX_SRC_MODULE)
 	/sbin/depmod -a ${shell uname -r}
 
-endif
 uninstall:
 #	rm -rf $(DAT_PATH)
 	rm -rf $(addprefix $(LINUX_SRC_MODULE),$(addsuffix .ko,$(MOD_NAME)))

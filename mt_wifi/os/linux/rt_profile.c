@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -23,7 +22,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
  */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 #ifdef RTMP_UDMA_SUPPORT
@@ -40,34 +39,30 @@
 
 
 #if defined (CONFIG_RA_HW_NAT)  || defined (CONFIG_RA_HW_NAT_MODULE)
-#include "../../../../../../../net/nat/hw_nat/ra_nat.h"
-#include "../../../../../../../net/nat/hw_nat/frame_engine.h"
+#include "../../../../../../net/nat/hw_nat/ra_nat.h"
+#include "../../../../../../net/nat/hw_nat/frame_engine.h"
 #endif
 
+/* hwnat optimize */
+#ifdef CONFIG_WLAN_LAN_BY_PASS_HWNAT
 /* get br-lan's netmask */
 #include <linux/inetdevice.h> 
 #include <linux/netdevice.h> 
+#endif
 
 #define BSSID_WCID_TO_REMOVE 1
-
-extern int (*ra_sw_nat_hook_rx)(VOID *skb);
 
 struct dev_type_name_map{
 	INT type;
 	RTMP_STRING *prefix[MAX_NUM_OF_INF];
 };
 
-#ifdef INTELP6_SUPPORT
-#define SECOND_INF_MAIN_DEV_NAME	"ra"
-#define SECOND_INF_MBSSID_DEV_NAME	"ra"
-#else
 #if defined(RT_CFG80211_SUPPORT)
 #define SECOND_INF_MAIN_DEV_NAME		"wlani"
 #define SECOND_INF_MBSSID_DEV_NAME	"wlani"
 #else
 #define SECOND_INF_MAIN_DEV_NAME		"rai"
 #define SECOND_INF_MBSSID_DEV_NAME	"rai"
-#endif
 #endif
 #define SECOND_INF_WDS_DEV_NAME		"wdsi"
 #define SECOND_INF_APCLI_DEV_NAME	"apclii"
@@ -114,22 +109,14 @@ struct dev_type_name_map{
 #define THIRD_CHIP_ID	xdef_to_str(MT_THIRD_CARD)
 
 #else
-#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/"
-#ifdef INTELP6_SUPPORT
-#define FIRST_AP_PROFILE_PATH	"/tmp/mt76xx_24.dat"
-#else
-#define FIRST_AP_PROFILE_PATH		"/etc_ro/Wireless/mt7615e.1.2G.dat"
-#endif
-#define FIRST_STA_PROFILE_PATH      "/etc_ro/Wireless/mt7615e.1.2G.dat"
+#define FIRST_EEPROM_FILE_PATH	"/etc_ro/Wireless/RT2860/"
+#define FIRST_AP_PROFILE_PATH		"/etc/Wireless/RT2860/RT2860.dat"
+#define FIRST_STA_PROFILE_PATH      "/etc/Wireless/RT2860/RT2860.dat"
 #define FIRST_CHIP_ID	xdef_to_str(MT_FIRST_CARD)
 
-#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/"
-#ifdef INTELP6_SUPPORT
-#define SECOND_AP_PROFILE_PATH	"/tmp/mt76xx_5.dat"
-#else
-#define SECOND_AP_PROFILE_PATH	"/etc_ro/Wireless/mt7615e.1.5G.dat"
-#endif
-#define SECOND_STA_PROFILE_PATH "/etc_ro/Wireless/mt7615e.1.5G.dat"
+#define SECOND_EEPROM_FILE_PATH	"/etc_ro/Wireless/iNIC/"
+#define SECOND_AP_PROFILE_PATH	"/etc/Wireless/iNIC/iNIC_ap.dat"
+#define SECOND_STA_PROFILE_PATH "/etc/Wireless/iNIC/iNIC_sta.dat"
 
 #define SECOND_CHIP_ID	xdef_to_str(MT_SECOND_CARD)
 
@@ -657,6 +644,7 @@ VOID ApCliLinkCoverRxPolicy(
 	IN PNDIS_PACKET pPacket,
 	OUT BOOLEAN *DropPacket)
 {
+#ifdef MAC_REPEATER_SUPPORT
 	void *opp_band_tbl =NULL;
 	void *band_tbl =NULL;
 	void *other_band_tbl = NULL;
@@ -688,10 +676,12 @@ VOID ApCliLinkCoverRxPolicy(
 			*DropPacket = TRUE;
 		}
 	}
+#endif /* MAC_REPEATER_SUPPORT */	
 }
 #endif /* CONFIG_WIFI_PKT_FWD */
 
 /* hwnat optimize */
+#ifdef CONFIG_WLAN_LAN_BY_PASS_HWNAT
 #if (!defined(CONFIG_RA_NAT_NONE)) || ( defined(BB_SOC) && defined(BB_RA_HWNAT_WIFI) )
 int GetBrLanNetMask(
 	IN	RTMP_ADAPTER *pAd)
@@ -716,6 +706,11 @@ int GetBrLanNetMask(
 		}
 	}
 	in_dev = (struct in_device *)pNetDev->ip_ptr; 
+	if( !in_dev )
+	{
+		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, (" in_dev is NULL!\n"));
+		return 0
+	}
 	// get in_ifaddr
 	if_info = in_dev->ifa_list; 
 	if( if_info )
@@ -728,7 +723,7 @@ int GetBrLanNetMask(
 	return 0;
 }
 #endif
-
+#endif
 
 void announce_802_3_packet(
 	IN VOID *pAdSrc,
@@ -737,10 +732,16 @@ void announce_802_3_packet(
 {
 	RTMP_ADAPTER *pAd = NULL;
 	PNDIS_PACKET pRxPkt = pPacket;
+#if( defined(WH_EZ_SETUP) && (defined (CONFIG_WIFI_PKT_FWD) || defined (CONFIG_WIFI_PKT_FWD_MODULE)))
+	BOOLEAN bypass_rx_fwd = FALSE;
+#endif
 	/* hwnat optimize */
+#ifdef CONFIG_WLAN_LAN_BY_PASS_HWNAT
 #if (!defined(CONFIG_RA_NAT_NONE)) || ( defined(BB_SOC) && defined(BB_RA_HWNAT_WIFI) )
 	BOOLEAN 	 isToLan = FALSE;
 #endif
+#endif
+
 	pAd =  (RTMP_ADAPTER *)pAdSrc;
 	//MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("=>%s(): OpMode=%d\n", __FUNCTION__, OpMode));
 #ifdef DOT11V_WNM_SUPPORT
@@ -754,7 +755,7 @@ void announce_802_3_packet(
 	{
 #ifdef MAT_SUPPORT
 		if (RTMP_MATPktRxNeedConvert(pAd, RtmpOsPktNetDevGet(pRxPkt))) {
-#if defined(CONFIG_WIFI_PKT_FWD) || defined(CONFIG_WIFI_PKT_FWD_MODULE)
+#if defined (CONFIG_WIFI_PKT_FWD)
 		if ((wf_fwd_needed_hook != NULL) && (wf_fwd_needed_hook() == TRUE)) {
 			BOOLEAN	 need_drop = FALSE;
 
@@ -833,7 +834,7 @@ void announce_802_3_packet(
 	}
 #endif /* INF_PPA_SUPPORT */
 
-
+#ifdef CONFIG_WLAN_LAN_BY_PASS_HWNAT
 #if (!defined(CONFIG_RA_NAT_NONE)) || ( defined(BB_SOC) && defined(BB_RA_HWNAT_WIFI) )
 	/* hwnat optimize */
 	if ( (ra_sw_nat_hook_rx != NULL) && pAd->LanNatSpeedUpEn )
@@ -843,7 +844,7 @@ void announce_802_3_packet(
 		PUCHAR		pPktHdr = NULL, pLayerHdr = NULL;
 		UINT32		pSrcIP,pDesIP;
 		
-		struct wifi_dev *wdev = pAd->wdev_list[pAd->CurWdevIdx];
+		struct wifi_dev *wdev = pAd->wdev_list[pAd->HwnatCurWdevIdx];
 		/* wdev should not be apcli or Null*/
 		if( (wdev!=NULL)
 #ifdef APCLI_SUPPORT
@@ -852,7 +853,7 @@ void announce_802_3_packet(
 			)
 		{
 			
-			MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("RecvIF Name=(%s)\n",wdev->if_dev->name ));
+			MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("RecvIF Name=(%s)\n",wdev->if_dev->name ));
 			pPktHdr = GET_OS_PKT_DATAPTR(pRxPkt);
 			
 			if ( pPktHdr )
@@ -870,10 +871,10 @@ void announce_802_3_packet(
 				// handle 802.2 enabled packet. Skip LLC field to get the protocol type. 
 				else if( protoType < 1536 ) 
 				{
-					MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("protoType < 1536 pPktHdr: "));
+					MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("protoType < 1536 pPktHdr: "));
 					for( i = 0 ; i < 30 ; i++ )
-						MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("%02X ",*(pPktHdr+i)));
-					MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("\n"));
+						MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%02X ",*(pPktHdr+i)));
+					MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("\n"));
 					
 					if (pPktHdr[14] == 0xAA && pPktHdr[15] == 0xAA && pPktHdr[16] == 0x03)
 					{
@@ -894,8 +895,8 @@ void announce_802_3_packet(
 						if( pAd->isInitBrLan == 0 )
 							GetBrLanNetMask( pAd );
 							
-						MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("pSrcIP=(%d.%d.%d.%d) %08X&%08X \n", pSrcIP&0xff, (pSrcIP>>8)&0xff, (pSrcIP>>16)&0xff, (pSrcIP>>24)&0xff , pSrcIP,pAd->BrLanMask) );
-						MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("pDesIP=(%d.%d.%d.%d) %08X&%08X \n", pDesIP&0xff, (pDesIP>>8)&0xff, (pDesIP>>16)&0xff, (pDesIP>>24)&0xff , pDesIP,pAd->BrLanMask) );
+						MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("pSrcIP=(%d.%d.%d.%d) %08X&%08X \n", pSrcIP&0xff, (pSrcIP>>8)&0xff, (pSrcIP>>16)&0xff, (pSrcIP>>24)&0xff , pSrcIP,pAd->BrLanMask) );
+						MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("pDesIP=(%d.%d.%d.%d) %08X&%08X \n", pDesIP&0xff, (pDesIP>>8)&0xff, (pDesIP>>16)&0xff, (pDesIP>>24)&0xff , pDesIP,pAd->BrLanMask) );
 						if( ( pSrcIP & pAd->BrLanMask ) == ( pDesIP & pAd->BrLanMask ) )
 							isToLan = TRUE;
 						
@@ -909,10 +910,11 @@ void announce_802_3_packet(
 						break;
 				}
 				
-				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("isToLan = %d \n", isToLan ));
+				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("isToLan = %d \n", isToLan ));
 			}
 		}
 	}
+#endif
 #endif
 
 	{
@@ -933,7 +935,9 @@ void announce_802_3_packet(
 
 #if !defined(CONFIG_RA_NAT_NONE)
 	/* hwnat optimize */
+#ifdef CONFIG_WLAN_LAN_BY_PASS_HWNAT
 	if( !isToLan )
+#endif
 	{
 
 #if defined (CONFIG_RA_HW_NAT)  || defined (CONFIG_RA_HW_NAT_MODULE)
@@ -994,7 +998,9 @@ void announce_802_3_packet(
 
 #if defined(BB_SOC) && defined(BB_RA_HWNAT_WIFI)
 	/* hwnat optimize */
+#ifdef CONFIG_WLAN_LAN_BY_PASS_HWNAT
 	if( !isToLan )
+#endif
 	{
 		if (ra_sw_nat_hook_set_magic)
 			ra_sw_nat_hook_set_magic(pRxPkt, FOE_MAGIC_WLAN);
@@ -1025,6 +1031,8 @@ void announce_802_3_packet(
 #ifdef MAC_REPEATER_SUPPORT
 							if ((pAd->ApCfg.bMACRepeaterEn == TRUE) &&
 								(RTMPQueryLookupRepeaterCliEntryMT(pAd, mh->h_source, TRUE) == TRUE)) {
+								//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, 
+								//    ("announce_802_3_packet: drop rx pkt by RTMPQueryLookupRepeaterCliEntryMT check\n"));
 								RELEASE_NDIS_PACKET(pAd, pRxPkt, NDIS_STATUS_FAILURE);
 								return;
 							}
@@ -1045,6 +1053,8 @@ void announce_802_3_packet(
 										((((REPEATER_ADAPTER_DATA_TABLE *)band_tbl)->Wdev_ifAddr_DBDC !=NULL) &&
 										MAC_ADDR_EQUAL(((UCHAR *)((REPEATER_ADAPTER_DATA_TABLE *)band_tbl)->Wdev_ifAddr_DBDC), mh->h_source)))
 										{
+										//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, 
+										//    ("announce_802_3_packet: drop rx pkt by wf_fwd_feedback_map_table band_tbl check of source addr against Wdev_ifAddr\n"));
 											RELEASE_NDIS_PACKET(pAd, pRxPkt, NDIS_STATUS_FAILURE);
 											return;
 										}
@@ -1055,6 +1065,8 @@ void announce_802_3_packet(
 										((((REPEATER_ADAPTER_DATA_TABLE *)opp_band_tbl)->Wdev_ifAddr_DBDC !=NULL) &&
 										(MAC_ADDR_EQUAL(((UCHAR *)((REPEATER_ADAPTER_DATA_TABLE *)opp_band_tbl)->Wdev_ifAddr_DBDC), mh->h_source))))
 										{
+										//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, 
+										//    ("announce_802_3_packet: drop rx pkt by wf_fwd_feedback_map_table opp_band_tbl check of source addr against Wdev_ifAddr\n"));
 											RELEASE_NDIS_PACKET(pAd, pRxPkt, NDIS_STATUS_FAILURE);
 											return;
 										}
@@ -1066,6 +1078,8 @@ void announce_802_3_packet(
 										((((REPEATER_ADAPTER_DATA_TABLE *)other_band_tbl)->Wdev_ifAddr_DBDC !=NULL) &&
 										(MAC_ADDR_EQUAL(((UCHAR *)((REPEATER_ADAPTER_DATA_TABLE *)other_band_tbl)->Wdev_ifAddr_DBDC), mh->h_source))))
 										{
+										//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, 
+										// ("announce_802_3_packet: drop rx pkt by wf_fwd_feedback_map_table other_band_tbl check of source addr against Wdev_ifAddr\n"));
 											RELEASE_NDIS_PACKET(pAd, pRxPkt, NDIS_STATUS_FAILURE);
 											return;
 										}
@@ -1073,16 +1087,51 @@ void announce_802_3_packet(
 							}
 						}
 					}
+#ifdef WH_EZ_SETUP
+					if (IS_EZ_SETUP_ENABLED(pAd->wdev_list[pAd->CurWdevIdx]))
+					{
+						struct wifi_dev *wdev = pAd->wdev_list[pAd->CurWdevIdx];
+#ifdef EZ_MOD_SUPPORT
+						//interface_info_t other_band_config;			
+						if (ez_need_bypass_rx_fwd(wdev)
+							/*wdev->wdev_type == WDEV_TYPE_APCLI && ez_get_other_band_info(pAd,wdev, &other_band_config)
+							&& !wdev->ez_security.this_band_info.shared_info.link_duplicate 
+							&& !MAC_ADDR_EQUAL(other_band_config.cli_peer_ap_mac ,ZERO_MAC_ADDR)*/)
+#else
+						interface_info_t other_band_config; 		
+						if (wdev->wdev_type == WDEV_TYPE_APCLI && ez_get_other_band_info(pAd,wdev, &other_band_config)
+							&& !wdev->ez_security.this_band_info.shared_info.link_duplicate 
+							&& !MAC_ADDR_EQUAL(other_band_config.cli_peer_ap_mac ,ZERO_MAC_ADDR))
+#endif
+						{
+							bypass_rx_fwd = TRUE;
+						} else {
+							bypass_rx_fwd = FALSE;
+						}
+					} else
+					{
+						bypass_rx_fwd = FALSE;
+					}
+					if (!bypass_rx_fwd) {
+#endif		
 					
 					ret = wf_fwd_rx_hook(pRxPkt);
 
 					if (ret == 0) {
+						//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, 
+						//    ("announce_802_3_packet: wf_fwd_rx_hook returned 0\n"));
 						return;
 					} else if (ret == 2) {
+						//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, 
+						//    ("announce_802_3_packet: wf_fwd_rx_hook returned 2\n"));
 						RELEASE_NDIS_PACKET(pAd, pRxPkt, NDIS_STATUS_FAILURE);
 						return;
 					}
+#ifdef WH_EZ_SETUP		
 				}
+#endif			
+				}
+					
  			}
 			else
 				MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
@@ -1309,12 +1358,75 @@ int RTMPSendPackets(
 #endif /* CONFIG_5VT_ENHANCE */
 
 
+#ifdef WH_EZ_SETUP
+	if(IS_EZ_SETUP_ENABLED(wdev)
+	//hex_dump("RTMPSendPackets: Eth Hdr: ",GET_OS_PKT_DATAPTR(pPacket),14)
+	/*if( MAC_ADDR_IS_GROUP( ( (PUCHAR)GET_OS_PKT_DATAPTR(pPacket) ) ) ){
+		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN, ("RTMPSendPackets: wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x\nEth Hdr: Dest[%02x-%02x-%02x-%02x-%02x-%02x] Source[%02x-%02x-%02x-%02x-%02x-%02x] Type[%02x-%02x]\n",
+		wdev->wdev_idx,wdev->wdev_type,wdev->func_idx,
+		((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[0],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[1],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[2],
+		((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[3],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[4],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[5],
+		((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[6],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[7],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[8],
+		((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[9],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[10],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[11],
+		((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[12],((PUCHAR)GET_OS_PKT_DATAPTR(pPacket))[13]));
+	}*/
+	
+#ifdef EZ_API_SUPPORT	
+#ifdef EZ_MOD_SUPPORT
+	 && (wdev->ez_driver_params.ez_api_mode != CONNECTION_OFFLOAD) 
+#else
+	 && (wdev->ez_security.ez_api_mode != CONNECTION_OFFLOAD) 
+#endif
+#endif	 
+	 && (wdev->wdev_type == WDEV_TYPE_APCLI) )
+	{
+#ifdef EZ_MOD_SUPPORT	
+		if (ez_handle_send_packets(wdev, pPacket) == 0)
+			return 0;
+#else
+		UCHAR *pDestAddr = GET_OS_PKT_DATAPTR(pPacket);
+
+#ifdef EZ_DUAL_BAND_SUPPORT
+		if((wdev->ez_security.ez_loop_chk_timer_running) && (wdev->ez_security.first_loop_check) &&  (MAC_ADDR_IS_GROUP(pDestAddr))){ // only source runs timer, so role chk not required
+		    EZ_DEBUG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+			    ("APCLi=> wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x : Drop Tx Pkt as Loop Check triggered by this source\n",
+		    	wdev->wdev_idx,wdev->wdev_type,wdev->func_idx));
+			RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_FAILURE);
+			return 0;
+		}
+#endif
+
+		//hex_dump("RTMPSendPackets: Eth Hdr: ",pDestAddr,14);
+
+		if(pDestAddr && MAC_ADDR_IS_GROUP(pDestAddr)){ // group packet
+			//EZ_DEBUG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+			//    ("RTMPSendPackets: APCLi=> wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x: Group packet on ApCli interface\n",
+			//	  wdev->wdev_idx,wdev->wdev_type,wdev->func_idx));
+
+			if( ez_apcli_tx_grp_pkt_drop(wdev, (struct sk_buff *)pPacket) == TRUE)
+			{
+				//EZ_DEBUG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,("APCLi=> wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x : ApCli will drop this other band rcvd pkt\n",
+					//wdev->wdev_idx,wdev->wdev_type,wdev->func_idx));
+				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_FAILURE);
+				return 0;
+			}			
+		}
+		else if(pDestAddr && (!MAC_ADDR_IS_GROUP(pDestAddr))){
+			ez_apcli_uni_tx_on_dup_link(wdev,(struct sk_buff *)pPacket);
+		}
+#endif
+	}
+#endif
+
 #if defined(CONFIG_WIFI_PKT_FWD) || defined(CONFIG_WIFI_PKT_FWD_MODULE)
 	if ((wf_fwd_needed_hook != NULL) && (wf_fwd_needed_hook() == TRUE)) {
 		if (wf_fwd_tx_hook != NULL)
 		{
 			if (wf_fwd_tx_hook(pPacket) == 1)
 			{
+				//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,
+				//    ("RTMPSendPackets: wdev_idx=0x%x, wdev_type=0x%x, func_idx=0x%x : wf_fwd_tx_hook indicated Packet DROP\n",
+				//	   wdev->wdev_idx,wdev->wdev_type,wdev->func_idx));
 				RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_FAILURE);
 				return 0;
 			}

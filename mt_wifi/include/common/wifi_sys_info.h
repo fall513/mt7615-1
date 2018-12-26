@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	--------	----------  ----------------------------------------------
 	Name		Date	    Modification logs
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __WIFI_SYS_INFO_H__
 #define __WIFI_SYS_INFO_H__
 
@@ -157,9 +156,6 @@ typedef struct _LINKUP_HWCTRL{
 VOID WifiSysInfoReset(struct _WIFI_SYS_INFO *pWifiSysInfo);
 VOID WifiSysInfoInit(struct _RTMP_ADAPTER *pAd);
 VOID WifiSysInfoDump(struct _RTMP_ADAPTER *pAd);
-VOID WifiSysInfoBssInfoDump(RTMP_ADAPTER *pAd);
-
-
 
 
 VOID WifiSysOpen(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev);
@@ -170,8 +166,9 @@ VOID WifiSysClose(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev);
 VOID WifiSysApLinkDown(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev);
 VOID WifiSysApLinkUp(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev);
 VOID WifiSysApPeerLinkUp(struct _RTMP_ADAPTER *pAd,struct _MAC_TABLE_ENTRY *pEntry, struct _IE_lists *ie_list);
-
-
+#ifdef WH_EZ_SETUP
+VOID WifiSysApPeerChBwUpdate(struct _RTMP_ADAPTER *pAd,struct _MAC_TABLE_ENTRY *pEntry);//, struct _IE_lists *ie_list);
+#endif
 #ifdef WDS_SUPPORT
 VOID WifiSysWdsLinkUp(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev, UCHAR wcid);
 VOID WifiSysWdsLinkDown(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev, UCHAR wcid);
@@ -183,7 +180,9 @@ VOID WifiSysWdsLinkDown(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev, UCHAR w
 #ifdef APCLI_SUPPORT
 VOID WifiSysApCliLinkUp(struct _RTMP_ADAPTER *pAd,struct _APCLI_STRUCT *pApCliEntry,UCHAR CliIdx, struct _MAC_TABLE_ENTRY *pMacEntry);
 VOID WifiSysApCliLinkDown(struct _RTMP_ADAPTER *pAd,struct _APCLI_STRUCT *pApCliEntry,UCHAR CliIdx);
-
+#ifdef WH_EZ_SETUP
+VOID WifiSysApCliChBwUpdate(struct _RTMP_ADAPTER *pAd,struct _APCLI_STRUCT *pApCliEntry,UCHAR CliIdx, struct _MAC_TABLE_ENTRY *pMacEntry);
+#endif
 #endif /*APCLI*/
 
 

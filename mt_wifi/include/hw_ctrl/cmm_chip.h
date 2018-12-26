@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __CMM_CHIP_H__
 #define __CMM_CHIP_H__
@@ -375,6 +374,7 @@ typedef struct _RTMP_CHIP_OP {
     INT32 (*archSetAid)(struct _RTMP_ADAPTER *pAd, UINT16 Aid);
     INT32 (*BfApClientCluster)(struct _RTMP_ADAPTER *pAd, UCHAR ucWlanId, UCHAR ucCmmWlanId);
     INT32 (*BfReptClonedStaToNormalSta)(struct _RTMP_ADAPTER *pAd, UCHAR ucWlanId, UCHAR ucCliIdx);
+    INT32 (*BfeeHwCtrl)(struct _RTMP_ADAPTER *pAd, BOOLEAN fgBfeeEn);
 #endif /* MT_MAC */
 #endif /* TXBF_SUPPORT */
 #ifdef SMART_CARRIER_SENSE_SUPPORT

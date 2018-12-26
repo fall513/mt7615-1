@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	client.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __CLIENT_H__
 #define __CLIENT_H__
 

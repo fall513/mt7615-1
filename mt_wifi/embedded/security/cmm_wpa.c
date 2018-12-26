@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,6 @@
 	Jan	Lee		03-07-22		Initial
 	Paul Lin	03-11-28		Modify for supplicant
 */
-#endif /* MTK_LICENSE */
 #include "rt_config.h"
 
 /* --------------------EddySEC Start---------------- */
@@ -1148,6 +1146,7 @@ VOID RTMPToWirelessSta(
     PNDIS_PACKET pPacket;
     NDIS_STATUS Status;
 	struct wifi_dev *wdev;
+	//UINT8 debug_level_bkp = DebugLevel;
 
 	if ((!pEntry) || (!IS_ENTRY_CLIENT(pEntry) && !IS_ENTRY_APCLI(pEntry)
 #ifdef MAC_REPEATER_SUPPORT
@@ -1179,12 +1178,11 @@ VOID RTMPToWirelessSta(
 
 	RTMP_SET_PACKET_WCID(pPacket, (UCHAR)pEntry->wcid);
 	// TODO: shiang-usw, fix this!
-	if (!pEntry->wdev) {
-		RELEASE_NDIS_PACKET(pAd, pPacket, NDIS_STATUS_FAILURE);
+	if (!pEntry->wdev)
 		return;
-	}
 	RTMP_SET_PACKET_WDEV(pPacket, pEntry->wdev->wdev_idx);
 	RTMP_SET_PACKET_MOREDATA(pPacket, FALSE);
+
 
 	/* send out the packet */
 	wdev = pEntry->wdev;
@@ -1278,7 +1276,7 @@ VOID MlmeDeAuthAction(
 		MlmeFreeMemory( pOutBuffer);
 
 		/* ApLogEvent(pAd, pEntry->Addr, EVENT_DISASSOCIATED);*/
-#ifdef CONFIG_HOTSPOT_R2
+#if defined (CONFIG_HOTSPOT_R2) || defined(CONFIG_DOT11V_WNM)
 		if (!pEntry->IsKeep)
 #endif /* CONFIG_HOTSPOT_R2 */
 		MacTableDeleteEntry(pAd, pEntry->wcid, pEntry->Addr);
@@ -3739,35 +3737,6 @@ BOOLEAN WpaMessageSanity (
                 MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("MIC Different in group msg %d of 2-way handshake!\n", (MsgType - EAPOL_PAIR_MSG_4)));
             }
 
-#ifdef VENDOR_FEATURE6_SUPPORT
-			{
-				int k=0;
-				UCHAR mic_hex[2];
-				UCHAR *event_msg = NULL;
-				os_alloc_mem(NULL, (UCHAR **)&event_msg, 768);
-				if(event_msg)
-				{
-					NdisZeroMemory(event_msg, 768);
-					sprintf(event_msg, "(%02x:%02x:%02x:%02x:%02x:%02x) --> %s%d (%s) failed\n",
-							PRINT_MAC(pEntry->Addr), INF_MAIN_DEV_NAME, pEntry->wdev->wdev_idx, pEntry->pMbss->Ssid);
-					strcat(event_msg, "Desired  MIC: ");
-					for(k=0;k<LEN_KEY_DESC_MIC;k++)
-					{
-						sprintf(mic_hex, "%02x ", mic[k]);
-						strcat(event_msg, mic_hex);
-					}
-					strcat(event_msg, "\nReceived MIC: ");
-					for(k=0;k<LEN_KEY_DESC_MIC;k++)
-					{
-						sprintf(mic_hex, "%02x ", rcvd_mic[k]);
-						strcat(event_msg, mic_hex);
-					}
-					strcat(event_msg, "\n");
-					MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s\n", event_msg));
-					os_free_mem(event_msg);
-				}
-			}
-#endif
             hex_dump("Received MIC", rcvd_mic, LEN_KEY_DESC_MIC);
             hex_dump("Desired  MIC", mic, LEN_KEY_DESC_MIC);
             goto LabelErr;
@@ -4203,10 +4172,16 @@ VOID WPABuildPairMsg4 (
 
     os_free_mem(mpool);
 
-#if defined(CONFIG_AP_SUPPORT) && defined(APCLI_AUTO_CONNECT_SUPPORT)
+    /* open 802.1x port control and privacy filter*/
+    tr_entry = &pAd->MacTab.tr_entry[pEntry->wcid];
+    tr_entry->PortSecured = WPA_802_1X_PORT_SECURED;
+    pEntry->PrivacyFilter = Ndis802_11PrivFilterAcceptAll;
+
+#ifdef CONFIG_AP_SUPPORT
 	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
 	{
 		if (IS_ENTRY_APCLI(pEntry)) {
+#ifdef APCLI_AUTO_CONNECT_SUPPORT
 			UCHAR	ifIdx = 0;
 			if (pEntry->wdev)
 				ifIdx = pEntry->wdev->func_idx;
@@ -4216,9 +4191,32 @@ VOID WPABuildPairMsg4 (
 				 MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("Apcli auto connected:WPABuildPairMsg4(),pAd->ApCfg.ApCliAutoConnectRunning[%d]=%d\n",
 										  ifIdx,pAd->ApCfg.ApCliAutoConnectRunning[ifIdx]));
 			}
+#endif /* APCLI_AUTO_CONNECT_SUPPORT*/
+
+#ifdef APCLI_SUPPORT
+#ifdef MWDS
+		if(pEntry &&
+			(pEntry->func_tb_idx < MAX_APCLI_NUM) &&
+			tr_entry)
+		{
+			if((tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+				MWDSAPCliPeerEnable(pAd, &pAd->ApCfg.ApCliTab[pEntry->func_tb_idx], pEntry);
+		}
+#endif /* MWDS */
+#ifdef WH_EVENT_NOTIFIER
+            if (pEntry && tr_entry && 
+                (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+            {
+                EventHdlr pEventHdlrHook = NULL;
+                pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_EXT_UPLINK_STAT);
+                if(pEventHdlrHook && pEntry->wdev)
+                    pEventHdlrHook(pAd, pEntry, (UINT32)WHC_UPLINK_STAT_CONNECTED);
+            }
+#endif /* WH_EVENT_NOTIFIER */
+#endif /* APCLI_SUPPORT */
 		}
 	}
-#endif /* CONFIG_AP_SUPPORT && APCLI_AUTO_CONNECT_SUPPORT*/
+#endif /* CONFIG_AP_SUPPORT */
 	
 	
 
@@ -4227,6 +4225,18 @@ VOID WPABuildPairMsg4 (
 		__FUNCTION__, pEntry->wcid, STATE_PORT_SECURE));
 
 
+#ifdef WH_EZ_SETUP
+	if(IS_EZ_SETUP_ENABLED(pEntry->wdev) && (IS_ENTRY_APCLI(pEntry)) ){
+#ifndef EZ_MOD_SUPPORT
+		EZ_UPDATE_CAPABILITY_INFO(pAd, EZ_SET_ACTION, CONNECTED, pEntry->func_tb_idx);
+#endif
+	//	ez_apclient_info_action_frame(pAd, pEntry->wdev);
+#ifdef NEW_CONNECTION_ALGO
+		/*APCLI has connected to a non-easy setup AP, allocate itself a new node number according to the MAC address of the root AP and its own aid.*/
+		ez_handle_pairmsg4(pAd, pEntry);
+#endif
+	}
+#endif /* WH_EZ_SETUP */
     MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("<=== %s: send Msg4 of 4-way \n", __FUNCTION__));
 }
 
@@ -4325,6 +4335,46 @@ VOID WPABuildGroupMsg2 (
                                     pSecConfig, /* Pairwise */
                                     pSecConfig, /* Group */
                                     pEapolFrame);
+
+#ifdef CONFIG_AP_SUPPORT
+	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
+	{
+#ifdef APCLI_SUPPORT
+#ifdef MWDS
+		if(pEntry &&
+			IS_ENTRY_APCLI(pEntry) &&
+			(pEntry->func_tb_idx < MAX_APCLI_NUM))
+		{
+			STA_TR_ENTRY *tr_entry = NULL;
+			if(VALID_TR_WCID(pEntry->wcid))
+				tr_entry = &pAd->MacTab.tr_entry[pEntry->wcid];
+
+			if(tr_entry && (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+				MWDSAPCliPeerEnable(pAd, &pAd->ApCfg.ApCliTab[pEntry->func_tb_idx], pEntry);
+		}
+#endif /* MWDS */
+
+#ifdef WH_EVENT_NOTIFIER
+		if(pEntry &&
+		   IS_ENTRY_APCLI(pEntry))
+	        {
+	            STA_TR_ENTRY *tr_entry = NULL;
+	            EventHdlr pEventHdlrHook = NULL;
+	            if(VALID_TR_WCID(pEntry->wcid))
+	                tr_entry = &pAd->MacTab.tr_entry[pEntry->wcid];
+
+	            if(tr_entry && (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+	            {
+	                pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_EXT_UPLINK_STAT);
+	                if(pEventHdlrHook && pEntry->wdev)
+	                    pEventHdlrHook(pAd, pEntry, (UINT32)WHC_UPLINK_STAT_CONNECTED);
+	            }
+	        }
+#endif /* WH_EVENT_NOTIFIER */
+#endif /* APCLI_SUPPORT */
+	}
+#endif /* CONFIG_AP_SUPPORT */
+
 
     /* Make outgoing frame: Supplicant send to Authenticator */
     MAKE_802_3_HEADER(Header802_3, pHandshake4Way->AAddr, pHandshake4Way->SAddr, EAPOL);
@@ -4496,7 +4546,7 @@ VOID PeerPairMsg2Action(
                                             ptk_len,
                                             pEntry->FT_PTK,
                                             pEntry->PTK_NAME);
-	    NdisCopyMemory(pSecConfig->PTK, pEntry->FT_PTK, LEN_MAX_PTK);
+	    	NdisCopyMemory(pSecConfig->PTK, pEntry->FT_PTK, LEN_MAX_PTK);
 
         }
 #endif /* CONFIG_AP_SUPPORT */
@@ -4722,12 +4772,19 @@ VOID PeerPairMsg4Action(
                 EvtAssoc.SeqNum = 0;
                 NdisMoveMemory(EvtAssoc.MacAddr, pEntry->Addr, MAC_ADDR_LEN);
 
-                FT_KDP_EVENT_INFORM(pAd,
-                                                            pEntry->func_tb_idx,
-                                                            FT_KDP_SIG_FT_ASSOCIATION,
-                                                            &EvtAssoc,
-                                                            sizeof(EvtAssoc),
-                                                            NULL);
+#ifdef WH_EZ_SETUP
+				if (!IS_EZ_SETUP_ENABLED(&pAd->ApCfg.MBSSID[pEntry->func_tb_idx].wdev) && !ez_is_triband())
+#endif
+				{
+					
+		            FT_KDP_EVENT_INFORM(pAd,
+		                                pEntry->func_tb_idx,
+		                                FT_KDP_SIG_FT_ASSOCIATION,
+		                                &EvtAssoc,
+		                                sizeof(EvtAssoc),
+		                                NULL);
+					
+				}
             }
 #endif /* IAPP_SUPPORT 				*/
 
@@ -4763,7 +4820,21 @@ VOID PeerPairMsg4Action(
             MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("Calc PMKID=%02x:%02x:%02x:%02x:%02x:%02x\n", digest[0],digest[1],digest[2],digest[3],digest[4],digest[5]));
         }
 #endif /* DOT1X_SUPPORT */
+#ifdef MWDS
+	if((tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+	    MWDSAPPeerEnable(pAd, pEntry);
+#endif /* MWDS */
 #endif /* CONFIG_AP_SUPPORT */
+
+#ifdef WH_EVENT_NOTIFIER
+        if (pEntry && tr_entry && (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+        {
+            EventHdlr pEventHdlrHook = NULL;
+            pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_STA_JOIN);
+            if(pEventHdlrHook && pEntry->wdev)
+                pEventHdlrHook(pAd, pEntry, Elem);
+        }
+#endif /* WH_EVENT_NOTIFIER */
 
         /* send wireless event - for set key done WPA2*/
         RTMPSendWirelessEvent(pAd, IW_SET_KEY_DONE_WPA2_EVENT_FLAG, pEntry->Addr, pEntry->wdev->wdev_idx, 0);
@@ -4783,6 +4854,8 @@ VOID PeerPairMsg4Action(
             printk("!!!!msg 4 send wnm req\n");
         }
 
+#endif
+#if defined(CONFIG_HOTSPOT_R2) || defined (CONFIG_DOT11V_WNM)
         if (pEntry->IsBTMReqValid == TRUE)
         {
             struct btm_req_data *req_data = pEntry->ReqbtmData;
@@ -4798,7 +4871,7 @@ VOID PeerPairMsg4Action(
 #endif
 
         MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-                ("AP SETKEYS DONE - AKMMap=%s, PairwiseCipher=%s, GroupCipher=%s, wcid=%d from %02X:%02X:%02X:%02X:%02X:%02X\n\n",
+                ("AP SETKEYS DONE - AKMMap=%s, PairwiseCipher=%s, GroupCipher=%s, wcid=%d from %02X:%02X:%02X:%02X:%02X:%02X\n",
                             GetAuthModeStr(pSecConfig->AKMMap),
                             GetEncryModeStr(pSecConfig->PairwiseCipher),
                             GetEncryModeStr(pSecConfig->GroupCipher),
@@ -4807,12 +4880,12 @@ VOID PeerPairMsg4Action(
 		if ((!IS_AKM_OPEN(GET_SEC_AKM(pSecConfig))) && tr_entry->PortSecured == 1)
 		{
 			INT32 i;
-			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("PTK:"));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("PTK:"));
 			
 			for (i=0;i<64;i++) {
-				MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%02x",pSecConfig->PTK[i]));
+				MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%02x",pSecConfig->PTK[i]));
 			}
-			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\n"));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("\n"));
 		}
     }
     else
@@ -4886,6 +4959,32 @@ VOID PeerGroupMsg2Action(
     RTMPCancelTimer(&pHandshake4Way->MsgRetryTimer, &Cancelled);
     pSecConfig->Handshake.GTKState = REKEY_ESTABLISHED;
 
+#ifdef MWDS
+    if(1)
+    {
+        STA_TR_ENTRY *tr_entry = NULL;
+        if(VALID_TR_WCID(pEntry->wcid))
+            tr_entry = &pAd->MacTab.tr_entry[pEntry->wcid];
+
+        if(tr_entry && (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+    	    MWDSAPPeerEnable(pAd, pEntry);
+    }
+#endif /* MWDS */
+
+#ifdef WH_EVENT_NOTIFIER
+    if (VALID_TR_WCID(pEntry->wcid))
+    {
+        EventHdlr pEventHdlrHook = NULL;
+        STA_TR_ENTRY *tr_entry = &pAd->MacTab.tr_entry[pEntry->wcid];
+        if(tr_entry && (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+        {
+            pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_STA_JOIN);
+            if(pEventHdlrHook && pEntry->wdev)
+                pEventHdlrHook(pAd, pEntry, Elem);
+        }
+    }
+#endif /* WH_EVENT_NOTIFIER */
+
     if (IS_AKM_WPA2(pSecConfig->AKMMap)
         || IS_AKM_WPA2PSK(pSecConfig->AKMMap))
     {
@@ -4898,7 +4997,7 @@ VOID PeerGroupMsg2Action(
         RTMPSendWirelessEvent(pAd, IW_SET_KEY_DONE_WPA1_EVENT_FLAG, pEntry->Addr, pEntry->wdev->wdev_idx, 0);
     }
 
-    MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("AP SETKEYS DONE - AKMMap=%s, PairwiseCipher=%s, GroupCipher=%s from %02X:%02X:%02X:%02X:%02X:%02X\n\n",
+    MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("AP SETKEYS DONE - AKMMap=%s, PairwiseCipher=%s, GroupCipher=%s from %02X:%02X:%02X:%02X:%02X:%02X\n",
 		GetAuthModeStr(pSecConfig->AKMMap),
 		GetEncryModeStr(pSecConfig->PairwiseCipher),
 		GetEncryModeStr(pSecConfig->GroupCipher),
@@ -5137,7 +5236,27 @@ static VOID WpaEAPOLKeyAction(
                         EAPOL-Key(0,1,1,1,P,0,KeyRSC,ANonce,MIC,DataKD_M3)
                  */
                 if (peerKeyInfo.KeyMic == 0)
-                    PeerPairMsg1Action(pAd, pEntry, &pEntry->SecConfig, Elem);
+                {
+#ifdef APCLI_CERT_SUPPORT
+					/*fix for multiple eapol1 frames from Marvel testbed AP*/
+					if((IS_ENTRY_APCLI(pEntry)) && (pAd->bApCliCertTest == TRUE))
+					{
+	                	if(pSecConfig->Handshake.WpaState < AS_PTKINIT_NEGOTIATING)
+
+						{
+                    		PeerPairMsg1Action(pAd, pEntry, &pEntry->SecConfig, Elem);
+						}
+						else
+						{
+							MTWF_LOG(DBG_CAT_SEC, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("already processed EAPOL1 frame, WPA_STATE >= AS_PTKINIT_NEGOTIATING\n"));
+							return;
+						}
+					}
+					else
+#endif /*APCLI_CERT_SUPPORT*/
+					PeerPairMsg1Action(pAd, pEntry, &pEntry->SecConfig, Elem);
+
+                }
                 else
                     PeerPairMsg3Action(pAd, pEntry, &pEntry->SecConfig, Elem);
             }

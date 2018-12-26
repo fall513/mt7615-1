@@ -10,10 +10,17 @@ struct _RTMP_ADAPTER;
 #define RALINK_256QAM_CAP   (1 << 3)
 
 #define MEDIATEK_256QAM_CAP (1 << 3)
-
+#ifdef WH_EZ_SETUP
+#define MEDIATEK_EASY_SETUP (1 << 6)
+#endif
+#ifdef MWDS
+#define MEDIATEK_MWDS_CAP   (1 << 7)
+#endif
 #define BROADCOM_256QAM_CAP (1 << 0)
-#define BROADCOM_2G_4SS_CAP (1 << 4)
 
+#ifdef STA_FORCE_ROAM_SUPPORT
+#define MEDIATEK_CLI_ENTRY (1 << 4)
+#endif
 
 typedef struct GNU_PACKED _ie_hdr {
     UCHAR eid;
@@ -81,7 +88,11 @@ struct GNU_PACKED _broadcom_ie {
 
 
 ULONG build_vendor_ie(struct _RTMP_ADAPTER *pAd, 
-        struct wifi_dev *wdev, UCHAR *frame_buffer);
+        struct wifi_dev *wdev, UCHAR *frame_buffer
+#ifdef WH_EZ_SETUP
+		, UCHAR SubType
+#endif
+		);
 
 VOID check_vendor_ie(struct _RTMP_ADAPTER *pAd,
         UCHAR *ie_buffer, struct _vendor_ie_cap *vendor_ie);

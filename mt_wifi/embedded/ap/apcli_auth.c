@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +24,7 @@
 	Who			When			What
 	--------	----------		-------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifdef APCLI_SUPPORT
 
 #include "rt_config.h"
@@ -91,6 +90,12 @@ static VOID ApCliMlmeAuthReqAction(
 	UCHAR CliIdx = 0xFF;
     REPEATER_CLIENT_ENTRY *pReptEntry = NULL;
 #endif /* MAC_REPEATER_SUPPORT */
+#ifdef WH_EZ_SETUP
+	struct wifi_dev *wdev;
+
+	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
+		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("ApCliMlmeAuthReqAction()\n"));
+#endif /* WH_EZ_SETUP */
 
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
@@ -143,6 +148,14 @@ static VOID ApCliMlmeAuthReqAction(
 		Seq = 1;
 		Status = MLME_SUCCESS;
 
+#ifdef WH_EZ_SETUP
+		wdev = &pAd->ApCfg.ApCliTab[ifIndex].wdev;
+		if (IS_EZ_SETUP_ENABLED(wdev) 
+			&& (Alg == AUTH_MODE_EZ)) {
+			Alg = cpu2le16(Alg);
+		}
+#endif /* WH_EZ_SETUP */
+
 		/* allocate and send out AuthReq frame */
 		NState = MlmeAllocateMemory(pAd, &pOutBuffer);
 		if(NState != NDIS_STATUS_SUCCESS)
@@ -162,7 +175,7 @@ static VOID ApCliMlmeAuthReqAction(
 			return;
 		}
 
-		MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("APCLI AUTH - Send AUTH request seq#1 (Alg=%d)...\n", Alg));
+		MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("APCLI AUTH - Send AUTH request seq#1 (Alg=0x%x)...\n", Alg));
 		ApCliMgtMacHeaderInit(pAd, &AuthHdr, SUBTYPE_AUTH, 0, Addr, pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.Bssid, ifIndex);
 #ifdef MAC_REPEATER_SUPPORT
 		if (CliIdx != 0xFF)
@@ -175,6 +188,13 @@ static VOID ApCliMlmeAuthReqAction(
 						  2,                    &Seq,
 						  2,                    &Status,
 						  END_OF_ARGS);
+#ifdef WH_EZ_SETUP
+		if (IS_EZ_SETUP_ENABLED(wdev) 
+			&& (pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.support_easy_setup)) {
+			FrameLen += ez_build_auth_request_ie(wdev, 
+				pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.Bssid, pOutBuffer+FrameLen);
+		}
+#endif /* WH_EZ_SETUP */
 
 		MiniportMMRequest(pAd, QID_AC_BE, pOutBuffer, FrameLen);
 		MlmeFreeMemory( pOutBuffer);
@@ -227,6 +247,11 @@ static VOID ApCliPeerAuthRspAtSeq2Action(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM * El
 	UCHAR CliIdx = 0xFF;
 #endif /* MAC_REPEATER_SUPPORT */
 
+#ifdef WH_EZ_SETUP
+	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
+		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("ApCliPeerAuthRspAtSeq2Action\n"));
+#endif
+
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
 		&& (ifIndex < REPT_MLME_START_IDX)
@@ -275,6 +300,18 @@ static VOID ApCliPeerAuthRspAtSeq2Action(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM * El
 
 			if(Status == MLME_SUCCESS)
 			{
+#ifdef WH_EZ_SETUP			
+				if (IS_EZ_SETUP_ENABLED(&apcli_entry->wdev)
+					&& (Alg == AUTH_MODE_EZ)) {
+					ez_process_auth_response(pAd, 
+							&apcli_entry->wdev,
+							Addr2,
+							pCurrState, 
+							Elem->Msg, 
+							Elem->MsgLen);
+					return;
+				}
+#endif /* WH_EZ_SETUP */
 				if(apcli_entry->MlmeAux.Alg == Ndis802_11AuthModeOpen)
 				{
 					*pCurrState = APCLI_AUTH_REQ_IDLE;
@@ -522,6 +559,11 @@ static VOID ApCliPeerDeauthAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
     REPEATER_CLIENT_ENTRY *pReptEntry = NULL;
 #endif /* MAC_REPEATER_SUPPORT */
 
+#ifdef WH_EZ_SETUP
+	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
+		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("ApCliPeerDeauthAction\n"));
+#endif
+
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
 		&& (ifIndex < REPT_MLME_START_IDX)
@@ -581,6 +623,8 @@ static VOID ApCliAuthTimeoutAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 		REPEATER_CLIENT_ENTRY *pReptEntry = NULL;
 #endif /* MAC_REPEATER_SUPPORT */
 
+	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_ERROR, ("APCLI AUTH - AuthTimeoutAction\n"));
+
 	if ((ifIndex >= MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
 		&& (ifIndex < REPT_MLME_START_IDX)
@@ -599,8 +643,6 @@ static VOID ApCliAuthTimeoutAction(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 	else
 #endif /* MAC_REPEATER_SUPPORT */
 		pCurrState = &pAd->ApCfg.ApCliTab[ifIndex].AuthCurrState;
-
-	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("APCLI AUTH - AuthTimeoutAction\n"));
 
 	*pCurrState = APCLI_AUTH_REQ_IDLE;
 
@@ -677,7 +719,10 @@ static VOID ApCliInvalidStateWhenAuth(RTMP_ADAPTER *pAd, MLME_QUEUE_ELEM *Elem)
 	Description:
 	==========================================================================
  */
-static VOID ApCliMlmeDeauthReqAction(
+#ifndef WH_EZ_SETUP
+static
+#endif
+VOID ApCliMlmeDeauthReqAction(
 	IN PRTMP_ADAPTER pAd,
 	IN MLME_QUEUE_ELEM *Elem)
 {
@@ -693,7 +738,7 @@ static VOID ApCliMlmeDeauthReqAction(
 	UCHAR CliIdx = 0xFF;
 #endif /* MAC_REPEATER_SUPPORT */
 
-	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("APCLI AUTH - ApCliMlmeAuthReqAction (state=%ld), reset AUTH state machine\n",
+	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_ERROR, ("APCLI AUTH - ApCliMlmeDeauthReqAction (state=%ld), reset AUTH state machine\n",
 		pAd->Mlme.ApCliAuthMachine.CurrState));
 
 	if ((ifIndex >= MAX_APCLI_NUM)

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -94,16 +93,16 @@
 {																			\
 	(__pBandInfo)->RFICType = HcGetRadioRfIC(__pAd);								\
 	(__pBandInfo)->MpduDensity = __pAd->CommonCfg.BACapability.field.MpduDensity;\
-	(__pBandInfo)->TxStream = (__wdev == NULL) ? 1 : wlan_config_get_tx_stream(__wdev);			\
-	(__pBandInfo)->RxStream = (__wdev == NULL) ? 1 : wlan_config_get_rx_stream(__wdev);			\
+	(__pBandInfo)->TxStream = ((__wdev == NULL)||(__wdev->wpf_cfg == NULL)) ? 1 : wlan_config_get_tx_stream(__wdev);			\
+	(__pBandInfo)->RxStream = ((__wdev == NULL)||(__wdev->wpf_cfg == NULL)) ? 1 : wlan_config_get_rx_stream(__wdev);			\
 	(__pBandInfo)->MaxTxPwr = __pAd->CommonCfg.DefineMaxTxPwr;				\
 	if (WMODE_EQUAL(HcGetRadioPhyMode(__pAd), WMODE_B))				\
 		(__pBandInfo)->FlgIsBMode = TRUE;									\
 	else																	\
 		(__pBandInfo)->FlgIsBMode = FALSE;									\
 	(__pBandInfo)->MaxBssTable = MAX_LEN_OF_BSS_TABLE;						\
-	(__pBandInfo)->RtsThreshold = (__wdev == NULL) ? DEFAULT_RTS_LEN_THLD : wlan_operate_get_rts_len_thld(__wdev);\
-	(__pBandInfo)->FragmentThreshold = (__wdev == NULL) ? DEFAULT_FRAG_THLD : wlan_operate_get_frag_thld(__wdev);\
+	(__pBandInfo)->RtsThreshold = ((__wdev == NULL)||(__wdev->wpf_op == NULL)) ? DEFAULT_RTS_LEN_THLD : wlan_operate_get_rts_len_thld(__wdev);\
+	(__pBandInfo)->FragmentThreshold = ((__wdev == NULL)||(__wdev->wpf_op == NULL)) ? DEFAULT_FRAG_THLD : wlan_operate_get_frag_thld(__wdev);\
 	(__pBandInfo)->RetryMaxCnt = 0;											\
 }
 #else
@@ -111,16 +110,16 @@
 {																			\
 	(__pBandInfo)->RFICType =HcGetRadioRfIC(__pAd);								\
 	(__pBandInfo)->MpduDensity = __pAd->CommonCfg.BACapability.field.MpduDensity;\
-	(__pBandInfo)->TxStream = (__wdev == NULL) ? 1 : wlan_config_get_tx_stream(__wdev);			\
-	(__pBandInfo)->RxStream = (__wdev == NULL) ? 1 : wlan_config_get_rx_stream(__wdev);			\
+	(__pBandInfo)->TxStream = ((__wdev == NULL)||(__wdev->wpf_cfg == NULL)) ? 1 : wlan_config_get_tx_stream(__wdev);			\
+	(__pBandInfo)->RxStream = ((__wdev == NULL)||(__wdev->wpf_cfg == NULL)) ? 1 : wlan_config_get_rx_stream(__wdev);			\
 	(__pBandInfo)->MaxTxPwr = 0;											\
 	if (WMODE_EQUAL(HcGetRadioPhyMode(__pAd), WMODE_B))				\
 		(__pBandInfo)->FlgIsBMode = TRUE;									\
 	else																	\
 		(__pBandInfo)->FlgIsBMode = FALSE;									\
 	(__pBandInfo)->MaxBssTable = MAX_LEN_OF_BSS_TABLE;						\
-	(__pBandInfo)->RtsThreshold = (__wdev == NULL) ? DEFAULT_RTS_LEN_THLD : wlan_operate_get_rts_len_thld(__wdev);\
-	(__pBandInfo)->FragmentThreshold = (__wdev == NULL) ? DEFAULT_FRAG_THLD : wlan_operate_get_frag_thld(__wdev);\
+	(__pBandInfo)->RtsThreshold = ((__wdev == NULL)||(__wdev->wpf_op == NULL)) ? DEFAULT_RTS_LEN_THLD : wlan_operate_get_rts_len_thld(__wdev);\
+	(__pBandInfo)->FragmentThreshold = ((__wdev == NULL)||(__wdev->wpf_op == NULL)) ? DEFAULT_FRAG_THLD : wlan_operate_get_frag_thld(__wdev);\
 	(__pBandInfo)->RetryMaxCnt = 0;											\
 }
 #endif /* SINGLE_SKU */

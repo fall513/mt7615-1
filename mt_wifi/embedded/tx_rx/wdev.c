@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +23,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 /**
@@ -51,6 +50,11 @@ INT rtmp_wdev_idx_unreg(RTMP_ADAPTER *pAd, struct wifi_dev *wdev)
 
 	if (!wdev)
 		return -1;
+	
+#ifdef WH_EZ_SETUP
+	if((wdev->wdev_type == WDEV_TYPE_AP) || (wdev->wdev_type == WDEV_TYPE_APCLI))
+		ez_exit(wdev);
+#endif /* WH_EZ_SETUP */
 
 	NdisAcquireSpinLock(&pAd->WdevListLock);
 	for (idx = 0; idx < WDEV_NUM_MAX; idx++) {
@@ -385,7 +389,13 @@ INT32 wdev_init(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, enum WDEV_TYPE WdevTyp
 	if (wdev_idx < 0)
 		return FALSE;
 
-    return TRUE;
+#ifdef WH_EZ_SETUP
+	if (wdev->wdev_type == WDEV_TYPE_AP)
+		ez_init(pAd, wdev, TRUE);
+	else if (wdev->wdev_type == WDEV_TYPE_APCLI)
+		ez_init(pAd, wdev, FALSE);
+#endif /* WH_EZ_SETUP */
+	return TRUE;
 }
 
 
@@ -611,11 +621,22 @@ void update_att_from_wdev(struct wifi_dev *dev1, struct wifi_dev *dev2)
 	UCHAR tx_stream;
 	UCHAR rx_stream;
 
+#ifdef WH_EZ_SETUP // Rakesh: fix for issue seen when ext-cha modified from GUI
+	ext_cha = wlan_config_get_ext_cha(dev2);
+
+	/*update configure*/
+	if(wlan_config_get_ext_cha(dev1)!= ext_cha){
+
+		wlan_config_set_ext_cha(dev1,ext_cha);
+	}
+#else
 	/*update configure*/
 	if(wlan_config_get_ext_cha(dev1)== EXTCHA_NOASSIGN){
 		ext_cha = wlan_config_get_ext_cha(dev2);
 		wlan_config_set_ext_cha(dev1,ext_cha);
 	}
+#endif
+
 	stbc = wlan_config_get_ht_stbc(dev2);
 	wlan_config_set_ht_stbc(dev1, stbc);
 	ldpc = wlan_config_get_ht_ldpc(dev2);

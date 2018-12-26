@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -30,7 +29,7 @@
     Hank Huang  2015/07/13      initial version
     --------    ----------      ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #include "rt_config.h"
 #include <linux/jhash.h>

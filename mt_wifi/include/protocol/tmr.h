@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -29,7 +28,7 @@
     Carter      2014-1120     create
 
 */
-#endif /* MTK_LICENSE */
+
 #ifndef _TMR_H_
 #define _TMR_H_
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -25,7 +24,6 @@
     ---------    ----------    ----------------------------------------------
 	Fonchi Wu    2008	  	   created for 802.11h
  */
-#endif /* MTK_LICENSE */
 
 #ifndef __SPECTRUM_DEF_H__
 #define __SPECTRUM_DEF_H__

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
     Name        Date            Modification logs
     Paul Lin    1-2-2004
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __RTMP_TYPE_H__
 #define __RTMP_TYPE_H__
 
@@ -82,6 +81,9 @@ typedef unsigned char BOOLEAN;
 typedef void VOID;
 #endif /* LINUX */
 
+#if (defined(MWDS) || defined(WH_EVENT_NOTIFIER))
+typedef char *PSTRING;
+#endif
 typedef VOID *PVOID;
 typedef CHAR *PCHAR;
 typedef UCHAR *PUCHAR;

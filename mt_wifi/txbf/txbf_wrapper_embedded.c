@@ -4,7 +4,7 @@
 /*! \file   "txbf_wrapper_embedded.c"
     \brief
 */
-#ifdef MTK_LICENSE
+
 /*******************************************************************************
 * Copyright (c) 2014 MediaTek Inc.
 *
@@ -46,9 +46,31 @@
 * (ICC).
 ********************************************************************************
 */
-#endif /* MTK_LICENSE */
+
 /*
 ** $Log: txbf_wrapper_embedded.c $
+**
+** 06 29 2017 wish.chen
+** [WCNCR00155771] [MT7615][BF] Beamform by channel
+** 1) Purpose:
+** Add new feature: beamform by channel
+** 
+** 2) Changed function name:
+** AsicSwitchChannel
+** SwitchBfByChannel
+** Show_RAInfo_Proc
+** RTMPSetProfileParameters
+** RTMPSetProfileParameters
+** mt_WrapSetETxBFCapByChannel
+** mt_WrapSetVHTETxBFCapByChannel
+** multi_profile_merge_bandnobf
+** multi_profile_merge
+** 
+** 3) Code change description brief:
+** Add new profile BandNoBf to indicate which 5G bands do not enable beamform
+** 	
+** 4) Unit Test Result:
+** Test pass: profile test. Function correctness. DFS. Auto-channel.
 **
 ** 11 13 2015 by.huang
 ** [WCNCR00053227] [MT7621+MT7615+MT7615][Noise][E3] Client WNDA3100v3 have many P1
@@ -235,6 +257,41 @@ void mt_WrapSetETxBFCap(
 
 }    
 
+
+#ifdef TXBF_BY_CHANNEL
+/*
+	does the same as mt_WrapSetETxBFCap but take Channel as parameter
+*/
+void mt_WrapSetETxBFCapByChannel(
+    IN  RTMP_ADAPTER *pAd,
+    IN  HT_BF_CAP *pTxBFCap,
+    IN  UCHAR Channel)
+{
+    TXBF_STATUS_INFO   TxBfInfo;
+    UCHAR RxStream;
+
+	if (pAd->CommonCfg.dbdc_mode)
+	{
+		UCHAR band_idx = HcGetBandByChannel(pAd, Channel);
+
+		if (band_idx == DBDC_BAND0)
+			RxStream = pAd->dbdc_2G_rx_stream;
+		else
+			RxStream = pAd->dbdc_5G_rx_stream;
+	} else {
+		RxStream = pAd->Antenna.field.RxPath;
+	}
+
+    TxBfInfo.pHtTxBFCap = pTxBFCap;
+    TxBfInfo.cmmCfgETxBfEnCond= pAd->CommonCfg.ETxBfEnCond;
+    TxBfInfo.cmmCfgETxBfNoncompress= pAd->CommonCfg.ETxBfNoncompress;
+    TxBfInfo.ucRxPathNum = RxStream;
+
+    pAd->chipOps.setETxBFCap(pAd, &TxBfInfo);
+}    
+#endif /* TXBF_BY_CHANNEL */
+
+
 #ifdef VHT_TXBF_SUPPORT
 /*
 	Wrapper for mt_setVHTETxBFCap 
@@ -265,6 +322,40 @@ void mt_WrapSetVHTETxBFCap(
     
     pAd->chipOps.setVHTETxBFCap(pAd,&TxBfInfo);
 }
+
+
+#ifdef TXBF_BY_CHANNEL
+/*
+ 	does the same as mt_WrapSetVHTETxBFCap but take Channel as parameter
+*/
+void mt_WrapSetVHTETxBFCapByChannel(
+    IN  RTMP_ADAPTER *pAd,
+    IN  VHT_CAP_INFO *pTxBFCap,
+    IN  UCHAR Channel)
+{
+    TXBF_STATUS_INFO   TxBfInfo;
+    UCHAR TxStream;
+
+	if (pAd->CommonCfg.dbdc_mode)
+	{
+		UCHAR band_idx = HcGetBandByChannel(pAd, Channel);
+
+		if (band_idx == DBDC_BAND0)
+			TxStream = pAd->dbdc_2G_tx_stream;
+		else
+			TxStream = pAd->dbdc_5G_tx_stream;
+	} else {
+		TxStream = pAd->Antenna.field.TxPath;
+	}
+
+    TxBfInfo.pVhtTxBFCap = pTxBFCap;
+    TxBfInfo.ucTxPathNum = TxStream;
+    TxBfInfo.cmmCfgETxBfEnCond= pAd->CommonCfg.ETxBfEnCond;    
+    
+    pAd->chipOps.setVHTETxBFCap(pAd,&TxBfInfo);
+}
+#endif /* TXBF_BY_CHANNEL */
+
 #endif /* VHT_TXBF_SUPPORT */
 
 #endif /* MT_MAC */

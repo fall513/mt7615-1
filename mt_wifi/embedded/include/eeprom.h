@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,6 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
 #ifndef __EEPROM_H__
 #define __EEPROM_H__
 
@@ -92,9 +90,9 @@
 #endif /* WCX_SUPPORT */
 #endif /* BB_SOC */
 
-#define EEPROM_DFT_FILE_DIR		"/etc_ro/Wireless/"
-#define EEPROM_1ST_FILE_DIR		"/etc_ro/Wireless/"
-#define EEPROM_2ND_FILE_DIR		"/etc_ro/Wireless/"
+#define EEPROM_DFT_FILE_DIR		"/etc_ro/wlan/"
+#define EEPROM_1ST_FILE_DIR		"/etc_ro/Wireless/RT2860/"
+#define EEPROM_2ND_FILE_DIR		"/etc_ro/Wireless/iNIC/"
 
 #ifndef EEPROM_DEFAULT_FILE_PATH
 /* RFIC 2820 */
@@ -102,7 +100,7 @@
 
 #ifdef MT7615
 #undef EEPROM_DEFAULT_FILE_PATH
-#define EEPROM_DEFAULT_FILE_PATH                     "/etc_ro/Wireless/mt7615e.eeprom.bin"
+#define EEPROM_DEFAULT_FILE_PATH                     "/etc_ro/wlan/MT7615_EEPROM.bin"
 #endif /* MT7615 */
 
 
@@ -798,7 +796,8 @@ INT rtmp_ee_load_from_bin(
 
 INT rtmp_ee_write_to_bin(
 	IN struct _RTMP_ADAPTER *pAd);
-#ifdef VENDOR_FEATURE6_SUPPORT
+#ifdef BB_SOC
+BOOLEAN rtmp_ee_bin_read_with_range(struct _RTMP_ADAPTER *pAd, UINT16 start, UINT16 Length, UCHAR *pbuf);
 int rtmp_ee_bin_write_with_range(struct _RTMP_ADAPTER *pAd, USHORT start, USHORT Length, UCHAR *pbuf);
 #endif
 INT rtmp_ee_write_to_prom(struct _RTMP_ADAPTER *pAd);

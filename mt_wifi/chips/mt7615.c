@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,15 +13,13 @@
 	Module Name:
 	mt7615.c
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 #include "mcu/mt7615_firmware.h"
-#include "mcu/mt7615_firmware_e1.h"
 
 #include "mcu/mt7615_cr4_firmware.h"
 #ifdef NEED_ROM_PATCH
 #include "mcu/mt7615_rom_patch.h"
-#include "mcu/mt7615_rom_patch_e1.h"
 #endif /* NEED_ROM_PATCH */
 
 #include "hdev/hdev_basic.h"
@@ -42,21 +39,13 @@
 #endif
 
 #ifdef CONFIG_AP_SUPPORT
-#ifdef INTELP6_SUPPORT
-#define DEFAULT_BIN_FILE "/nvram/MT7615_EEPROM_2G.bin"
+#define DEFAULT_BIN_FILE "/etc_ro/wlan/MT7615E_EEPROM1.bin"
 #else
-#define DEFAULT_BIN_FILE "/etc_ro/Wireless/mt7615e.eeprom.bin"
-#endif
-#else
-#define DEFAULT_BIN_FILE "/etc_ro/Wireless/mt7615e.eeprom.bin"
+#define DEFAULT_BIN_FILE "/etc/MT7615E_EEPROM1.bin"
 #endif /* CONFIG_AP_SUPPORT */
 
 #ifdef MT_SECOND_CARD
-#ifdef INTELP6_SUPPORT
-#define SECOND_BIN_FILE "/nvram/MT7615_EEPROM_5G.bin"
-#else
-#define SECOND_BIN_FILE "/etc_ro/Wireless/mt7615e.eeprom.bin"
-#endif
+#define SECOND_BIN_FILE "/etc_ro/wlan/MT7615E_EEPROM2.bin"
 #endif /* MT_SECOND_CARD */
 #ifdef MT_THIRD_CARD
 #define THIRD_BIN_FILE "/etc_ro/wlan/MT7615E_EEPROM3.bin"
@@ -630,14 +619,14 @@ void mt7615_apply_dpd(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg, UINT16 B
 	ShowDPDData(pAd,TxDPDResult);
 	MtCmdGetTXDPDCalResult(pAd,toCR,CentralFreq,SwChCfg.Bw,Band,bSecBW80,FALSE,&TxDPDResult);	
 }
-
+//!Levarage form MP1.0 CL#170108
+RXDCOC_RESULT_T RxDcocResult;
 void mt7615_apply_dcoc(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg, UINT16 BW160Central, BOOLEAN bSecBW80)
 {
 	UINT8 			i = 0;
 	UINT8 			Band = 0;
 	UINT16 			CentralFreq = 0;
 	ULONG 			Offset = 0;	
-	RXDCOC_RESULT_T RxDcocResult;
 	BOOLEAN 		toCR = TRUE;
 
 	if(pAd->E2pAccessMode != E2P_FLASH_MODE && pAd->E2pAccessMode != E2P_BIN_MODE)
@@ -646,6 +635,8 @@ void mt7615_apply_dcoc(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg, UINT16 
 		("%s : Currently not in FLASH or BIN MODE,return. \n", __FUNCTION__));
 		return;
 	}
+//! Levarage from MP1.0 CL 170210
+	os_zero_mem(&RxDcocResult, sizeof(RXDCOC_RESULT_T));
 	
 	/*
 	  * 11j TODO - 
@@ -777,7 +768,8 @@ void mt7615_apply_dcoc(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg, UINT16 
 	}
 
 	memcpy(&RxDcocResult.ucDCOCTBL_I_WF0_SX0_LNA[0],pAd->CalDCOCImage + Offset, RXDCOC_SIZE);
-	ShowDCOCData(pAd,RxDcocResult);
+//! Levarage from MP1.0 CL 170210
+	//ShowDCOCData(pAd,RxDcocResult);
 	MtCmdGetRXDCOCCalResult(pAd,toCR,CentralFreq,SwChCfg.Bw,Band,bSecBW80,FALSE,&RxDcocResult);	
 }
 
@@ -924,6 +916,7 @@ void mt7615_apply_cal_data(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg)
 }
 #endif /* PRE_CAL_TRX_SET1_SUPPORT */
 
+// TODO: Star
 static void mt7615_switch_channel(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChCfg)
 {
 #ifdef PRE_CAL_TRX_SET1_SUPPORT
@@ -938,84 +931,53 @@ static void mt7615_switch_channel(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChC
          }
     }		
 
-#ifdef NR_PD_DETECTION
+#ifdef LINK_TEST_SUPPORT
     if (pAd->CommonCfg.LinkTestSupport)
     {
-        /* channel switch done flag disable */
-        pAd->fgChannelSwitchDone = FALSE;
-
         /* Update Channel Band Info */
         if (SwChCfg.ControlChannel <= 14)
         {
-            pAd->ucCmwChannelBand = CHANNEL_BAND_2G;
+            pAd->ucCmwChannelBand[SwChCfg.BandIdx] = CHANNEL_BAND_2G;
     
             MTWF_LOG(DBG_CAT_CMW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("(Link Test) 2G Channel Band !! \n"));
         }
         else
         {
-            pAd->ucCmwChannelBand = CHANNEL_BAND_5G;
+            pAd->ucCmwChannelBand[SwChCfg.BandIdx] = CHANNEL_BAND_5G;
     
             MTWF_LOG(DBG_CAT_CMW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("(Link Test) 5G Channel Band !! \n"));
         }
-
-        /* Back to 4T mode */
-        if(pAd->CommonCfg.dbdc_mode)
-        {
-            MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_2G);
-            MtCmdLinkTestTxCtrl(pAd, FALSE, CHANNEL_BAND_5G);
-        }
-        else
-        {
-            MtCmdLinkTestTxCtrl(pAd, FALSE, pAd->ucCmwChannelBand);
-        }
-
-        MTWF_LOG(DBG_CAT_CMW, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("(Link Test) Channel switch --> Enter 4T mode !!!\n"));
     }    
-#endif /* NR_PD_DETECTION */
+#endif /* LINK_TEST_SUPPORT */
 
     MtCmdChannelSwitch(pAd,SwChCfg);
 
     if(!SwChCfg.bScan)
     {
-        MtCmdSetTxRxPath(pAd,&SwChCfg);
+        MtCmdSetTxRxPath(pAd,SwChCfg);
     }
 
     pAd->LatchRfRegs.Channel = SwChCfg.CentralChannel;
 
-#ifdef NR_PD_DETECTION
+#ifdef LINK_TEST_SUPPORT
     if (pAd->CommonCfg.LinkTestSupport)
     {
-        /* channel switch done flag enable */
-        pAd->fgChannelSwitchDone = TRUE;
-
         /* Update Link Up status (Disable) */
     	pAd->fgCmwLinkDone = FALSE;
 
-        /* Disable Ap-clinet link to RootAp Flag */
-        pAd->fgApclientLink = FALSE;
-
-        if (pAd->CommonCfg.dbdc_mode)
-        {
-            /* 1T mode */
-            MtCmdLinkTestTxCtrl(pAd, TRUE, CHANNEL_BAND_2G);
-            MtCmdLinkTestTxCtrl(pAd, TRUE, CHANNEL_BAND_5G);
-        }
-        else
-        {
-            /* 1T mode */
-            MtCmdLinkTestTxCtrl(pAd, TRUE, pAd->ucCmwChannelBand);
-        }
+		/* Update Apclient Link up Flag */
+		pAd->fgApclientLinkUp = FALSE;
     
-        /* Clear Timeout Count */
-        pAd->ucTestTimeoutCount = 0;
+        /* clear Timeout Count */
+        pAd->ucRxTestTimeoutCount = 0;
                 
         /* Restore to 4R Config */
         MtCmdLinkTestRxCtrl(pAd, BITMAP_WF_ALL);
         
         /* Update 1R PD Detection Status */
-        pAd->fgLinkSingleRxState = FALSE;
+        pAd->ucRxStreamState = FALSE;
     }
-#endif /* NR_PD_DETECTION */
+#endif /* LINK_TEST_SUPPORT */
 
 #ifdef SINGLE_SKU_V2
 #ifdef TXBF_SUPPORT
@@ -1027,10 +989,10 @@ static void mt7615_switch_channel(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChC
         UINT8 i;
         UINT8 fg5Gband;
         UINT8 BfBoundTable[3];
-        UINT8 aucTxPwrFccBfOnCase[10];
-        UINT8 aucTxPwrFccBfOffCase[10];
+        INT8  acTxPwrFccBfOnCase[10];
+        INT8  acTxPwrFccBfOffCase[10];
             
-       if (SwChCfg.Channel_Band == 0) // Not 802.11j
+        if (SwChCfg.Channel_Band == 0) // Not 802.11j
         {
             if (SwChCfg.ControlChannel <= 14)
             {
@@ -1045,7 +1007,8 @@ static void mt7615_switch_channel(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChC
         {
             fg5Gband = 1;
         }
-        
+
+        /* obtain BF Backoff Table */
         mt_FillBFBackoff(pAd, SwChCfg.ControlChannel, fg5Gband, BfBoundTable);
 
         /*==============================================================================================*/
@@ -1066,76 +1029,62 @@ static void mt7615_switch_channel(RTMP_ADAPTER *pAd, MT_SWITCH_CHANNEL_CFG SwChC
     	}
 
         /* Update BF Backoff value for different Tx Stream case */
-        if (pAd->CommonCfg.BFBACKOFFenable[SwChCfg.BandIdx])
+        if (g_BFBackOffMode == 4)
         {
-            if (g_BFBackOffMode == 4)
-            {
-                aucTxPwrFccBfOnCase[0] = BfBoundTable[0] + 12;   // Entry_1
-                aucTxPwrFccBfOnCase[1] = BfBoundTable[0] +  6;   // Entry_2
-                aucTxPwrFccBfOnCase[2] = BfBoundTable[0] + 12;   // Entry_3
-                aucTxPwrFccBfOnCase[3] = BfBoundTable[0] +  2;   // Entry_4
-                aucTxPwrFccBfOnCase[4] = BfBoundTable[0] +  8;   // Entry_5
-                aucTxPwrFccBfOnCase[5] = BfBoundTable[0] + 12;   // Entry_6
-                aucTxPwrFccBfOnCase[6] = BfBoundTable[0] +  0;   // Entry_7 (reference point)
-                aucTxPwrFccBfOnCase[7] = BfBoundTable[0] +  6;   // Entry_8
-                aucTxPwrFccBfOnCase[8] = BfBoundTable[0] +  9;   // Entry_9
-                aucTxPwrFccBfOnCase[9] = BfBoundTable[0] + 12;   // Entry_10
-            }
-            else if (g_BFBackOffMode == 3)
-            {
-                aucTxPwrFccBfOnCase[0] = BfBoundTable[1] +  9;   // Entry_1
-                aucTxPwrFccBfOnCase[1] = BfBoundTable[1] +  3;   // Entry_2
-                aucTxPwrFccBfOnCase[2] = BfBoundTable[1] +  9;   // Entry_3
-                aucTxPwrFccBfOnCase[3] = BfBoundTable[1] +  0;   // Entry_4 (reference point)
-                aucTxPwrFccBfOnCase[4] = BfBoundTable[1] +  6;   // Entry_5
-                aucTxPwrFccBfOnCase[5] = BfBoundTable[1] +  9;   // Entry_6
-                aucTxPwrFccBfOnCase[6] = BfBoundTable[1] -  3;   // Entry_7 
-                aucTxPwrFccBfOnCase[7] = BfBoundTable[1] +  3;   // Entry_8
-                aucTxPwrFccBfOnCase[8] = BfBoundTable[1] +  7;   // Entry_9
-                aucTxPwrFccBfOnCase[9] = BfBoundTable[1] +  9;   // Entry_10
-            }
-            else if (g_BFBackOffMode == 2)
-            {
-                aucTxPwrFccBfOnCase[0] = BfBoundTable[2] +  6;   // Entry_1
-                aucTxPwrFccBfOnCase[1] = BfBoundTable[2] +  0;   // Entry_2 (reference point)
-                aucTxPwrFccBfOnCase[2] = BfBoundTable[2] +  6;   // Entry_3
-                aucTxPwrFccBfOnCase[3] = BfBoundTable[2] -  4;   // Entry_4
-                aucTxPwrFccBfOnCase[4] = BfBoundTable[2] +  2;   // Entry_5
-                aucTxPwrFccBfOnCase[5] = BfBoundTable[2] +  6;   // Entry_6
-                aucTxPwrFccBfOnCase[6] = BfBoundTable[2] -  6;   // Entry_7
-                aucTxPwrFccBfOnCase[7] = BfBoundTable[2] +  0;   // Entry_8
-                aucTxPwrFccBfOnCase[8] = BfBoundTable[2] +  3;   // Entry_9
-                aucTxPwrFccBfOnCase[9] = BfBoundTable[2] +  6;   // Entry_10
-            }
-            else
-            {
-                for (i = 0; i < BF_GAIN_FINAL_SIZE; i++)
-                {
-                    aucTxPwrFccBfOnCase[i] = 0x3F; 
-                }
-            }
+            acTxPwrFccBfOnCase[0] = BfBoundTable[0] + 12;   // Entry_1
+            acTxPwrFccBfOnCase[1] = BfBoundTable[0] +  6;   // Entry_2
+            acTxPwrFccBfOnCase[2] = BfBoundTable[0] + 12;   // Entry_3
+            acTxPwrFccBfOnCase[3] = BfBoundTable[0] +  2;   // Entry_4
+            acTxPwrFccBfOnCase[4] = BfBoundTable[0] +  8;   // Entry_5
+            acTxPwrFccBfOnCase[5] = BfBoundTable[0] + 12;   // Entry_6
+            acTxPwrFccBfOnCase[6] = BfBoundTable[0] +  0;   // Entry_7 (reference point)
+            acTxPwrFccBfOnCase[7] = BfBoundTable[0] +  6;   // Entry_8
+            acTxPwrFccBfOnCase[8] = BfBoundTable[0] +  9;   // Entry_9
+            acTxPwrFccBfOnCase[9] = BfBoundTable[0] + 12;   // Entry_10
+        }
+        else if (g_BFBackOffMode == 3)
+        {
+            acTxPwrFccBfOnCase[0] = BfBoundTable[1] +  9;   // Entry_1
+            acTxPwrFccBfOnCase[1] = BfBoundTable[1] +  3;   // Entry_2
+            acTxPwrFccBfOnCase[2] = BfBoundTable[1] +  9;   // Entry_3
+            acTxPwrFccBfOnCase[3] = BfBoundTable[1] +  0;   // Entry_4 (reference point)
+            acTxPwrFccBfOnCase[4] = BfBoundTable[1] +  6;   // Entry_5
+            acTxPwrFccBfOnCase[5] = BfBoundTable[1] +  9;   // Entry_6
+            acTxPwrFccBfOnCase[6] = BfBoundTable[1] -  3;   // Entry_7 
+            acTxPwrFccBfOnCase[7] = BfBoundTable[1] +  3;   // Entry_8
+            acTxPwrFccBfOnCase[8] = BfBoundTable[1] +  7;   // Entry_9
+            acTxPwrFccBfOnCase[9] = BfBoundTable[1] +  9;   // Entry_10
+        }
+        else if (g_BFBackOffMode == 2)
+        {
+            acTxPwrFccBfOnCase[0] = BfBoundTable[2] +  6;   // Entry_1
+            acTxPwrFccBfOnCase[1] = BfBoundTable[2] +  0;   // Entry_2 (reference point)
+            acTxPwrFccBfOnCase[2] = BfBoundTable[2] +  6;   // Entry_3
+            acTxPwrFccBfOnCase[3] = BfBoundTable[2] -  4;   // Entry_4
+            acTxPwrFccBfOnCase[4] = BfBoundTable[2] +  2;   // Entry_5
+            acTxPwrFccBfOnCase[5] = BfBoundTable[2] +  6;   // Entry_6
+            acTxPwrFccBfOnCase[6] = BfBoundTable[2] -  6;   // Entry_7
+            acTxPwrFccBfOnCase[7] = BfBoundTable[2] +  0;   // Entry_8
+            acTxPwrFccBfOnCase[8] = BfBoundTable[2] +  3;   // Entry_9
+            acTxPwrFccBfOnCase[9] = BfBoundTable[2] +  6;   // Entry_10
         }
         else
         {
-            for (i = 0; i < BF_GAIN_FINAL_SIZE; i++)
-            {
-                aucTxPwrFccBfOnCase[i] = 0x3F; 
-            }
+            /* Fill BF Backoff ON Table */
+            os_fill_mem(acTxPwrFccBfOnCase, BF_GAIN_FINAL_SIZE, 0x3F);
         }
         
         /*===============================================================================================*/
         /* Update BF OFF Table (Default BF OFF Table is 0x3f to bypass the backoff mechanism) */
         /*===============================================================================================*/
 
-        for (i = 0; i < BF_GAIN_FINAL_SIZE; i++)
-        {
-            aucTxPwrFccBfOffCase[i] = 0x3F; 
-        }
+        /* Fill BF Backoff OFF Table */
+        os_fill_mem(acTxPwrFccBfOffCase, BF_GAIN_FINAL_SIZE, 0x3F);
         
         for (i = 0; i < BF_GAIN_FINAL_SIZE; i++)
-            MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,("aucTxPwrFccBfOnCase[%d]: 0x%x \n", i, aucTxPwrFccBfOnCase[i]));
+            MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,("acTxPwrFccBfOnCase[%d]: 0x%x \n", i, acTxPwrFccBfOnCase[i]));
 
-        CmdTxBfTxPwrBackOff(pAd, SwChCfg.BandIdx, aucTxPwrFccBfOnCase, aucTxPwrFccBfOffCase);    
+        CmdTxBfTxPwrBackOff(pAd, SwChCfg.BandIdx, acTxPwrFccBfOnCase, acTxPwrFccBfOffCase);
     }   
 
 #endif /* CONFIG_ATE */
@@ -2719,22 +2668,8 @@ static VOID mt7615_fw_prepare(RTMP_ADAPTER *pAd)
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
 				("%s():FW(%x), HW(%x), CHIPID(%x))\n",
 				__FUNCTION__,  pAd->FWVersion, pAd->HWVersion, pAd->ChipID));
-    if (IS_MT7615_FW_VER_E1(pAd))
-    {
-#ifdef NEED_ROM_PATCH
-        pChipCap->rom_patch_header_image = mt7615_rom_patch_e1;
-        pChipCap->rom_patch_len = sizeof(mt7615_rom_patch_e1);
-#endif /* NEED_ROM_PATCH */
 
-        /* FW IMAGE */
-        pChipCap->fw_header_image = MT7615_FirmwareImage_E1;
-        pChipCap->fw_bin_file_name = "";
-        pChipCap->fw_len = sizeof(MT7615_FirmwareImage_E1);
-        MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, 
-            ("%s(%d): MT7615_E1, USE E1 patch and ram code binary image\n", 
-                                            __FUNCTION__, __LINE__));
-    }
-    else if (IS_MT7615_FW_VER_E3(pAd))
+	if (IS_MT7615_FW_VER_E3(pAd))
     {
 #ifdef NEED_ROM_PATCH
         pChipCap->rom_patch_header_image = mt7615_rom_patch;
@@ -2805,8 +2740,7 @@ static UCHAR MT7615BandGetByIdx(RTMP_ADAPTER *pAd, UCHAR BandIdx)
 
 void mt7615_heart_beat_check(RTMP_ADAPTER *pAd)
 {
-
-#define HEART_BEAT_CHECK_PERIOD 250
+#define HEART_BEAT_CHECK_PERIOD 30
 #define N9_HEART_BEAT_ADDR 0xc2ec //0x820682ec, PSE dummy CR
 #define CR4_HEART_BEAT_ADDR 0x80200
 	UINT32 mac_val;
@@ -2966,15 +2900,7 @@ void mt7615_setVHTETxBFCap(
             pTxBFCap->bfee_cap_mu = 0;
             pTxBFCap->bfer_cap_mu = 0;
 #endif /* CFG_SUPPORT_MU_MIMO */
-			/* Add for CBW160 + DBW160 Bfmee STS CAP */
-            if (pAd->CommonCfg.vht_bw >= VHT_BW_160)
-            {
-            	pTxBFCap->bfee_sts_cap      = 1;
-            }
-			else
-			{
-				pTxBFCap->bfee_sts_cap      = 3;    
-			}            
+            pTxBFCap->bfee_sts_cap      = 3;
             pTxBFCap->num_snd_dimension = pTxBfInfo->ucTxPathNum - 1;
             break;
         case SUBF_BFER:
@@ -3042,15 +2968,7 @@ void mt7615_setVHTETxBFCap(
             pTxBFCap->bfee_cap_mu = 0;
             pTxBFCap->bfer_cap_mu = 0;
 #endif /* CFG_SUPPORT_MU_MIMO */
-			/* Add for CBW160 + DBW160 Bfmee STS CAP */
-            if (pAd->CommonCfg.vht_bw >= VHT_BW_160)
-            {
-            	pTxBFCap->bfee_sts_cap      = 1;
-            }
-			else
-			{
-				pTxBFCap->bfee_sts_cap      = 3;    
-			}           
+            pTxBFCap->bfee_sts_cap      = 3;
             pTxBFCap->num_snd_dimension = pTxBfInfo->ucTxPathNum - 1;
             break;            
         }
@@ -3450,6 +3368,15 @@ UCHAR* mt7615_get_default_bin_image_file(RTMP_ADAPTER *pAd)
 	return NULL;
 }
 
+static struct rx_dly_ctl_cfg mt7615_rx_dly_ctl_ul_tbl[] = {
+	{0, 0x811c},
+	{700, 0xc01f},
+};
+
+static struct rx_dly_ctl_cfg mt7615_rx_dly_ctl_dl_tbl[] = {
+	{0, 0x811c},
+};
+
 static RTMP_CHIP_OP MT7615_ChipOp = {0};
 static RTMP_CHIP_CAP MT7615_ChipCap = {0};
 
@@ -3700,6 +3627,7 @@ static VOID mt7615_chipOp_init(void)
     MT7615_ChipOp.BfReptClonedStaToNormalSta = CmdTxBfReptClonedStaToNormalSta;
     MT7615_ChipOp.BfPfmuMemRelease           = CmdPfmuMemRelease;
     MT7615_ChipOp.BfHwEnStatusUpdate         = CmdTxBfHwEnableStatusUpdate;
+    MT7615_ChipOp.BfeeHwCtrl                 = CmdTxBfeeHwCtrl;
 #ifdef VHT_TXBF_SUPPORT
     MT7615_ChipOp.ClientSupportsVhtETxBF     = mt_WrapClientSupportsVhtETxBF;
     MT7615_ChipOp.setVHTETxBFCap             = mt7615_setVHTETxBFCap;
@@ -3726,6 +3654,7 @@ static VOID mt7615_chipOp_init(void)
 VOID mt7615_init(RTMP_ADAPTER *pAd)
 {
 	RTMP_CHIP_CAP *pChipCap = &pAd->chipCap;
+	struct rx_delay_control *rx_delay_ctl = &pAd->tr_ctl.rx_delay_ctl;
 	UINT32 Value;
 	BOOLEAN b11nOnly = FALSE, bThreeAnt = FALSE;
 
@@ -3777,7 +3706,12 @@ VOID mt7615_init(RTMP_ADAPTER *pAd)
     pChipCap->BssNums = 4;
     pChipCap->ExtMbssOmacStartIdx = 0x10;
     pChipCap->RepeaterStartIdx = 0x20;
+#ifdef AIR_MONITOR
+    pChipCap->MaxRepeaterNum = 16;
+#else
     pChipCap->MaxRepeaterNum = 32;
+#endif /* AIR_MONITOR */
+
 #ifdef BCN_OFFLOAD_SUPPORT
     pChipCap->fgBcnOffloadSupport = TRUE;
 #endif
@@ -3797,18 +3731,15 @@ VOID mt7615_init(RTMP_ADAPTER *pAd)
     else
         pChipCap->RxDMAScatter = RX_DMA_SCATTER_DISABLE;
 #endif /* RX_SCATTER */
-#ifdef CUSTOMER_RSG_FEATURE
-	pAd->EnableChannelStatsCheck = FALSE;
-	NdisZeroMemory(&pAd->RadioStatsCounter, sizeof(RADIO_STATS_COUNTER)); 
-#endif
+
 	/* For calibration log buffer size limitation issue */
 	pAd->fgQAtoolBatchDumpSupport = TRUE;
-#ifdef CUSTOMER_DCC_FEATURE
-	pAd->ApEnableBeaconTable = FALSE;
-	pAd->CommonCfg.channelSwitch.CHSWMode = NORMAL_MODE;
-	pAd->CommonCfg.channelSwitch.CHSWCount = 0;
-	pAd->CommonCfg.channelSwitch.CHSWPeriod = 5;		
-#endif
+
+	rx_delay_ctl->ul_rx_dly_ctl_tbl = mt7615_rx_dly_ctl_ul_tbl;
+	rx_delay_ctl->ul_rx_dly_ctl_tbl_size = (sizeof(mt7615_rx_dly_ctl_ul_tbl) / sizeof(mt7615_rx_dly_ctl_ul_tbl[0]));
+	rx_delay_ctl->dl_rx_dly_ctl_tbl = mt7615_rx_dly_ctl_dl_tbl;
+	rx_delay_ctl->dl_rx_dly_ctl_tbl_size = (sizeof(mt7615_rx_dly_ctl_dl_tbl) / sizeof(mt7615_rx_dly_ctl_dl_tbl[0]));
+
 	MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("<--%s()\n", __FUNCTION__));
 }
 
@@ -3893,9 +3824,8 @@ INT Mt7615AsicArchOpsInit(RTMP_ADAPTER *pAd)
 	arch_ops->archUpdateRtsThld = MtAsicUpdateRtsThldByFw;
 	arch_ops->archSwitchChannel = MtAsicSwitchChannel;
     arch_ops->archSetRDG = NULL; //MtAsicSetRDGByFw;
-	arch_ops->asic_rts_on_off = MtAsicRTSOnOff;
 	arch_ops->asic_ampdu_efficiency_on_off = MtAsicAMPDUEfficiencyAdjust;
-
+	arch_ops->asic_rts_on_off = MtAsicRTSOnOff;
 #ifdef ANT_DIVERSITY_SUPPORT
 	arch_ops->archAntennaSelect = MtAsicAntennaSelect;
 #endif /* ANT_DIVERSITY_SUPPORT */
@@ -3906,8 +3836,6 @@ INT Mt7615AsicArchOpsInit(RTMP_ADAPTER *pAd)
 	arch_ops->archSetBssid = MtAsicSetBssidByFw;
 	arch_ops->archSetStaRec = MtAsicSetStaRecByFw;
 	arch_ops->archUpdateStaRecBa = MtAsicUpdateStaRecBaByFw;
-
-	arch_ops->archUpdateWtblVhtInfo = update_wtbl_vht_info;
 
 #ifdef CONFIG_AP_SUPPORT
 	arch_ops->archSetMbssMode = MtAsicSetMbssMode;

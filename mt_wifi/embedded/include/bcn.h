@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,10 +26,11 @@
     --------    ----------    ----------------------------------------------
     Carter      2014-1121     Created.
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __BCN_H__
 #define __BCN_H__
 
+#include "rt_config.h"
 
 #define MAX_BEACON_LENGTH       (sizeof(HEADER_802_11) + \
                                     TIMESTAMP_FIELD_LEN + \

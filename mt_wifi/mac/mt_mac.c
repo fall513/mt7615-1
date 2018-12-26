@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +23,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #if defined(EVENT_TRACING)

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -17,7 +16,7 @@
  ***************************************************************************
 
 */
-#endif /* MTK_LICENSE */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -521,9 +520,6 @@ int main(int argc ,char *argv[])
 			is_bin2h_fw = 1;
 			is_bin2h_e2p = 1;
         } else if (strncmp(chipset, "mt7615", 7) == 0) {
-			strcat(in_rom_patch, "mt7615_patch_e1_hdr.bin");
-			strcat(out_rom_patch, "mt7615_rom_patch_e1.h");
-			strcat(rom_patch_name, "mt7615_rom_patch_e1");
 
 			strcat(in_rom_patch_e3, "mt7615_patch_e3_hdr.bin"); //mt7615_patch_e3_hdr.bin
 			strcat(out_rom_patch_e3, "mt7615_rom_patch.h");
@@ -535,16 +531,12 @@ int main(int argc ,char *argv[])
 			}
 			else
 			{
-                strcat(infname, "WIFI_RAM_CODE_MT7615_E1.bin");
                 strcat(infname_e3, "WIFI_RAM_CODE_MT7615.bin");
  			}
 
 
             strcat(outfname_e3, "mt7615_firmware.h");
             strcat(fw_name_e3, "MT7615_FirmwareImage");
-
-            strcat(outfname, "mt7615_firmware_e1.h");
-            strcat(fw_name, "MT7615_FirmwareImage_E1");
 
 			if ((strncmp(rx_cut_through, "y", 1) == 0)) 
 			{

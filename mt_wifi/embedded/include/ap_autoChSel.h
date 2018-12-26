@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -18,7 +17,7 @@
 
 
  */
-#endif /* MTK_LICENSE */
+
 #include "ap_autoChSel_cmm.h"
 
 #ifndef __AUTOCHSELECT_H__
@@ -41,10 +40,6 @@ VOID UpdateChannelInfo(
 	IN int ch,
 	IN ChannelSel_Alg Alg);
 
-#ifdef CUSTOMER_DCC_FEATURE
-VOID ChannelInfoResetNew(
-	IN PRTMP_ADAPTER pAd);
-#endif
 ULONG AutoChBssInsertEntry(
 	IN PRTMP_ADAPTER pAd,
 	IN PUCHAR pBssid,

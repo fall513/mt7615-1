@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -29,7 +28,7 @@
 	Shiang Tu    Aug-28-2008	init version
 
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __RTMP_TIMER_H__
 #define  __RTMP_TIMER_H__
 
@@ -144,13 +143,6 @@ DECLARE_TIMER_FUNCTION(PMF_SAQueryTimeOut);
 DECLARE_TIMER_FUNCTION(PMF_SAQueryConfirmTimeOut);
 #endif /* DOT11W_PMF_SUPPORT */
 
-#if defined (RTMP_MAC_USB) || defined(RTMP_MAC_SDIO)
-DECLARE_TIMER_FUNCTION(BeaconUpdateExec);
-#ifdef CONFIG_MULTI_CHANNEL
-DECLARE_TIMER_FUNCTION(EDCA_ActionTimeout);
-DECLARE_TIMER_FUNCTION(HCCA_ActionTimeout);
-#endif /* CONFIG_MULTI_CHANNEL */
-#endif /* RTMP_MAC_USB */
 
 #ifdef CONFIG_AP_SUPPORT
 DECLARE_TIMER_FUNCTION(APDetectOverlappingExec);
@@ -228,6 +220,22 @@ DECLARE_TIMER_FUNCTION(DfsZeroWaitTimeout);
 #ifdef CONFIG_AP_SUPPORT
 DECLARE_TIMER_FUNCTION(AutoChSelScanTimeout);
 #endif/* CONFIG_AP_SUPPORT */
+
+#ifdef WH_EZ_SETUP
+DECLARE_TIMER_FUNCTION(ez_scan_timeout);
+DECLARE_TIMER_FUNCTION(ez_stop_scan_timeout);
+DECLARE_TIMER_FUNCTION(ez_scan_pause_timeout);
+#ifdef EZ_NETWORK_MERGE_SUPPORT
+DECLARE_TIMER_FUNCTION(ez_group_merge_timeout);
+#endif
+#ifdef NEW_CONNECTION_ALGO
+DECLARE_TIMER_FUNCTION(ez_wait_for_connection_allow_timeout);
+#endif
+#ifdef EZ_DUAL_BAND_SUPPORT
+DECLARE_TIMER_FUNCTION(ez_loop_chk_timeout);
+#endif
+
+#endif /* WH_EZ_SETUP */
 
 #endif /* __RTMP_TIMER_H__ */
 

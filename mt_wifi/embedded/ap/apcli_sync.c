@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,10 +25,16 @@
 	--------	----------		----------------------------------------------
 	Fonchi		2006-06-23      modified for rt61-APClinent
 */
-#endif /* MTK_LICENSE */
+
 #ifdef APCLI_SUPPORT
 
 #include "rt_config.h"
+
+#ifdef WH_EZ_SETUP
+#ifdef DUAL_CHIP
+extern NDIS_SPIN_LOCK ez_conn_perm_lock;
+#endif
+#endif
 
 static VOID ApCliProbeTimeout(
 	IN PVOID SystemSpecific1,
@@ -143,6 +148,12 @@ static VOID ApCliMlmeProbeReqAction(
 	APCLI_MLME_JOIN_REQ_STRUCT *Info = (APCLI_MLME_JOIN_REQ_STRUCT *)(Elem->Msg);
 	USHORT ifIndex = (USHORT)(Elem->Priv);
 	PULONG pCurrState = &pAd->ApCfg.ApCliTab[ifIndex].SyncCurrState;
+#ifdef WH_EZ_SETUP	
+	PULONG pCurrStateCtrl = &pAd->ApCfg.ApCliTab[ifIndex].CtrlCurrState;
+#ifdef WSC_AP_SUPPORT
+		PWSC_CTRL	pWpsCtrl = &pAd->ApCfg.ApCliTab[ifIndex].WscControl;
+#endif /* WSC_AP_SUPPORT */
+#endif	
 	APCLI_STRUCT *pApCliEntry = NULL;
 	struct wifi_dev *wdev = &pAd->ApCfg.ApCliTab[ifIndex].wdev;
 	struct dev_rate_info *rate = &wdev->rate;
@@ -194,6 +205,66 @@ static VOID ApCliMlmeProbeReqAction(
 	NdisCopyMemory(pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.Ssid, pAd->ApCfg.ApCliTab[ifIndex].CfgSsid, pAd->ApCfg.ApCliTab[ifIndex].CfgSsidLen);
 #endif /* APCLI_CONNECTION_TRIAL */
 
+#ifdef WH_EZ_SETUP
+	if (IS_EZ_SETUP_ENABLED(wdev)
+#ifdef EZ_NETWORK_MERGE_SUPPORT	
+			//! if peer supports EZ setup, always go for EZ-connection
+			&& pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.support_easy_setup) 
+#else
+			&& wdev->ez_security.configured_status == EZ_UNCONFIGURED) 
+ 
+#endif			
+		{
+			ULONG bss_idx = BSS_NOT_FOUND;
+			pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.support_easy_setup = FALSE;
+			bss_idx = BssTableSearchWithSSID(&pAd->ScanTab, (PCHAR)Info->Bssid, (PCHAR)Info->Ssid, Info->SsidLen, pApCliEntry->MlmeAux.Channel);
+			if (bss_idx != BSS_NOT_FOUND) {
+				if (pAd->ScanTab.BssEntry[bss_idx].support_easy_setup)
+				{
+					pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.support_easy_setup = TRUE;
+#ifdef NEW_CONNECTION_ALGO
+					if (!ez_update_connection_permission(pAd,&pApCliEntry->wdev,EZ_DISALLOW_ALL_ALLOW_ME))
+					{
+						BOOLEAN cancelled;
+						*pCurrStateCtrl = APCLI_CTRL_DISCONNECTED;
+						ASSERT(FALSE);
+						RTMPCancelTimer(&(pApCliEntry->MlmeAux.ProbeTimer), &cancelled);
+						return;
+					}
+#endif
+					
+				}
+			}
+			else
+			{
+				BOOLEAN cancelled;
+				EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("BssEntry Not found in pAd->ScanTab\n"));
+				*pCurrStateCtrl = APCLI_CTRL_DISCONNECTED;
+				//ASSERT(FALSE);
+				RTMPCancelTimer(&(pApCliEntry->MlmeAux.ProbeTimer), &cancelled);
+				return;
+				
+			}
+		EZ_DEBUG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE,("EasySetup Conn = %d\n",pAd->ApCfg.ApCliTab[ifIndex].MlmeAux.support_easy_setup));
+		
+	}
+	else if (IS_EZ_SETUP_ENABLED(wdev) &&	(pWpsCtrl->WscConfMode != WSC_DISABLE) &&
+		(pWpsCtrl->bWscTrigger == TRUE))
+	{
+		ULONG bss_idx = BSS_NOT_FOUND;
+		bss_idx = BssTableSearchWithSSID(&pAd->ScanTab, (PCHAR)Info->Bssid, (PCHAR)Info->Ssid, Info->SsidLen, pApCliEntry->MlmeAux.Channel);
+
+		//! adjust APCLI's operating bandwidth to that of peer
+		if (bss_idx != BSS_NOT_FOUND) {
+			ez_ApCliAutoConnectBWAdjust(pAd, wdev, &pAd->ScanTab.BssEntry[bss_idx]);
+							
+			ez_ApCliAutoConnectBWAdjust(pAd, &pAd->ApCfg.MBSSID[wdev->func_idx].wdev , &pAd->ScanTab.BssEntry[bss_idx]);
+		} else {
+		}
+	}
+
+#endif /* WH_EZ_SETUP */
+
 	ApCliEnqueueProbeRequest(pAd, Info->SsidLen, (PCHAR) Info->Ssid, ifIndex);
 
 	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("ApCli SYNC - Start Probe the SSID %s on channel =%d\n", pApCliEntry->MlmeAux.Ssid, pApCliEntry->MlmeAux.Channel));
@@ -225,20 +296,14 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 	USHORT ifIndex = (USHORT)(Elem->Priv);
 	ULONG *pCurrState;
 	BCN_IE_LIST *ie_list = NULL;
-
-#ifdef CUSTOMER_DCC_FEATURE
-	UCHAR Snr[4] = {0};
-    CHAR  rssi[4] = {0};
-    Snr[0] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[0]);
-    Snr[1] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[1]);
-    Snr[2] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[2]);
-    Snr[3] = ConvertToSnr(pAd, Elem->rssi_info.raw_Snr[3]);
-
-    rssi[0] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_0);
-    rssi[1] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_1);
-    rssi[2] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_2);
-    rssi[3] = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_3);
+#ifdef WH_EZ_SETUP
+	PFRAME_802_11 pFrame = NULL;
+	struct wifi_dev *wdev;
+#ifdef DISCONNECT_ON_CONFIG_UPDATE
+	BOOLEAN error = FALSE;
 #endif
+#endif /* WH_EZ_SETUP */
+
 	if (ifIndex >= MAX_APCLI_NUM)
 		return;
 
@@ -286,7 +351,8 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 		INT matchFlag = FALSE;
 
         ULONG   Bssidx;
-#if defined(RT_CFG80211_P2P_CONCURRENT_DEVICE) || defined(CFG80211_MULTI_STA)
+		CHAR Rssi = -127;
+#if defined(RT_CFG80211_P2P_CONCURRENT_DEVICE) || defined(CFG80211_MULTI_STA) || defined (WH_EZ_SETUP)
         CHAR Rssi0 = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_0);
         CHAR Rssi1 = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_1);
         CHAR Rssi2 = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_2);
@@ -297,12 +363,12 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 		Bssidx = BssTableSearch(&pAd->ScanTab, ie_list->Bssid, ie_list->Channel);
 		if (Bssidx == BSS_NOT_FOUND)
 		{
+#ifdef WH_EZ_SETUP
+			if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
+				Rssi = (CHAR)RealRssi;
+#endif
 			/* discover new AP of this network, create BSS entry */
-			Bssidx = BssTableSetEntry(pAd, &pAd->ScanTab, ie_list, -127, LenVIE, pVIE
-#ifdef CUSTOMER_DCC_FEATURE
-                    ,Snr, rssi
-#endif        
-                    );
+			Bssidx = BssTableSetEntry(pAd, &pAd->ScanTab, ie_list, Rssi, LenVIE, pVIE);
 
 			if (Bssidx == BSS_NOT_FOUND) /* return if BSS table full */
 			{
@@ -332,6 +398,36 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 
 		pApCliEntry = &pAd->ApCfg.ApCliTab[ifIndex];
 
+#ifdef WH_EZ_SETUP
+		wdev = &pApCliEntry->wdev;
+		pFrame = (PFRAME_802_11)Elem->Msg;
+		if (IS_EZ_SETUP_ENABLED(wdev) &&
+			pAd->ScanTab.BssEntry[Bssidx].support_easy_setup &&
+			pApCliEntry->MlmeAux.support_easy_setup) {
+#ifdef DISCONNECT_ON_CONFIG_UPDATE			
+			error = ez_probe_rsp_join_action(pAd, wdev, ie_list, Bssidx);
+			if(error)
+				    goto LabelErr;
+#endif
+			if (pFrame->Hdr.FC.SubType == SUBTYPE_BEACON) {
+				/*
+					Ignore beacon here.
+					Only probe response has DH public key information.
+				*/
+				goto LabelErr;
+			}
+			else {
+#ifdef EZ_MOD_SUPPORT				
+				ez_process_beacon_probe_response(wdev, 
+					Elem->Msg, Elem->MsgLen);
+#else
+				ez_process_beacon_probe_response(&wdev->ez_security, 
+					Elem->Msg, Elem->MsgLen);		
+#endif
+			}
+		}
+#endif /* WH_EZ_SETUP */
+
 		if (!MAC_ADDR_EQUAL(pApCliEntry->CfgApCliBssid, ZERO_MAC_ADDR))
 		{
 			if (!MAC_ADDR_EQUAL(pApCliEntry->CfgApCliBssid, ie_list->Bssid))
@@ -347,11 +443,25 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 		else
 			bssidEmptyFlag = TRUE;
 
-		/* Check the Probe-Rsp's Ssid. */
-		if(pApCliEntry->CfgSsidLen != 0)
-			ssidEqualFlag = SSID_EQUAL(pApCliEntry->CfgSsid, pApCliEntry->CfgSsidLen, ie_list->Ssid, ie_list->SsidLen);
-		else
-			ssidEmptyFlag = TRUE;
+#ifdef WSC_AP_SUPPORT
+       	if ((pApCliEntry->WscControl.WscConfMode != WSC_DISABLE) &&
+           	(pApCliEntry->WscControl.bWscTrigger == TRUE))
+       	{
+        	if(pApCliEntry->WscControl.WscSsid.SsidLength != 0)
+		    ssidEqualFlag = SSID_EQUAL(pApCliEntry->WscControl.WscSsid.Ssid,
+			                       pApCliEntry->WscControl.WscSsid.SsidLength,ie_list->Ssid, ie_list->SsidLen);
+		    else
+			   	ssidEmptyFlag = TRUE;
+       	}
+       	else
+#endif /* WSC_AP_SUPPORT */
+		{
+			/* Check the Probe-Rsp's Ssid. */
+			if(pApCliEntry->CfgSsidLen != 0) 
+				ssidEqualFlag = SSID_EQUAL(pApCliEntry->CfgSsid, pApCliEntry->CfgSsidLen, ie_list->Ssid, ie_list->SsidLen);
+			else 
+				ssidEmptyFlag = TRUE;
+		}
 
 #ifdef WSC_AP_SUPPORT
                 if ((pAd->ApCfg.ApCliTab[ifIndex].WscControl.WscConfMode != WSC_DISABLE) &&
@@ -377,6 +487,11 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 							matchFlag = TRUE;
 						else
 							matchFlag = FALSE;
+#ifdef WH_EZ_SETUP
+						//! SSID will be empty on EZ interface in case of TRIband
+						if (IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev) && bssidEqualFlag && ssidEmptyFlag && ez_is_triband())
+							matchFlag = TRUE;
+#endif				
 				} else if (ssidEqualFlag)
 					matchFlag = TRUE;
 				else
@@ -384,6 +499,23 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 
 		}
 
+#ifdef WH_EZ_SETUP
+
+		if (IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev) && matchFlag == 0)
+		{
+			if (ssidEqualFlag == 0)
+			{
+				// Clear scan list if found to be stale.
+				BssTableInit(&pAd->ScanTab);
+
+			}
+			if (bssidEqualFlag == 0)
+			{
+				hex_dump("Apclibssid", pApCliEntry->CfgApCliBssid,6);
+				hex_dump("IEbssid", ie_list->Bssid,6);
+			}
+		}
+#endif
 		MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("SYNC - bssidEqualFlag=%d, ssidEqualFlag=%d, matchFlag=%d\n",
 					bssidEqualFlag, ssidEqualFlag, matchFlag));
 		if (matchFlag)
@@ -490,6 +622,28 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 				pApCliEntry->MlmeAux.VarIELen = 0;
 			}
 
+#ifdef MWDS
+    	    pApCliEntry->MlmeAux.bSupportMWDS = FALSE;
+            if(ie_list->vendor_ie.mtk_cap_found)
+            {
+                BOOLEAN bSupportMWDS = FALSE;
+                if(ie_list->vendor_ie.support_mwds)
+                    bSupportMWDS = TRUE;
+
+                if(pAd->ScanTab.BssEntry[Bssidx].bSupportMWDS != bSupportMWDS)
+                   pAd->ScanTab.BssEntry[Bssidx].bSupportMWDS = bSupportMWDS;
+
+                if(pAd->ScanTab.BssEntry[Bssidx].bSupportMWDS)
+    			{
+    				pApCliEntry->MlmeAux.bSupportMWDS = TRUE;
+    				MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_OFF, ("AP supports MWDS\n"));
+    			}
+    			else{
+    				pApCliEntry->MlmeAux.bSupportMWDS = FALSE;
+                }
+            } 
+#endif /* MWDS */
+
 			MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("SYNC - receive desired PROBE_RSP at JoinWaitProbeRsp... Channel = %d\n",
 							ie_list->Channel));
 
@@ -500,13 +654,8 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 				CHAR Rssi0 = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_0);
 				CHAR Rssi1 = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_1);
 				CHAR Rssi2 = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_2);
-#ifdef CUSTOMER_DCC_FEATURE                
-				CHAR Rssi3 = ConvertToRssi(pAd, &Elem->rssi_info, RSSI_IDX_3);
-				LONG RealRssi = (LONG)(RTMPMaxRssi(pAd, Rssi0, Rssi1, Rssi2, Rssi3));
-#else
 				LONG RealRssi = (LONG)(RTMPMaxRssi(pAd, Rssi0, Rssi1, Rssi2));
 
-#endif
 				MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("SYNC - previous Rssi = %ld current Rssi=%ld\n", pApCliEntry->MlmeAux.Rssi, (LONG)RealRssi));
 				if (pApCliEntry->MlmeAux.Rssi > (LONG)RealRssi)
 					goto LabelErr;
@@ -618,7 +767,7 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 				ChangeToCellPowerLimit(pAd, ie_list->AironetCellPowerLimit);
 			}
 			else  /* Used the default TX Power Percentage. */
-		    {         
+	        {         
 				pAd->CommonCfg.TxPowerPercentage[BAND0] = pAd->CommonCfg.TxPowerDefault[BAND0];
 #ifdef DBDC_MODE
                 pAd->CommonCfg.TxPowerPercentage[BAND1] = pAd->CommonCfg.TxPowerDefault[BAND1];
@@ -692,10 +841,25 @@ static VOID ApCliPeerProbeRspAtJoinAction(
 				}
 #endif
 
+#ifdef WH_EZ_SETUP
+				if (IS_EZ_SETUP_ENABLED(wdev)
+					&& pApCliEntry->MlmeAux.support_easy_setup) {
+					ez_prepare_security_key(wdev, ie_list->Addr2, FALSE);
+				}
+#endif /* WH_EZ_SETUP */
+
 				MlmeEnqueue(pAd, APCLI_CTRL_STATE_MACHINE, APCLI_CTRL_PROBE_RSP,
 					sizeof(APCLI_CTRL_MSG_STRUCT), &ApCliCtrlMsg, ifIndex);
 			}
 		}
+#ifdef WH_EVENT_NOTIFIER
+        {
+            EventHdlr pEventHdlrHook = NULL;
+            pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_AP_PROBE_RSP);
+            if(pEventHdlrHook && pApCliEntry)
+                pEventHdlrHook(pAd, &pApCliEntry->wdev, ie_list, Elem);
+        }
+#endif /* WH_EVENT_NOTIFIER */       
 	}
 
 LabelErr:
@@ -818,7 +982,7 @@ static VOID ApCliInvalidStateWhenJoin(
 	Description:
 	==========================================================================
  */
-static VOID ApCliEnqueueProbeRequest(
+static VOID ApCliEnqueueProbeRequest_A3Bcast(
 	IN PRTMP_ADAPTER pAd,
 	IN UCHAR SsidLen,
 	OUT PCHAR Ssid,
@@ -862,10 +1026,10 @@ static VOID ApCliEnqueueProbeRequest(
 		if(MAC_ADDR_EQUAL(pAd->ApCfg.ApCliTab[ifIndex].CfgApCliBssid, ZERO_MAC_ADDR))
 			ApCliMgtMacHeaderInit(pAd, &Hdr80211, SUBTYPE_PROBE_REQ, 0,
 				BROADCAST_ADDR, BROADCAST_ADDR, ifIndex);
-		else
+		else {
 			ApCliMgtMacHeaderInit(pAd, &Hdr80211, SUBTYPE_PROBE_REQ, 0,
-				pAd->ApCfg.ApCliTab[ifIndex].CfgApCliBssid, pAd->ApCfg.ApCliTab[ifIndex].CfgApCliBssid, ifIndex);
-
+				pAd->ApCfg.ApCliTab[ifIndex].CfgApCliBssid, BROADCAST_ADDR, ifIndex);
+		}
 		ssidLen = SsidLen;
 		NdisZeroMemory(ssid, MAX_LEN_OF_SSID);
 		NdisMoveMemory(ssid, Ssid, ssidLen);
@@ -982,6 +1146,219 @@ static VOID ApCliEnqueueProbeRequest(
                 FrameLen += ExtraIeTmpLen;
         }
 #endif /* RT_CFG80211_P2P_CONCURRENT_DEVICE || CFG80211_MULTI_STA */
+
+#ifdef WH_EZ_SETUP
+		if (IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev) &&
+			pApCliEntry->MlmeAux.support_easy_setup) {
+			FrameLen += ez_build_probe_request_ie(&pApCliEntry->wdev, pOutBuffer + FrameLen);
+		}
+#endif /* WH_EZ_SETUP */
+
+#ifdef WH_EVENT_NOTIFIER
+        if(pApCliEntry->wdev.custom_vie.ie_hdr.len > 0)
+        {
+            ULONG custom_vie_len;
+            ULONG total_custom_vie_len = sizeof(struct Custom_IE_Header) + pApCliEntry->wdev.custom_vie.ie_hdr.len;
+            MakeOutgoingFrame((pOutBuffer + FrameLen),&custom_vie_len,
+                                total_custom_vie_len, (UCHAR*)&pApCliEntry->wdev.custom_vie, END_OF_ARGS);
+            FrameLen += custom_vie_len;
+        }
+#endif /* WH_EVENT_NOTIFIER */
+
+		MiniportMMRequest(pAd, QID_AC_BE, pOutBuffer, FrameLen);
+		MlmeFreeMemory( pOutBuffer);
+	}
+
+	return;
+}
+
+static VOID ApCliEnqueueProbeRequest(
+	IN PRTMP_ADAPTER pAd,
+	IN UCHAR SsidLen,
+	OUT PCHAR Ssid,
+	IN USHORT ifIndex)
+{
+	NDIS_STATUS     NState;
+	PUCHAR          pOutBuffer;
+	ULONG           FrameLen = 0;
+	HEADER_802_11   Hdr80211;
+	UCHAR           SsidIe    = IE_SSID;
+	UCHAR           SupRateIe = IE_SUPP_RATES;
+	UCHAR ssidLen;
+	CHAR ssid[MAX_LEN_OF_SSID];
+	APCLI_STRUCT *pApCliEntry = NULL;
+#ifdef DOT11_VHT_AC
+    struct _build_ie_info  vht_ie_info;
+#endif /*DOT11_VHT_AC*/
+
+#ifdef WSC_AP_SUPPORT	
+	BOOLEAN bHasWscIe = FALSE;
+#endif /* WSC_AP_SUPPORT */
+#if defined(TXBF_SUPPORT) && defined(VHT_TXBF_SUPPORT)
+    UCHAR ucETxBfCap;
+#endif /* TXBF_SUPPORT && VHT_TXBF_SUPPORT */
+
+	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("force out a ProbeRequest ...\n"));
+
+	if (ifIndex >= MAX_APCLI_NUM)
+		return;
+
+	pApCliEntry = &pAd->ApCfg.ApCliTab[ifIndex];
+
+	NState = MlmeAllocateMemory(pAd, &pOutBuffer);  /* Get an unused nonpaged memory */
+	if(NState != NDIS_STATUS_SUCCESS)
+	{
+		MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE, ("EnqueueProbeRequest() allocate memory fail\n"));
+		return;
+	}
+	else
+	{
+		if(MAC_ADDR_EQUAL(pAd->ApCfg.ApCliTab[ifIndex].CfgApCliBssid, ZERO_MAC_ADDR))
+			ApCliMgtMacHeaderInit(pAd, &Hdr80211, SUBTYPE_PROBE_REQ, 0,
+				BROADCAST_ADDR, BROADCAST_ADDR, ifIndex);
+		else {
+			ApCliMgtMacHeaderInit(pAd, &Hdr80211, SUBTYPE_PROBE_REQ, 0,
+				pAd->ApCfg.ApCliTab[ifIndex].CfgApCliBssid, pAd->ApCfg.ApCliTab[ifIndex].CfgApCliBssid, ifIndex);
+			ApCliEnqueueProbeRequest_A3Bcast(
+				pAd,
+				SsidLen,
+				Ssid,
+				ifIndex);
+		}
+		ssidLen = SsidLen;
+		NdisZeroMemory(ssid, MAX_LEN_OF_SSID);
+		NdisMoveMemory(ssid, Ssid, ssidLen);
+
+		/* this ProbeRequest explicitly specify SSID to reduce unwanted ProbeResponse */
+		MakeOutgoingFrame(pOutBuffer,		&FrameLen,
+			sizeof(HEADER_802_11),			&Hdr80211,
+			1,								&SsidIe,
+			1,								&ssidLen,
+			ssidLen,						ssid,
+			1,								&SupRateIe,
+			1,								&pApCliEntry->MlmeAux.SupRateLen,
+			pApCliEntry->MlmeAux.SupRateLen,		pApCliEntry->MlmeAux.SupRate,
+			END_OF_ARGS);
+
+		/* Add the extended rate IE */
+		if (pApCliEntry->MlmeAux.ExtRateLen != 0)
+		{
+			ULONG            tmp;
+
+			MakeOutgoingFrame(pOutBuffer + FrameLen,    &tmp,
+				1,                        &ExtRateIe,
+				1,                        &pApCliEntry->MlmeAux.ExtRateLen,
+				pApCliEntry->MlmeAux.ExtRateLen,  pApCliEntry->MlmeAux.ExtRate,
+				END_OF_ARGS);
+			FrameLen += tmp;
+		}
+
+#ifdef DOT11_VHT_AC
+        vht_ie_info.frame_buf = (UCHAR *)(pOutBuffer + FrameLen);
+        vht_ie_info.frame_subtype = SUBTYPE_PROBE_REQ;
+        vht_ie_info.channel = pApCliEntry->wdev.channel;
+        vht_ie_info.phy_mode = pApCliEntry->wdev.PhyMode;
+	vht_ie_info.wdev = &pApCliEntry->wdev;
+
+#if defined(TXBF_SUPPORT) && defined(VHT_TXBF_SUPPORT)
+        ucETxBfCap = pAd->CommonCfg.ETxBfEnCond;
+        if (HcIsBfCapSupport(&pApCliEntry->wdev) == FALSE)
+        {
+            pAd->CommonCfg.ETxBfEnCond = SUBF_OFF;
+        }
+#ifdef MAC_REPEATER_SUPPORT        
+        else if (pAd->ApCfg.bMACRepeaterEn)
+        {
+	        if (ifIndex >= REPT_MLME_START_IDX)
+	        {
+	            REPEATER_CLIENT_ENTRY *pReptEntry = NULL;
+	            UCHAR CliIdx;
+		        CliIdx = ifIndex - REPT_MLME_START_IDX;
+		        pReptEntry = &pAd->ApCfg.pRepeaterCliPool[CliIdx];
+
+		        if (pReptEntry)
+		        {
+		            pAd->CommonCfg.ETxBfEnCond = SUBF_BFER;
+                    //MTWF_LOG(DBG_CAT_HW, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("%s : SUBF_BFER =============== \n", __FUNCTION__));
+		        }
+	        }       
+        }
+#endif /* MAC_REPEATER_SUPPORT */         
+#endif /* TXBF_SUPPORT && VHT_TXBF_SUPPORT */ 
+
+        FrameLen += build_vht_ies(pAd, &vht_ie_info);
+
+#if defined(TXBF_SUPPORT) && defined(VHT_TXBF_SUPPORT)
+		pAd->CommonCfg.ETxBfEnCond = ucETxBfCap;
+#endif /* TXBF_SUPPORT && VHT_TXBF_SUPPORT */ 
+#endif /* DOT11_VHT_AC */
+
+#ifdef WSC_AP_SUPPORT
+/* Append WSC information in probe request if WSC state is running */
+		if ((pAd->ApCfg.ApCliTab[ifIndex].WscControl.WscConfMode != WSC_DISABLE) &&
+			(pAd->ApCfg.ApCliTab[ifIndex].WscControl.bWscTrigger))
+		{
+			bHasWscIe = TRUE;
+		}
+#ifdef WSC_V2_SUPPORT
+		else if (pAd->ApCfg.ApCliTab[ifIndex].WscControl.WscV2Info.bEnableWpsV2)
+		{
+			bHasWscIe = TRUE;	
+		}
+#endif /* WSC_V2_SUPPORT */
+		if (bHasWscIe)
+		{
+			UCHAR		 WscIeLen = 0;
+			UCHAR		*WscBuf = NULL;
+			ULONG 		WscTmpLen = 0;
+			/* allocate memory */
+			os_alloc_mem(NULL, (UCHAR **)&WscBuf, 512);
+			if (WscBuf != NULL)
+			{
+				NdisZeroMemory(WscBuf, 512);
+				WscBuildProbeReqIE(pAd, STA_MODE, ifIndex, WscBuf, &WscIeLen);
+				MakeOutgoingFrame(pOutBuffer + FrameLen,              &WscTmpLen,
+								WscIeLen,                             WscBuf,
+								END_OF_ARGS);
+				FrameLen += WscTmpLen;
+				os_free_mem(WscBuf);
+			}
+			else
+				MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_ERROR, ("%s: Allocate memory fail!!!\n", __FUNCTION__));				
+		}
+#endif /*WSC_AP_SUPPORT*/
+
+#if defined(RT_CFG80211_P2P_CONCURRENT_DEVICE) || defined(CFG80211_MULTI_STA)
+         if ((pAd->StaCfg[0].wpa_supplicant_info.WpaSupplicantUP != WPA_SUPPLICANT_DISABLE) &&
+		    (pAd->cfg80211_ctrl.ExtraIeLen > 0))
+        {
+                ULONG           ExtraIeTmpLen = 0;
+
+                MakeOutgoingFrame(pOutBuffer+ FrameLen,              &ExtraIeTmpLen,
+                                                pAd->cfg80211_ctrl.ExtraIeLen,  pAd->cfg80211_ctrl.pExtraIe,
+                                                END_OF_ARGS);
+
+                FrameLen += ExtraIeTmpLen;
+        }
+#endif /* RT_CFG80211_P2P_CONCURRENT_DEVICE || CFG80211_MULTI_STA */
+
+#ifdef WH_EZ_SETUP
+		if (IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev) &&
+			pApCliEntry->MlmeAux.support_easy_setup) {
+			FrameLen += ez_build_probe_request_ie(&pApCliEntry->wdev, pOutBuffer + FrameLen);
+		}
+#endif /* WH_EZ_SETUP */
+
+#ifdef WH_EVENT_NOTIFIER
+        if(pApCliEntry->wdev.custom_vie.ie_hdr.len > 0)
+        {
+            ULONG custom_vie_len;
+            ULONG total_custom_vie_len = sizeof(struct Custom_IE_Header) + pApCliEntry->wdev.custom_vie.ie_hdr.len;
+            MakeOutgoingFrame((pOutBuffer + FrameLen),&custom_vie_len,
+                                total_custom_vie_len, (UCHAR*)&pApCliEntry->wdev.custom_vie, END_OF_ARGS);
+            FrameLen += custom_vie_len;
+        }
+#endif /* WH_EVENT_NOTIFIER */
 
 		MiniportMMRequest(pAd, QID_AC_BE, pOutBuffer, FrameLen);
 		MlmeFreeMemory( pOutBuffer);

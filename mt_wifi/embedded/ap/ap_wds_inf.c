@@ -1,4 +1,4 @@
-#ifdef MTK_LICENSE
+
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +27,6 @@
     ------    ----------      ----------------------------------------------
     Fonchi    02-13-2007      created
 */
-#endif /* MTK_LICENSE */
 #define RTMP_MODULE_OS
 
 #ifdef WDS_SUPPORT

@@ -204,6 +204,9 @@
 
 
 #define MAX_CUSTOM_LEN 128
+#ifdef WH_EVENT_NOTIFIER
+#define CUSTOM_IE_TOTAL_LEN 128
+#endif /* WH_EVENT_NOTIFIER */
 
 /* */
 /* IEEE 802.11 Structures and definitions */
@@ -438,13 +441,9 @@ typedef struct  _PACKET_INFO    {
 #endif
 
 #define MAX_NUM_OF_INF		3
+#ifdef WH_EZ_SETUP
+#define	LINE_LEN	(4+33+20+23+9+7+7+3)	/* Channel+SSID+Bssid+Security+Signal+WiressMode+ExtCh+NetworkType*/
 
-#ifdef INTELP6_SUPPORT
-#ifdef MULTI_INF_SUPPORT
-/* Index 0 for 2.4G, 1 for 5Ghz Card */
-extern VOID* adapt_list[MAX_NUM_OF_INF];
-#endif /* MULTI_INF_SUPPORT */
-#define MAX_MBSS_NUM 8	
+BOOLEAN ascii2int(RTMP_STRING *in, UINT32 *out);
 #endif
-
 #endif /* __RT_COMM_H__ */

@@ -145,12 +145,12 @@ config DBDC_MODE
 config MULTI_PROFILE_SUPPORT
     bool "Multi Profile Support"
     depends on DBDC_MODE
-    default y
+	default y
 
 config DEFAULT_5G_PROFILE
-    bool "5G default profile for DBDC"
+	bool "5G default profile for DBDC"
 	depends on DBDC_MODE
-    default y
+	default y
 
 config WSC_INCLUDED
 	bool "WSC (WiFi Simple Config)"
@@ -261,11 +261,26 @@ config RTMP_FLASH_SUPPORT
 	depends on WIFI_DRIVER
 	default y
 
+#config PRE_CAL_TRX_SET1_SUPPORT
+#    bool "Pre-calibration TRX Set1 To Flash/BinFile Support"
+#    depends on WIFI_DRIVER
+#    default y
+
+config RLM_CAL_CACHE_SUPPORT
+	bool "RlmCalibrationCache Support"
+	depends on WIFI_DRIVER
+	default y
+
+config PRE_CAL_TRX_SET2_SUPPORT
+	bool "Pre-calibration TRX Set2 Support"
+	depends on WIFI_DRIVER
+	default y	
+	
 config RF_LOCKDOWN_SUPPORT
 	bool "RF Lockdown Support"
 	depends on WIFI_DRIVER
 	default n	
-		
+	
 #config LED_CONTROL_SUPPORT
 #	bool "LED Support"
 #	depends on WIFI_DRIVER
@@ -300,10 +315,10 @@ config UAPSD
 	depends on MT_AP_SUPPORT || MT_STA_SUPPORT
 	default y
 
-config TCP_RACK_SUPPORT
-	bool "TCP Reduced ACK  support"
-	depends on WIFI_DRIVER
-	default n
+#config TCP_RACK_SUPPORT
+#	bool "TCP Reduced ACK  support"
+#	depends on WIFI_DRIVER
+#	default n
 
 #### PA_LNA_Type choice
 
@@ -313,10 +328,10 @@ config RED_SUPPORT
 	depends on MT_AP_SUPPORT || MT_STA_SUPPORT
         default y
 
-#config FDB_SUPPORT
-#       bool "FW Debug Port"
-#       depends on WIFI_DRIVER
-#       default n
+config FDB_SUPPORT
+       bool "FW Debug Port"
+       depends on WIFI_DRIVER
+       default n
 
 choice
         prompt "PA LNA Type of 1st Card"
@@ -423,9 +438,9 @@ menu "WiFi Operation Modes"
 		source "drivers/net/wireless/mt_wifi_ap/Kconfig"
     endif
 
-#    if WIFI_MODE_STA || WIFI_MODE_BOTH
-#		source "drivers/net/wireless/mt_wifi_sta/Kconfig"
-#    endif
+    #if WIFI_MODE_STA || WIFI_MODE_BOTH
+	#	source "drivers/net/wireless/mt_wifi_sta/Kconfig"
+    #endif
 endmenu	
 
 endif

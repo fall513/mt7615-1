@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,6 @@
 	Module Name:
 	testmode_ioctl.c
 */
-#endif /* MTK_LICENSE */
 #if defined(COMPOS_WIN)
 #include "MtConfig.h"
 #elif defined (COMPOS_TESTMODE_WIN)
@@ -23,9 +21,6 @@
 #include "rt_config.h"
 #include "hdev/hdev.h"
 #endif
-
-#include "rtmp.h"
-
 static INT EthGetParamAndShiftBuff(BOOLEAN convert, UINT size, UCHAR **buf, 
 									   IN UCHAR *out)
 {
@@ -284,7 +279,7 @@ static INT32 HQA_StartTx(
 	UINT16 TxLength;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -363,7 +358,7 @@ static INT32 HQA_StartRx(
 	INT32 Ret = 0;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -394,7 +389,7 @@ static INT32 HQA_StopTx(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	UINT32 Mode;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -464,7 +459,7 @@ static INT32 HQA_StopRx(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	UINT32 Mode;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -499,7 +494,7 @@ static INT32 HQA_SetTxPath(
 	INT32 ant_sel = 0;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -535,7 +530,7 @@ static INT32 HQA_SetRxPath(
 	INT16 Value = 0;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -594,7 +589,7 @@ static INT32 HQA_SetTxPower0(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	ATE_TXPOWER TxPower;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -629,7 +624,7 @@ static INT32 HAQ_SetTxPower1(
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
 	ATE_TXPOWER TxPower;
-	INT8 band_idx = 0;
+	UINT8 band_idx = 0;
 
 	band_idx = MT_ATEGetBandIdxByIf(pAd);
 	if (band_idx == -1) {
@@ -788,6 +783,49 @@ static INT32 HQA_AntennaSelExt (PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ,
 	return Ret;
 }
 
+#ifdef ABSOLUTE_POWER_TEST
+static INT32 HQA_SetAbsoluteTxPower (PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQA_CMD_FRAME *HqaCmdFrame)
+{
+	INT32 Ret = 0;
+	UINT32 BandIdx = 0;
+	UINT32 Power = 0;
+	UINT32 PhyMode = 0;
+	UINT32 TxRate = 0;
+	UINT32 BW = 0;
+	
+	UCHAR *data = HqaCmdFrame->Data;
+	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
+	ATE_OPERATION *ATEOp = ATECtrl->ATEOp;
+
+	NdisMoveMemory((PUCHAR)&BandIdx, data, sizeof(BandIdx));
+	data += sizeof(BandIdx);
+	BandIdx = PKTL_TRAN_TO_HOST(BandIdx);
+	
+	NdisMoveMemory((PUCHAR)&Power, data, sizeof(Power));
+	data += sizeof(Power);
+	Power = PKTL_TRAN_TO_HOST(Power);
+
+	NdisMoveMemory((PUCHAR)&PhyMode, data, sizeof(PhyMode));
+	data += sizeof(PhyMode);
+	PhyMode = PKTL_TRAN_TO_HOST(PhyMode);
+
+	NdisMoveMemory((PUCHAR)&TxRate, data, sizeof(TxRate));
+	data += sizeof(TxRate);
+	TxRate = PKTL_TRAN_TO_HOST(TxRate);
+
+	NdisMoveMemory((PUCHAR)&BW, data, sizeof(BW));
+	data += sizeof(BW);
+	BW = PKTL_TRAN_TO_HOST(BW);
+
+	Ret = ATEOp->SetTxForceTxPower(pAd, BandIdx, Power, PhyMode, TxRate, BW);
+
+	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+			("%s, BandIdx:%x, Power:%x, PhyMode:%x, TxRate:%x, BW:%x\n"
+			, __FUNCTION__, BandIdx, Power, PhyMode, TxRate, BW));
+	ResponseToQA(HqaCmdFrame, WRQ, 2, Ret);
+	return Ret;
+}
+#endif /* ABSOLUTE_POWER_TEST */
 
 static HQA_CMD_HANDLER HQA_CMD_SET0[] =
 {
@@ -814,9 +852,10 @@ static HQA_CMD_HANDLER HQA_CMD_SET0[] =
 	HQA_AntennaSel,     /* 0x1013 */
 	HQA_FWPacketCMD_ClockSwitchDisable, /* 0x1014 */
 	HQA_AntennaSelExt,  /* 0x1015 */
+#ifdef ABSOLUTE_POWER_TEST	
+	HQA_SetAbsoluteTxPower,  /* 0x1016 */
+#endif /* #ifdef ABSOLUTE_POWER_TEST */	
 };
-
-
 
 static INT32 HQA_SetChannel(
 				PRTMP_ADAPTER pAd,
@@ -1751,6 +1790,8 @@ static INT32 HQA_ReadBulkEEPROM(
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s: Offset = %x, Length = %x\n", __FUNCTION__, Offset, Len));
 
+    RTMP_OS_NETDEV_STOP_QUEUE(pAd->net_dev);
+
 	Ret = os_alloc_mem(pAd,(PUCHAR *)&Buffer, EEPROM_SIZE);	//TODO verify
 	if(Ret == NDIS_STATUS_FAILURE){
 		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s : allocate memory for read EEPROM fail\n", __FUNCTION__));
@@ -1769,6 +1810,8 @@ static INT32 HQA_ReadBulkEEPROM(
 	}
 
 	os_free_mem(Buffer);
+
+    RTMP_OS_NETDEV_START_QUEUE(pAd->net_dev);
 HQA_ReadBulkEEPROM_RET:
 	ResponseToQA(HqaCmdFrame, WRQ, 2 + Len, Ret);
 #endif
@@ -2909,6 +2952,7 @@ static INT32 HQA_TMRSetting(
 				HQA_CMD_FRAME *HqaCmdFrame)
 {
 	INT32 Ret = 0;
+#if !defined(COMPOS_WIN) && !defined(COMPOS_TESTMODE_WIN)
 	UCHAR *data = HqaCmdFrame->Data;
 	UINT32 value = 0, version = 0;
 	CHAR TMR_Value[8];
@@ -2936,6 +2980,7 @@ static INT32 HQA_TMRSetting(
 
     setTmrVerProc(pAd, TMR_HW_Version);
 	setTmrEnableProc(pAd, TMR_Value);
+#endif
 	ResponseToQA(HqaCmdFrame, WRQ, 2, Ret);
 	return Ret;
 }
@@ -3085,7 +3130,7 @@ static INT32 HQA_MPSSetSeqData(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, 
 	len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/sizeof(UINT32)- 1;
 	
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>512) || (len == 0))
 		goto MPS_SEQ_DATA_RET;
 
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
@@ -3108,7 +3153,7 @@ static INT32 HQA_MPSSetSeqData(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, 
 
 MPS_SEQ_DATA_RET:
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s, len:%u, MPS_CNT:%u\n", __FUNCTION__,len, ATECtrl->mps_cb.mps_cnt));
-	ResponseToQA(HqaCmdFrame, WRQ, 2, Ret);
+    ResponseToQA(HqaCmdFrame, WRQ, 2, Ret);
 	return Ret;
 }
 
@@ -3127,7 +3172,7 @@ static INT32 HQA_MPSSetPayloadLength(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT 
     len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/4 - 1;
 	
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>1024) || (len == 0))
 		goto MPS_PKT_LEN_RET;
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
 	if(Ret == NDIS_STATUS_FAILURE)
@@ -3167,7 +3212,7 @@ static INT32 HQA_MPSSetPacketCount(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *W
     len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/4 - 1;
 	
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>1024) || (len == 0))
 		goto MPS_PKT_CNT_RET;
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
 	if(Ret == NDIS_STATUS_FAILURE)
@@ -3207,7 +3252,7 @@ static INT32 HQA_MPSSetPowerGain(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ
 	len = PKTS_TRAN_TO_NET(HqaCmdFrame->Length)/4 - 1;
 		
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>1024) || (len == 0))
 		goto MPS_SET_PWR_RET;
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
 	if(Ret == NDIS_STATUS_FAILURE)
@@ -3281,7 +3326,7 @@ static INT32 HQA_MPSSetNss(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQA_
 	len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/sizeof(UINT32)- 1;
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>512) || (len == 0))
 		goto out;
 
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
@@ -3324,7 +3369,7 @@ static INT32 HQA_MPSSetPerpacketBW(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *W
 	len = PKTS_TRAN_TO_HOST(HqaCmdFrame->Length)/sizeof(UINT32)- 1;
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s::len:%u\n", __FUNCTION__, len));
-	if(len == 0)
+	if((len>512) || (len == 0))
 		goto out;
 
 	Ret = os_alloc_mem(pAd, (UCHAR **)&mps_setting, sizeof(UINT32)*(len));
@@ -3441,6 +3486,7 @@ static INT32 HQA_SetBandMode(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQ
 
 static INT32 HQA_GetBandMode(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQA_CMD_FRAME *HqaCmdFrame)
 {
+
 	INT32 Ret = 0;
 	UINT32 band_mode = 0;
 #ifndef COMPOS_TESTMODE_WIN
@@ -3452,8 +3498,8 @@ static INT32 HQA_GetBandMode(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *WRQ, HQ
 	NdisMoveMemory((UCHAR *)&band_idx, HqaCmdFrame->Data, sizeof(band_idx));	
 	band_idx = PKTL_TRAN_TO_HOST(band_idx);
 	wdev_idx = MT_ATEGetWDevIdxByBand(pAd, band_idx);
-	wdev = pAd->wdev_list[wdev_idx];
-
+	if (wdev_idx != -1)
+		wdev = pAd->wdev_list[wdev_idx];
 	if (!wdev)
 		goto resp;
 
@@ -5454,12 +5500,11 @@ static INT32 hqa_set_channel_ext(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq
 	EthGetParamAndShiftBuff(TRUE, sizeof(UINT32), &data,(UCHAR *)&param.ch_band);
 	EthGetParamAndShiftBuff(TRUE, sizeof(UINT32), &data, (UCHAR *)&param.out_band_freq);
 	
-	band_idx = param.band_idx;
-	if (band_idx > TESTMODE_BAND_NUM) {
+	if(param.band_idx > TESTMODE_BAND_NUM){
 		ret = NDIS_STATUS_INVALID_DATA;
 		goto err0;
 	}
-
+	band_idx = param.band_idx;
 	switch(param.sys_bw){
 	case ATE_BAND_WIDTH_20:
 		bw = BAND_WIDTH_20;
@@ -5657,7 +5702,8 @@ static INT32 hqa_start_tx_ext(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq, H
 	TESTMODE_SET_PARAM(ate_ctrl, band_idx, eTxBf, param.ebf);
 #endif
 	ate_ctrl->wcid_ref = param.wlan_id;
-	TESTMODE_SET_PARAM(ate_ctrl, band_idx, IPG, param.aifs);		//Fix me
+    // TODO: Need to modify
+	TESTMODE_SET_PARAM(ate_ctrl, band_idx, ipg_param.ipg, param.aifs);		//Fix me
 	TESTMODE_SET_PARAM(ate_ctrl, band_idx, Sgi, param.gi);
 	TESTMODE_SET_PARAM(ate_ctrl, band_idx, TxAntennaSel, param.tx_path);
 	TESTMODE_SET_PARAM(ate_ctrl, band_idx, Nss, param.nss);
@@ -5679,9 +5725,9 @@ static INT32 hqa_start_tx_ext(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq, H
 	TxPower.Channel = Channel;
 	TxPower.Dbdc_idx = band_idx;
 	TxPower.Band_idx = Ch_Band;
-
+    
 	ret = ate_ops->SetTxPower0(pAd, TxPower);
-	ret = ate_ops->SetSlotTime(pAd, param.aifs, param.aifs, band_idx);
+    ret = ate_ops->SetIPG(pAd, band_idx);
 	ret = ate_ops->StartTx(pAd, param.band_idx);
 
 err0:

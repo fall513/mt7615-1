@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,7 @@
 	Module Name:
 	band_steering.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef _BAND_STEERING_H_
 #define __BAND_STEERING_H__
 
@@ -23,23 +22,27 @@
 /* ioctl */
 INT Show_BndStrg_List(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 INT Show_BndStrg_Info(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
+INT Show_BndStrg_Help(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 INT Set_BndStrg_Enable(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 INT Set_BndStrg_RssiDiff(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 INT Set_BndStrg_RssiLow(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 INT Set_BndStrg_Age(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
+INT Set_BndStrg_DwellTime(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
+INT Set_BndStrg_SteerTimeWindow(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
+INT Set_BndStrg_MaxSteerCount(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 INT Set_BndStrg_HoldTime(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
-INT Set_BndStrg_CheckTime5G(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
-INT Set_BndStrg_CheckTime2G(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
+INT Set_BndStrg_CheckTime(PRTMP_ADAPTER	pAd,RTMP_STRING	*arg);
 INT Set_BndStrg_FrmChkFlag(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
-INT Set_BndStrg_CndChkFlag(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
+//INT Set_BndStrg_CndChkFlag(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 #ifdef BND_STRG_DBG
 INT Set_BndStrg_MonitorAddr(PRTMP_ADAPTER	pAd, RTMP_STRING *arg);
 #endif /* BND_STRG_DBG */
 
 INT BndStrg_Init(PRTMP_ADAPTER pAd);
 INT BndStrg_Release(PRTMP_ADAPTER pAd);
-INT BndStrg_TableInit(PRTMP_ADAPTER pAd, PBND_STRG_CLI_TABLE table);
+INT BndStrg_TableInit(PRTMP_ADAPTER pAd, INT apidx);
 INT BndStrg_TableRelease(PBND_STRG_CLI_TABLE table);
+PBND_STRG_CLI_TABLE Get_BndStrgTable(PRTMP_ADAPTER pAd, INT apidx);
 
 BOOLEAN BndStrg_CheckConnectionReq(
 		PRTMP_ADAPTER	pAd,
@@ -51,14 +54,25 @@ BOOLEAN BndStrg_CheckConnectionReq(
 		BOOLEAN bVHTCap,
 		UINT8 nss);
 
-INT BndStrg_Enable(PBND_STRG_CLI_TABLE table, BOOLEAN enable);
-INT BndStrg_SetInfFlags(PRTMP_ADAPTER pAd, PBND_STRG_CLI_TABLE table, BOOLEAN bInfReady);
+INT BndStrg_Tb_Enable(PBND_STRG_CLI_TABLE table, BOOLEAN enable, CHAR *IfName);
+INT BndStrg_SetInfFlags(PRTMP_ADAPTER pAd, struct wifi_dev *wdev, PBND_STRG_CLI_TABLE table, BOOLEAN bInfReady);
 BOOLEAN BndStrg_IsClientStay(PRTMP_ADAPTER pAd, PMAC_TABLE_ENTRY pEntry);
-INT BndStrg_MsgHandle(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq);
+INT BndStrg_MsgHandle(PRTMP_ADAPTER pAd, RTMP_IOCTL_INPUT_STRUCT *wrq, INT apidx);
 INT Set_BndStrg_CndPriority(PRTMP_ADAPTER pAd, RTMP_STRING *arg); 
+INT Set_BndStrg_Steering_Num(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
+INT Set_BndStrg_LB_Assoc_Thres(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
+INT Set_BndStrg_LB_Qload_Thres(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
+INT Set_BndStrg_LB_Min_Rssi_Thres(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
+//INT Set_BndStrg_LB_Cnd(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
+//INT Set_BndStrg_LB_CndPriority(PRTMP_ADAPTER pAd, RTMP_STRING *arg); 
+INT Set_BndStrg_NSS_Thres(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
+INT Set_BndStrg_Sta_Poll_Period(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
+INT Set_BndStrg_Daemon_State(PRTMP_ADAPTER	pAd,RTMP_STRING		*arg);
 INT Set_BndStrg_BssIdx(PRTMP_ADAPTER pAd, RTMP_STRING *arg);
 void BndStrg_UpdateEntry(PRTMP_ADAPTER pAd,MAC_TABLE_ENTRY *pEntry, BOOLEAN bHTCap,  BOOLEAN bVHTCap, UINT8 nss, BOOLEAN bConnStatus);
 UINT8 GetNssFromHTCapRxMCSBitmask(UINT32 RxMCSBitmask);
+void BndStrgSetProfileParam(struct _RTMP_ADAPTER *pAd, RTMP_STRING *tmpbuf, RTMP_STRING *pBuffer);
+void BndStrgHeartBeatMonitor(PRTMP_ADAPTER	pAd);
 
 #define IS_VALID_MAC(addr) \
 	(addr[0])|(addr[1])|(addr[2])|(addr[3])|(addr[4])|(addr[5])

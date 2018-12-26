@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -30,7 +29,7 @@
 	--------	----------		----------------------------------------------
 	Name		Date			Modification logs
 */
-#endif /* MTK_LICENSE */
+
 #ifndef _RT_OS_H_
 #define _RT_OS_H_
 
@@ -51,7 +50,7 @@
 #define RT_PRIV_IOCTL								(SIOCIWFIRSTPRIV + 0x01)
 #define RTPRIV_IOCTL_SET							(SIOCIWFIRSTPRIV + 0x02)
 #define RT_PRIV_IOCTL_EXT							(SIOCIWFIRSTPRIV + 0x0E) /* Sync. with RT61 (for wpa_supplicant) */				
-#ifdef DBG
+#if defined(DBG) ||(defined(BB_SOC)&&defined(CONFIG_ATE))
 #define RTPRIV_IOCTL_BBP                            (SIOCIWFIRSTPRIV + 0x03)
 #define RTPRIV_IOCTL_MAC                            (SIOCIWFIRSTPRIV + 0x05)
 
@@ -59,7 +58,7 @@
 #define RTPRIV_IOCTL_RF                             (SIOCIWFIRSTPRIV + 0x13)
 #endif /* RTMP_RF_RW_SUPPORT */
 
-#endif /* DBG */
+#endif /* defined(DBG) ||(defined(BB_SOC)&&defined(CONFIG_ATE) */
 #define RTPRIV_IOCTL_E2P                            (SIOCIWFIRSTPRIV + 0x07)
 
 #ifdef WCX_SUPPORT
@@ -90,5 +89,9 @@
 #define RTPRIV_IOCTL_WSC_CALLBACK	(SIOCIWFIRSTPRIV + 0x1A)
 #define RTPRIV_IOCTL_RX_STATISTICS              (SIOCIWFIRSTPRIV + 0x1B)//Get CMD ID is odd; Set CMD ID is even 
 #endif /* CONFIG_AP_SUPPORT */
+
+#ifdef WH_EZ_SETUP
+#define RTPRIV_IOCTL_GEZ_SCAN_TABLE					(SIOCIWFIRSTPRIV + 0x1D)
+#endif /* WH_EZ_SETUP */
 
 #endif /* _RT_OS_H_ */

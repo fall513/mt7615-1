@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +23,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 
@@ -336,6 +335,7 @@ VOID dump_rmac_info_for_ICVERR(RTMP_ADAPTER *pAd, UCHAR *rmac_info)
 	RXD_BASE_STRUCT *rxd_base = (RXD_BASE_STRUCT *)rmac_info;
 	union _RMAC_RXD_0_UNION *rxd_0;
 	UINT32 pkt_type;
+	int LogDbgLvl = DBG_LVL_ERROR;
 
 	if (pAd->chipCap.hif_type != HIF_MT) {
 		return;
@@ -348,21 +348,26 @@ VOID dump_rmac_info_for_ICVERR(RTMP_ADAPTER *pAd, UCHAR *rmac_info)
 		return;
 	}
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("\tHTC/UC2ME/MC/BC=%d/%d/%d/%d",
+#ifdef WH_EZ_SETUP    
+	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
+		LogDbgLvl = DBG_LVL_TRACE;
+#endif
+
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, ("\tHTC/UC2ME/MC/BC=%d/%d/%d/%d",
 				rxd_base->RxD1.HTC,
 				(rxd_base->RxD1.a1_type == 0x1 ? 1 : 0),
 				(rxd_base->RxD1.a1_type == 0x2 ? 1 : 0),
 				rxd_base->RxD1.a1_type == 0x3 ? 1 : 0));
 
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (", WlanIndex=%d", rxd_base->RxD2.RxDWlanIdx));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (", SEC Mode=%d\n", rxd_base->RxD2.SecMode));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("\tFCE Error(FC)=%d", rxd_base->RxD2.FcsErr));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (", CM=%d", rxd_base->RxD2.CipherMis));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (", CLM=%d", rxd_base->RxD2.CipherLenMis));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (", I=%d", rxd_base->RxD2.IcvErr));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (", T=%d", rxd_base->RxD2.TkipMicErr));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, (", LM=%d\n", rxd_base->RxD2.LenMis));
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("\tFragment Frame(FRAG)=%d\n", rxd_base->RxD2.FragFrm));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, (", WlanIndex=%d", rxd_base->RxD2.RxDWlanIdx));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, (", SEC Mode=%d\n", rxd_base->RxD2.SecMode));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, ("\tFCE Error(FC)=%d", rxd_base->RxD2.FcsErr));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, (", CM=%d", rxd_base->RxD2.CipherMis));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, (", CLM=%d", rxd_base->RxD2.CipherLenMis));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, (", I=%d", rxd_base->RxD2.IcvErr));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, (", T=%d", rxd_base->RxD2.TkipMicErr));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, (", LM=%d\n", rxd_base->RxD2.LenMis));
+	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, LogDbgLvl, ("\tFragment Frame(FRAG)=%d\n", rxd_base->RxD2.FragFrm));
 
 }
 
@@ -525,10 +530,6 @@ INT dump_dmac_mib_info(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 
 		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("===Tx Related Counters(Generic)===\n"));
 		RTMP_IO_READ32(pAd, MIB_M0SDR0 + band_offset, &mac_val);
-#ifdef CUSTOMER_RSG_FEATURE
-		pAd->RadioStatsCounter.TotalBeaconSentCount += (mac_val & 0xffff);
-		pAd->RadioStatsCounter.TotalTxCount += (mac_val & 0xffff);
-#endif
 #ifdef MT7615
 #ifdef CONFIG_AP_SUPPORT
 		if (band_idx == DBDC_BAND0) 
@@ -595,9 +596,6 @@ INT dump_dmac_mib_info(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 		RTMP_IO_READ32(pAd, MIB_M0SDR11 + band_offset, &mac_val);
 		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\tRxLenMismatch=0x%x\n", (mac_val & 0xffff)));
 		RTMP_IO_READ32(pAd, MIB_M0SDR5 + band_offset, &mac_val);
-#ifdef CUSTOMER_RSG_FEATURE
-		pAd->RadioStatsCounter.TotalRxCount += (mac_val & 0xffff);
-#endif
 		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\tRxMPDUCnt=0x%x\n", (mac_val & 0xffff)));
 		RTMP_IO_READ32(pAd, MIB_M0SDR29 + band_offset, &mac_val);
 		MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("\tPFDropCnt=0x%x\n", (mac_val & 0x00ff)));
@@ -718,52 +716,7 @@ INT dump_dmac_pse_data(RTMP_ADAPTER *pAd, UINT32 StartFID, UINT32 FrameNums)
 	return TRUE;
 }
 
-#ifdef CUSTOMER_RSG_FEATURE
-VOID Read_Mib_TxRx_Counters(RTMP_ADAPTER *pAd)
-{
-	UINT32 CrValue;
-	UINT32 BeaconCount, CtrlPktCount, MgmtRetryCnt,DataFrameRetryCount, TotalRxCount;
 
-	RTMP_IO_READ32(pAd, MIB_M0SDR0, &CrValue);
-	BeaconCount = (CrValue & 0xffff);
-
-	RTMP_IO_READ32(pAd, MIB_M0SDR5, &CrValue);
-	TotalRxCount = CrValue;
-
-	RTMP_IO_READ32(pAd, MIB_M0SDR38, &CrValue);
-	CtrlPktCount = (CrValue & 0xffffff);
-
-	RTMP_IO_READ32(pAd, MIB_M0SDR39, &CrValue);
-	MgmtRetryCnt = (CrValue & 0xffffff);
-
-	RTMP_IO_READ32(pAd, MIB_M0SDR40, &CrValue);
-	DataFrameRetryCount = (CrValue & 0xffffff);	
-
-	pAd->RadioStatsCounter.TotalBeaconSentCount += BeaconCount;
-
-	pAd->RadioStatsCounter.TotalTxCount += BeaconCount + MgmtRetryCnt + CtrlPktCount;
-
-	pAd->RadioStatsCounter.TxDataCount -= DataFrameRetryCount;
-
-	pAd->RadioStatsCounter.TotalRxCount += TotalRxCount;
-
-	pAd->RadioStatsCounter.TxRetryCount += DataFrameRetryCount + MgmtRetryCnt;
-
-	pAd->beacon_cnt += BeaconCount; 
-	
-}
-VOID Reset_MIB_Update_Counters(RTMP_ADAPTER *pAd)
-{	
-	UCHAR CurrIdx = pAd->MsMibBucket.CurIdx;;
-	
-	pAd->ChannelStats.MibUpdateOBSSAirtime[CurrIdx] = 0;
-	pAd->ChannelStats.MibUpdateMyTxAirtime[CurrIdx] = 0;
-	pAd->ChannelStats.MibUpdateMyRxAirtime[CurrIdx] = 0;
-	pAd->ChannelStats.MibUpdateEDCCAtime[CurrIdx] = 0;
-	pAd->ChannelStats.MibUpdatePdCount[CurrIdx] = 0;
-	pAd->ChannelStats.MibUpdateMdrdyCount[CurrIdx] = 0;
-}
-#endif
 VOID Update_Mib_Bucket_One_Sec(RTMP_ADAPTER *pAd)
 {
 	//UINT32  CrValue;
@@ -820,19 +773,6 @@ VOID Update_Mib_Bucket_500Ms(RTMP_ADAPTER *pAd)
 			//Channel Busy Time
 			HW_IO_READ32(pAd, MIB_M0SDR16 +(i*BandOffset), &CrValue);
 			pAd->MsMibBucket.ChannelBusyTime[i][CurrIdx] = CrValue;
-#ifdef CUSTOMER_RSG_FEATURE
-			if((i == 0) && pAd->EnableChannelStatsCheck && !ApScanRunning(pAd))
-			{
-				pAd->MsMibBucket.OBSSAirtime[i][CurrIdx] = pAd->ChannelStats.MibUpdateOBSSAirtime[CurrIdx];
-				pAd->MsMibBucket.MyTxAirtime[i][CurrIdx] = pAd->ChannelStats.MibUpdateMyTxAirtime[CurrIdx];
-				pAd->MsMibBucket.MyRxAirtime[i][CurrIdx] = pAd->ChannelStats.MibUpdateMyRxAirtime[CurrIdx];
-				pAd->MsMibBucket.EDCCAtime[i][CurrIdx] = pAd->ChannelStats.MibUpdateEDCCAtime[CurrIdx];
-				pAd->MsMibBucket.PdCount[i][CurrIdx] = pAd->ChannelStats.MibUpdatePdCount[CurrIdx];
-				pAd->MsMibBucket.MdrdyCount[i][CurrIdx] = pAd->ChannelStats.MibUpdateMdrdyCount[CurrIdx];
-				Reset_MIB_Update_Counters(pAd);
-				continue;
-			}
-#endif			
 			//OBSS Air time
 			HW_IO_READ32(pAd, RMAC_MIBTIME5 + i*4, &CrValue);
 			pAd->MsMibBucket.OBSSAirtime[i][CurrIdx] = CrValue;
@@ -1208,6 +1148,7 @@ VOID NICUpdateRawCounters(RTMP_ADAPTER *pAd)
 {
 	UINT32 OldValue,i;
 	UINT32 rx_err_cnt, fcs_err_cnt, mdrdy_cnt = 0, fcs_err_cnt_band1 = 0, mdrdy_cnt_band1 = 0;
+	UINT32 sig_err = 0;
 	//UINT32 TxSuccessCount = 0, TxRetryCount = 0;
 #ifdef DBG_DIAGNOSE
 	UINT32 bss_tx_cnt;
@@ -1376,6 +1317,21 @@ VOID NICUpdateRawCounters(RTMP_ADAPTER *pAd)
 	}
 #endif /* DBG_DIAGNOSE */
 
+#ifdef MT7615
+	PHY_IO_READ32(pAd, RO_BAND0_PHYCTRL_STS1, &sig_err);
+	PHY_IO_WRITE32(pAd, RO_BAND0_PHYCTRL_STS1, 0);
+	pPrivCounters->SigErrCckCnt += sig_err >> 16;
+
+	PHY_IO_READ32(pAd, RO_BAND0_PHYCTRL_STS2, &sig_err);
+	PHY_IO_WRITE32(pAd, RO_BAND0_PHYCTRL_STS2, 0);
+	pPrivCounters->SigErrOfdmCnt += sig_err >> 16;
+
+	PHY_IO_READ32(pAd, RO_BAND0_PHYCTRL_STS4, &fcs_err_cnt);
+	PHY_IO_WRITE32(pAd, RO_BAND0_PHYCTRL_STS4, 0);
+	pPrivCounters->FcsErrCckCnt += fcs_err_cnt >> 16;
+	pPrivCounters->FcsErrOfdmCnt += fcs_err_cnt & 0xFFFF;
+#endif
+
 	return;
 }
 
@@ -1529,7 +1485,10 @@ UCHAR get_nsts_by_mcs(UCHAR phy_mode, UCHAR mcs, BOOLEAN stbc, UCHAR vht_nss)
 }
 
 // TODO: shiang-MT7615, fix me!
-static UCHAR dmac_wmm_aci_2_hw_ac_que[4][4] =
+#ifndef WH_EZ_SETUP
+static
+#endif
+UCHAR dmac_wmm_aci_2_hw_ac_que[4][4] =
 {
 	{
 		TxQ_IDX_AC1, /* 0: QID_AC_BE */
@@ -1565,7 +1524,7 @@ INT MtWriteTMacInfo(RTMP_ADAPTER *pAd, UCHAR *buf, TMAC_INFO *TxInfo)
     TMAC_TXD_0 *txd_0 = &txd_s->TxD0;
     TMAC_TXD_1 *txd_1 = &txd_s->TxD1;
     TMAC_TXD_2 *txd_2 = NULL;
-    TMAC_TXD_3 *txd_3 =NULL;
+    TMAC_TXD_3 *txd_3 = NULL;
     TMAC_TXD_5 *txd_5 = NULL;
     TMAC_TXD_6 *txd_6 = NULL;
     TMAC_TXD_7 *txd_7 = NULL;
@@ -1951,6 +1910,18 @@ INT write_tmac_info(
 #if defined(MT7615) || defined(MT7622)
 
 
+#ifdef WH_EZ_SETUP	
+		if (mac_entry && IS_EZ_SETUP_ENABLED(mac_entry->wdev) && info->PID == PID_P2P_ACTION)
+		{
+			EZ_DEBUG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("Action Frame TXD initialized\n"));
+		
+			txd_5->pid = info->PID;
+			txd_5->tx_status_fmt = TXS_FORMAT0;
+			txd_5->tx_status_2_mcu = 0;
+			txd_5->tx_status_2_host = 1;
+		}
+#endif
+
 #else
 		txd_5->pid = info->PID;
 
@@ -2314,12 +2285,6 @@ INT write_tmac_info_Data(RTMP_ADAPTER *pAd, UCHAR *buf, TX_BLK *pTxBlk)
 		txd_l->TxD3.remain_tx_cnt = MT_TX_RETRY_UNLIMIT;
 #endif /* !defined(MT7615) && !defined(MT7622) */
 
-#ifdef VENDOR_FEATURE6_SUPPORT
-#ifdef CONFIG_AP_SUPPORT
-	if (pAd->ApCfg.tx_retry_cnt > 0)
-		txd_l->TxD3.remain_tx_cnt = pAd->ApCfg.tx_retry_cnt;
-#endif
-#endif
 	txd_l->TxD5.pid = pTxBlk->Pid;
 
 	if (pTxBlk->Pid)
@@ -2586,20 +2551,18 @@ VOID mt_asic_init_txrx_ring(RTMP_ADAPTER *pAd)
 {
 	UINT32 phy_addr, offset;
 	INT i, TxHwRingNum;
+	struct rx_delay_control *rx_delay_ctl = &pAd->tr_ctl.rx_delay_ctl;
 
 	/* Set DMA global configuration except TX_DMA_EN and RX_DMA_EN bits */
 	AsicSetWPDMA(pAd, PDMA_TX_RX, FALSE);
 
 	AsicWaitPDMAIdle(pAd, 100, 1000);
 
-{
-	// TODO: shiang-usw, move this to other place!
-	UINT32 reg_val = 0;
-#if (CFG_CPU_LOADING_RXRING_DLY == 1)
-    reg_val = RX_DLY_INT_CFG;
-#endif
-	HIF_IO_WRITE32(pAd, MT_DELAY_INT_CFG, reg_val);
-}
+	{
+		// TODO: shiang-usw, move this to other place!
+		HIF_IO_WRITE32(pAd, MT_DELAY_INT_CFG, RX_DLY_INT_CFG);
+		rx_delay_ctl->en = TRUE;
+	}
 	/* Reset DMA Index */
 	HIF_IO_WRITE32(pAd, WPDMA_RST_PTR, 0xFFFFFFFF);
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -23,7 +22,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifdef RTMP_EFUSE_SUPPORT
 
 #include	"rt_config.h"
@@ -49,9 +48,6 @@ static VOID EFUSE_IO_READ32(PRTMP_ADAPTER pAd, UINT32 reg, UINT32 *value)
 		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
 #endif
 
-#if defined(RTMP_MAC_USB) || defined(RTMP_MAC_SDIO)
-		RTMP_MCU_IO_READ32(pAd, reg, value);
-#endif
 	}
 	else
 #endif /* MT_MAC */
@@ -72,9 +68,6 @@ static VOID EFUSE_IO_WRITE32(PRTMP_ADAPTER pAd, UINT32 reg, UINT32 value)
 		RTMP_IO_WRITE32(pAd, MCU_PCIE_REMAP_2, RestoreValue);
 #endif
 
-#if defined(RTMP_MAC_USB) || defined(RTMP_MAC_SDIO)
-		RTMP_MCU_IO_WRITE32(pAd, reg, value);
-#endif
 	}
 	else
 #endif /* MT_MAC */
@@ -1086,10 +1079,9 @@ int rtmp_ee_efuse_write16(
 
 	MtCmdEfuseAccessRead(pAd,Offset,&block[0],&isVaild);
 	index = Offset%EFUSE_BLOCK_SIZE;
-    
+
 	block[index] = data & 0xff;
-    if((index+1) < EFUSE_BLOCK_SIZE)
-	    block[index+1] = data >> 8 & 0xff;
+	block[index+1] = data >> 8 & 0xff;
 	MtCmdEfuseAccessWrite(pAd,Offset,&block[0]);
 	return 0;
 }
@@ -1153,15 +1145,15 @@ INT rtmp_ee_write_to_efuse(
 	UINT isVaild = 0;
 	BOOL NeedWrite;
 #ifdef RF_LOCKDOWN
-	BOOL RFlockDown = FALSE;
+    BOOL RFlockDown = FALSE;
 
-	/* Check RF lock down flag in Effuse column */
-	if ((pAd->fgQAEffuseWriteBack == FALSE) && (pAd->chipOps.check_RF_lock_down != NULL))
-		RFlockDown = pAd->chipOps.check_RF_lock_down(pAd);
+    /* Check RF lock down flag in Effuse column */
+    if ((pAd->fgQAEffuseWriteBack == FALSE) && (pAd->chipOps.check_RF_lock_down != NULL))
+        RFlockDown = pAd->chipOps.check_RF_lock_down(pAd);
 
-	/* check RF lock */
-	if (RFlockDown == TRUE)
-		return TRUE;
+    /* check RF lock */
+    if (RFlockDown == TRUE)
+        return TRUE;
 #endif /* RF_LOCKDOWN */
 
 	for ( offset = 0 ; offset < length ; offset += EFUSE_BLOCK_SIZE )
@@ -1470,46 +1462,33 @@ VOID rtmp_ee_load_from_efuse(RTMP_ADAPTER *pAd)
 #ifdef CONFIG_ATE
 INT Set_LoadEepromBufferFromEfuse_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
-	UINT bEnable = simple_strtol(arg, 0, 10);
+	//UINT bEnable = simple_strtol(arg, 0, 10);
 
-	if (bEnable < 0)
-		return FALSE;
-	else
-	{
-		rtmp_ee_load_from_efuse(pAd);
-		return TRUE;
-	}
+    rtmp_ee_load_from_efuse(pAd);
+
+    return TRUE;
 }
 
 
 INT set_eFuseBufferModeWriteBack_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
-	UINT bEnable = simple_strtol(arg, 0, 10);
+	//UINT bEnable = simple_strtol(arg, 0, 10);
 
-	if (bEnable < 0)
-		return FALSE;
-	else
-	{
-		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::Write EEPROM buffer back to eFuse\n", __FUNCTION__));
-		Set_EepromBufferWriteBack_Proc(pAd, "1");
-		return TRUE;
-	}
+    MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::Write EEPROM buffer back to eFuse\n", __FUNCTION__));
+    Set_EepromBufferWriteBack_Proc(pAd, "1");
+
+    return TRUE;
 }
 
 
 INT set_BinModeWriteBack_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
-	UINT bEnable = simple_strtol(arg, 0, 10);
+	//UINT bEnable = simple_strtol(arg, 0, 10);
 
-	if (bEnable < 0)
-		return FALSE;
-	else
-	{
-		MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::Write EEPROM buffer back to BIN\n", __FUNCTION__));
-		Set_EepromBufferWriteBack_Proc(pAd, "4");
+    MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("%s::Write EEPROM buffer back to BIN\n", __FUNCTION__));
+    Set_EepromBufferWriteBack_Proc(pAd, "4");
 
-		return TRUE;
-	}
+    return TRUE;
 }
 
 #endif /* CONFIG_ATE */

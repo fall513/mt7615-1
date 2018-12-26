@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,7 @@
 	Module Name:
 	mt_mac_ctrl.h
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __MT_MAC_CTRL_H__
 #define __MT_MAC_CTRL_H__
 

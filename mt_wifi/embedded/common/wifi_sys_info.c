@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,40 +13,39 @@
 	Module Name:
 	wifi_sys_info.c
 */
-#endif /* MTK_LICENSE */
 #include	"rt_config.h"
 
-#define NETWORKTYPE_STR_SIZE 128
+
 
 /*Local function*/
 static VOID _GetNetworkTypeStr(UINT32 Type,CHAR *str)
 {
 	if(Type & NETWORK_INFRA)
 	{
-		snprintf(str,NETWORKTYPE_STR_SIZE,"%s","NETWORK_INFRA");
+		sprintf(str,"%s","NETWORK_INFRA");
 	}else
 	if(Type & NETWORK_P2P)
 	{
-		snprintf(str,NETWORKTYPE_STR_SIZE,"%s","NETWORK_P2P");
+		sprintf(str,"%s","NETWORK_P2P");
 	}else
 	if(Type & NETWORK_IBSS)
 	{
-		snprintf(str,NETWORKTYPE_STR_SIZE,"%s","NETWORK_IBSS");
+		sprintf(str,"%s","NETWORK_IBSS");
 	}else
 	if(Type & NETWORK_MESH)
 	{
-		snprintf(str,NETWORKTYPE_STR_SIZE,"%s","NETWORK_MESH");
+		sprintf(str,"%s","NETWORK_MESH");
 	}else
 	if(Type & NETWORK_BOW)
 	{
-		snprintf(str,NETWORKTYPE_STR_SIZE,"%s","NETWORK_BOW");
+		sprintf(str,"%s","NETWORK_BOW");
 	}else
 	if(Type & NETWORK_WDS)
 	{
-		snprintf(str,NETWORKTYPE_STR_SIZE,"%s","NETWORK_WDS");
+		sprintf(str,"%s","NETWORK_WDS");
 	}else
 	{
-		snprintf(str,NETWORKTYPE_STR_SIZE,"%s","UND");
+		sprintf(str,"%s","UND");
 	}
 }
 
@@ -73,7 +71,7 @@ static VOID _WifiSysInfoBssInfoDump(WIFI_INFO_CLASS_T *pWifiClass)
 {
 	BSS_INFO_ARGUMENT_T *pBssInfo = NULL;
 	struct wifi_dev *wdev = NULL;
-	CHAR str[NETWORKTYPE_STR_SIZE]="";
+	CHAR str[128]="";
 
 	DlListForEach(pBssInfo,&pWifiClass->Head,BSS_INFO_ARGUMENT_T,list){
 		wdev = (struct wifi_dev*)pBssInfo->priv;
@@ -163,15 +161,6 @@ VOID WifiSysInfoDump(RTMP_ADAPTER *pAd)
 }
 
 
-VOID WifiSysInfoBssInfoDump(RTMP_ADAPTER *pAd)
-{
-	WIFI_SYS_INFO_T *pWifiSysInfo = &pAd->WifiSysInfo;
-	printk("===============================\n");
-	printk("Current BssInfo Num: %d\n",pWifiSysInfo->BssInfo.Num);	
-	printk("===============================\n");
-	_WifiSysInfoBssInfoDump(&pWifiSysInfo->BssInfo);
-	
-}
 /*
 *
 */
@@ -314,6 +303,51 @@ VOID WifiSysUpdateBssInfoState(RTMP_ADAPTER *pAd, UINT8 ucBssInfoIdx, BSSINFO_ST
 		__FUNCTION__, ucBssInfoIdx));
 }
 
+
+VOID DbgCheckLinkList(PDL_LIST list2chk, UINT8 chkpoint)
+{
+	STA_REC_CTRL_T *item = NULL;
+	UINT8 item_chked = 0;
+	
+	if (list2chk->Next == NULL){
+
+		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::pWifiSysInfo->StaRec.Head.Next is NULL\n", __FUNCTION__, chkpoint));
+	
+	}
+
+	item = DlListEntry((list2chk)->Next, STA_REC_CTRL_T, list);
+
+	if (item == NULL){
+
+		MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::item is NULL\n", __FUNCTION__, chkpoint));
+
+	}
+
+	while (&item->list != list2chk){
+
+		if (item->list.Next == NULL){
+
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::item->list.Next is NULL, item_chked=%d\n", __FUNCTION__, chkpoint, item_chked));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::item is TREntry %d\n", __FUNCTION__, chkpoint, item->WlanIdx));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::BssIndex=%d\n", __FUNCTION__, chkpoint, item->BssIndex));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::ConnectionType=%d\n", __FUNCTION__, chkpoint, item->ConnectionType));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::ConnectionState=%d\n", __FUNCTION__, chkpoint, item->ConnectionState));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::EnableFeature=%d\n", __FUNCTION__, chkpoint, item->EnableFeature));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::IsNewSTARec=%d\n", __FUNCTION__, chkpoint, item->IsNewSTARec));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::priv=%p\n", __FUNCTION__, chkpoint, item->priv));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::Prev=%p\n", __FUNCTION__, chkpoint, item->list.Prev));
+			MTWF_LOG(DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_OFF, ("ERROR:%s(%d)::Next=%p\n", __FUNCTION__, chkpoint, item->list.Next));
+		}
+
+		item_chked++;
+
+		item = DlListEntry(item->list.Next, STA_REC_CTRL_T, list);
+
+	}
+
+}
+
+
 /*
 *
 */
@@ -334,8 +368,12 @@ VOID WifiSysAddStaRec(RTMP_ADAPTER *pAd, STA_TR_ENTRY *tr_entry, STA_REC_CTRL_T 
 	/* Do not update pStaRec->list, it could be in the link list already. */
 	/* pStaRec->priv is updated later. */
 
+	DbgCheckLinkList(&pWifiSysInfo->StaRec.Head, 1);
+
 	DlListForEach(pStaRecTmp,&pWifiSysInfo->StaRec.Head,STA_REC_CTRL_T,list){
-		
+
+		DbgCheckLinkList(&pWifiSysInfo->StaRec.Head, 2);
+
 		if(pStaRecTmp==pStaRec)
 		{
 			OS_SEM_UNLOCK(&pWifiSysInfo->lock);
@@ -372,6 +410,8 @@ VOID WifiSysDelStaRec(RTMP_ADAPTER *pAd, STA_TR_ENTRY *tr_entry)
 				__FUNCTION__, tr_entry->wcid, tr_entry->EntryType));			
 		return;
 	}
+
+	DbgCheckLinkList(&pWifiSysInfo->StaRec.Head, 3);
 
 	DlListDel(&pStaRec->list);			
 	os_zero_mem(pStaRec,sizeof(STA_REC_CTRL_T));
@@ -496,7 +536,7 @@ VOID WifiSysUpdatePortSecur(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry)
 
 		wifi_sys_ctrl.wdev = pEntry->wdev;
 
-		HW_WIFISYS_PEER_UPDATE(pAd, &wifi_sys_ctrl);
+		HW_WIFISYS_PEER_UPDATE(pAd,wifi_sys_ctrl);
 #ifdef CONFIG_AP_SUPPORT
 		CheckBMCPortSecured(pAd, pEntry, TRUE);
 #endif /* CONFIG_AP_SUPPORT */
@@ -536,7 +576,7 @@ VOID WifiSysPeerLinkDown(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry)
 	}
 
 	wifi_sys_ctrl.wdev = wdev;
-	HW_WIFISYS_PEER_LINKDOWN(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_PEER_LINKDOWN(pAd,wifi_sys_ctrl);
 
 #ifdef CONFIG_AP_SUPPORT
 	CheckBMCPortSecured(pAd, pEntry, FALSE);
@@ -572,7 +612,7 @@ VOID WifiSysOpen(RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
 #endif
 		wifi_sys_ctrl.wdev = wdev;
 		/*update to hwctrl*/
-		HW_WIFISYS_OPEN(pAd, &wifi_sys_ctrl);
+		HW_WIFISYS_OPEN(pAd,wifi_sys_ctrl);
 	}
 
 }
@@ -605,7 +645,7 @@ VOID WifiSysClose(RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
 		
 		wifi_sys_ctrl.wdev = wdev;
 		/*update to hwctrl*/
-		HW_WIFISYS_CLOSE(pAd, &wifi_sys_ctrl);
+		HW_WIFISYS_CLOSE(pAd,wifi_sys_ctrl);
 	}
 	return;
 }
@@ -645,6 +685,11 @@ VOID WifiSysApLinkUp(RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
 												  BSS_INFO_RF_CH_FEATURE |
 												  BSS_INFO_BROADCAST_INFO_FEATURE);
 
+#ifdef RACTRL_FW_OFFLOAD_SUPPORT
+		if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
+			wdev->bss_info_argument.u4BssInfoFeature |= BSS_INFO_RA_FEATURE;
+#endif
+
 		if (wdev->OmacIdx > HW_BSSID_MAX)
 		{
 		  	wdev->bss_info_argument.u4BssInfoFeature = wdev->bss_info_argument.u4BssInfoFeature |
@@ -678,11 +723,6 @@ VOID WifiSysApLinkUp(RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
 			enableFeature |= STA_REC_AMSDU_FEATURE;
 		}
 
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-		if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
-			enableFeature |= STA_REC_RA_COMMON_INFO_FEATURE;
-#endif
-
 		sta_ctrl->BssIndex = wdev->bss_info_argument.ucBssIndex;
 		sta_ctrl->WlanIdx = wdev->bss_info_argument.ucBcMcWlanIdx;
 		sta_ctrl->ConnectionState = StaState;
@@ -697,7 +737,7 @@ VOID WifiSysApLinkUp(RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
 	            wdev->bss_info_argument.ucBcMcWlanIdx, StaState));
 		/*update to hw ctrl task*/
 		wifi_sys_ctrl.wdev = wdev;
-		HW_WIFISYS_LINKUP(pAd, &wifi_sys_ctrl);
+		HW_WIFISYS_LINKUP(pAd,wifi_sys_ctrl);
 
 		APKeyTableInit(pAd, wdev);
 
@@ -720,6 +760,17 @@ VOID WifiSysApLinkDown(RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
         	STA_REC_BASIC_STA_RECORD_FEATURE | STA_REC_TX_PROC_FEATURE;
 
 	APStopRekeyTimer(pAd, wdev);
+
+#ifdef WH_EZ_SETUP	
+#ifndef EZ_MOD_SUPPORT
+	if (IS_EZ_SETUP_ENABLED(wdev))
+	{
+		RTMP_SEM_LOCK(&wdev->ez_security.ez_apcli_list_sem_lock);
+		ez_clear_apcli_list(&wdev->ez_security.ez_apcli_list);
+		RTMP_SEM_UNLOCK(&wdev->ez_security.ez_apcli_list_sem_lock);
+	}
+#endif	
+#endif /* WH_EZ_SETUP */
 
 	os_zero_mem(&wifi_sys_ctrl,sizeof(WIFI_SYS_CTRL));
 	
@@ -763,7 +814,7 @@ VOID WifiSysApLinkDown(RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
 
 		/*update to hwctrl for hw seting*/
 		wifi_sys_ctrl.wdev = wdev;
-		HW_WIFISYS_LINKDOWN(pAd, &wifi_sys_ctrl);
+		HW_WIFISYS_LINKDOWN(pAd,wifi_sys_ctrl);
 	}
 
 }
@@ -842,8 +893,8 @@ VOID WifiSysApPeerLinkUp(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry, IE_LISTS *ie
 #ifdef TXBF_SUPPORT
     if ((pAd->CommonCfg.ETxBfEnCond == TRUE) || 
         (pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn == TRUE))
-    {
-        if (pEntry && (!IS_ENTRY_NONE(pEntry)) && IS_ENTRY_CLIENT(pEntry))
+    {   
+        if ((!IS_ENTRY_NONE(pEntry)) && IS_ENTRY_CLIENT(pEntry))
         {
             if (HcIsBfCapSupport(wdev))
             {                      
@@ -886,7 +937,7 @@ VOID WifiSysApPeerLinkUp(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry, IE_LISTS *ie
 
 	wifi_sys_ctrl.priv = (VOID*)lu_ctrl;
 	wifi_sys_ctrl.wdev = wdev;
-	HW_WIFISYS_PEER_LINKUP(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_PEER_LINKUP(pAd,wifi_sys_ctrl);
 
 #if defined(MT7615) || defined(MT7637) || defined(MT7622)
     if (IS_MT7615(pAd) || (IS_MT7637(pAd)) || IS_MT7622(pAd))
@@ -909,6 +960,84 @@ if ((pAd->BgndScanCtrl.BgndScanStatMachine.CurrState == BGND_RDD_DETEC)
 
 }
 
+#ifdef WH_EZ_SETUP
+
+VOID WifiSysApPeerChBwUpdate(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry)//, IE_LISTS *ie_list)  Rakesh: Todo check actual peer cap
+{
+	WIFI_SYS_CTRL wifi_sys_ctrl;
+	UINT32 enableFeature = 0;
+	UCHAR PortSecured = STATE_DISCONNECT;
+	STA_TR_ENTRY *tr_entry = &pAd->MacTab.tr_entry[pEntry->tr_tb_idx];
+	struct wifi_dev *wdev = pEntry->wdev;
+	STA_REC_CTRL_T *sta_ctrl = &wifi_sys_ctrl.StaRecCtrl;
+	
+	os_zero_mem(&wifi_sys_ctrl,sizeof(WIFI_SYS_CTRL));
+	
+	/* Jeffrey 2015.3.9, OR features instead */
+#if defined(MT7615) || defined(MT7622)
+	/* Jeffrey 2015.3.9, Sync HT info to F/W */
+#ifdef DOT11_N_SUPPORT
+	if ( //(ie_list->ht_cap_len > 0) &&     Rakesh: todo check actual peer cap
+		WMODE_CAP_N(wdev->PhyMode))
+	{
+		enableFeature |= STA_REC_BASIC_HT_INFO_FEATURE;
+	}
+#endif
+
+	/* Jeffrey 2015.3.9, Sync VHT info to F/W */
+#ifdef DOT11_VHT_AC
+	if ( //(ie_list->vht_cap_len > 0) && 	Rakesh: todo check actual peer cap
+		WMODE_CAP_AC(wdev->PhyMode))
+	{
+		enableFeature |= STA_REC_BASIC_VHT_INFO_FEATURE;
+	}
+#endif
+#endif /* defined(MT7615) || defined(MT7622) */
+
+	if ((tr_entry->PortSecured == WPA_802_1X_PORT_NOT_SECURED)
+		&& (IS_AKM_WPA_CAPABILITY_Entry(pEntry)
+#ifdef DOT1X_SUPPORT
+		|| IS_IEEE8021X(&pEntry->SecConfig)
+#endif /* DOT1X_SUPPORT */
+#ifdef RT_CFG80211_SUPPORT
+		|| wdev->IsCFG1xWdev
+#endif /* RT_CFG80211_SUPPORT */
+		|| pEntry->bWscCapable))
+	{
+		PortSecured = STATE_CONNECTED;
+	} else 
+	if (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED)
+	{
+		PortSecured = STATE_PORT_SECURE;
+		CheckBMCPortSecured(pAd, pEntry, TRUE);
+	}
+
+	sta_ctrl->BssIndex = wdev->bss_info_argument.ucBssIndex;
+	sta_ctrl->WlanIdx = pEntry->wcid;
+	sta_ctrl->ConnectionType = pEntry->ConnectionType;
+	sta_ctrl->ConnectionState = PortSecured;
+	sta_ctrl->EnableFeature = enableFeature;
+	sta_ctrl->IsNewSTARec = FALSE;	// Rakesh: set False as updating existing record
+	wifi_sys_ctrl.skip_set_txop = TRUE;/* there is no need to set txop when sta connected.*/
+	WifiSysUpdateStaRec(pAd,tr_entry, sta_ctrl);
+	
+	MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE,
+		("===> AsicStaRecUpdate called by (%s), wcid=%d, PortSecured=%d, AKM=0x%x\n",
+		__FUNCTION__, pEntry->wcid, PortSecured, pEntry->SecConfig.AKMMap));
+
+	wifi_sys_ctrl.priv = NULL;
+	wifi_sys_ctrl.wdev = wdev;
+	HW_WIFISYS_PEER_LINKUP(pAd,wifi_sys_ctrl);
+
+#if defined(MT7615) || defined(MT7637) || defined(MT7622)
+    if (IS_MT7615(pAd) || (IS_MT7637(pAd)) || IS_MT7622(pAd))
+    {
+		    RAInit(pAd, pEntry);
+    }
+#endif /* defined(MT7615) || defined(MT7637) || defined(MT7622) */
+
+}
+#endif
 
 #ifdef WDS_SUPPORT
 /*
@@ -943,6 +1072,11 @@ VOID WifiSysWdsLinkUp(RTMP_ADAPTER *pAd,struct wifi_dev *wdev, UCHAR wcid)
 											BSS_INFO_BROADCAST_INFO_FEATURE |
 											BSS_INFO_RF_CH_FEATURE);
 
+#ifdef RACTRL_FW_OFFLOAD_SUPPORT
+		if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
+			wdev->bss_info_argument.u4BssInfoFeature |= BSS_INFO_RA_FEATURE;
+#endif
+
 		WifiSysUpdateBssInfo(pAd,wdev,&wifi_sys_ctrl.BssInfoCtrl);
 	}
 
@@ -950,11 +1084,6 @@ VOID WifiSysWdsLinkUp(RTMP_ADAPTER *pAd,struct wifi_dev *wdev, UCHAR wcid)
 	if (pAd->chipCap.SupportAMSDU == TRUE) {
 		enableFeature |= STA_REC_AMSDU_FEATURE;
 	}
-
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-	if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
-		enableFeature |= STA_REC_RA_COMMON_INFO_FEATURE;
-#endif
 
 #ifdef DOT11_N_SUPPORT
 	if (CLIENT_STATUS_TEST_FLAG(pMacEntry, fCLIENT_STATUS_HT_CAPABLE))
@@ -984,7 +1113,7 @@ VOID WifiSysWdsLinkUp(RTMP_ADAPTER *pAd,struct wifi_dev *wdev, UCHAR wcid)
 		__FUNCTION__, wcid, STATE_PORT_SECURE));
 
 	wifi_sys_ctrl.wdev = wdev;
-	HW_WIFISYS_LINKUP(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_LINKUP(pAd,wifi_sys_ctrl);
 }
 
 
@@ -1026,7 +1155,7 @@ VOID WifiSysWdsLinkDown(RTMP_ADAPTER *pAd,struct wifi_dev *wdev, UCHAR wcid)
 	}
 	
 	wifi_sys_ctrl.wdev = wdev;
-	HW_WIFISYS_LINKDOWN(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_LINKDOWN(pAd,wifi_sys_ctrl);
 }
 #endif /*WDS_SUPPORT*/
 #endif /*CONFIG_AP_SUPPORT*/
@@ -1104,7 +1233,7 @@ VOID WifiSysApCliLinkUp(RTMP_ADAPTER *pAd,APCLI_STRUCT *pApCliEntry,UCHAR CliIdx
         if ((pAd->CommonCfg.ETxBfEnCond == TRUE) || 
             (pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn == TRUE))
         {
-            if (pMacEntry && (!IS_ENTRY_NONE(pMacEntry)) && 
+            if ((!IS_ENTRY_NONE(pMacEntry)) && 
                (IS_ENTRY_APCLI(pMacEntry) || IS_ENTRY_REPEATER(pMacEntry) || IS_ENTRY_AP(pMacEntry) || IS_ENTRY_CLIENT(pMacEntry)))
             {
                 if (HcIsBfCapSupport(wdev))
@@ -1123,11 +1252,6 @@ VOID WifiSysApCliLinkUp(RTMP_ADAPTER *pAd,APCLI_STRUCT *pApCliEntry,UCHAR CliIdx
             }
         }
 #endif /* TXBF_SUPPORT */		
-
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-		if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
-			enableFeature |= STA_REC_RA_COMMON_INFO_FEATURE;
-#endif
 
 		sta_ctrl->BssIndex = wdev->bss_info_argument.ucBssIndex;
 		sta_ctrl->WlanIdx = pReptEntry->MacTabWCID;
@@ -1159,6 +1283,11 @@ VOID WifiSysApCliLinkUp(RTMP_ADAPTER *pAd,APCLI_STRUCT *pApCliEntry,UCHAR CliIdx
 									BSS_INFO_RF_CH_FEATURE |
 									BSS_INFO_BROADCAST_INFO_FEATURE |
 									BSS_INFO_SYNC_MODE_FEATURE);
+
+#ifdef RACTRL_FW_OFFLOAD_SUPPORT
+		if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
+			wdev->bss_info_argument.u4BssInfoFeature |= BSS_INFO_RA_FEATURE;
+#endif
 
 			WifiSysUpdateBssInfo(pAd,wdev,&wifi_sys_ctrl.BssInfoCtrl);
 		}
@@ -1196,16 +1325,11 @@ VOID WifiSysApCliLinkUp(RTMP_ADAPTER *pAd,APCLI_STRUCT *pApCliEntry,UCHAR CliIdx
 	        enableFeature |= STA_REC_AMSDU_FEATURE;
 	    }
 
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-		if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
-			enableFeature |= STA_REC_RA_COMMON_INFO_FEATURE;
-#endif
-
 #ifdef TXBF_SUPPORT
         if ((pAd->CommonCfg.ETxBfEnCond == TRUE) || 
             (pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn == TRUE))
         {
-            if (pMacEntry && (!IS_ENTRY_NONE(pMacEntry)) && 
+            if ((!IS_ENTRY_NONE(pMacEntry)) && 
                (IS_ENTRY_APCLI(pMacEntry) || IS_ENTRY_REPEATER(pMacEntry) || IS_ENTRY_AP(pMacEntry)))
             {
                 if (HcIsBfCapSupport(wdev))
@@ -1247,7 +1371,7 @@ VOID WifiSysApCliLinkUp(RTMP_ADAPTER *pAd,APCLI_STRUCT *pApCliEntry,UCHAR CliIdx
 
 	/*update to hw ctrl*/
 	wifi_sys_ctrl.wdev = wdev;
-	HW_WIFISYS_LINKUP(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_LINKUP(pAd,wifi_sys_ctrl);
 	
 }
 
@@ -1324,8 +1448,81 @@ VOID WifiSysApCliLinkDown(RTMP_ADAPTER *pAd,APCLI_STRUCT *pApCliEntry,UCHAR CliI
 
 	/*update to hw ctrl*/
 	wifi_sys_ctrl.wdev = wdev;
-	HW_WIFISYS_LINKDOWN(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_LINKDOWN(pAd,wifi_sys_ctrl);
 }
+
+#ifdef WH_EZ_SETUP
+VOID WifiSysApCliChBwUpdate(RTMP_ADAPTER *pAd,APCLI_STRUCT *pApCliEntry,UCHAR CliIdx, MAC_TABLE_ENTRY *pMacEntry) // Rakesh : refer WifiSysApCliLinkUp
+{
+	WIFI_SYS_CTRL wifi_sys_ctrl;
+	struct wifi_dev *wdev = &pApCliEntry->wdev;
+	UCHAR PortSecured = STATE_DISCONNECT;
+    UINT32 enableFeature = 0;
+#ifdef MAC_REPEATER_SUPPORT
+    //RTMP_CHIP_CAP *cap = &pAd->chipCap;
+    //REPEATER_CLIENT_ENTRY *pReptEntry = NULL;
+#endif /*MAC_REPEATER*/
+	STA_TR_ENTRY *tr_entry;
+	STA_REC_CTRL_T *sta_ctrl;
+
+	os_zero_mem(&wifi_sys_ctrl,sizeof(WIFI_SYS_CTRL));
+
+#ifdef MAC_REPEATER_SUPPORT
+	if (CliIdx != 0xFF)
+    {
+		// Rakesh: not handling this case		
+    }
+    else
+#endif /* MAC_REPEATER_SUPPORT */
+	{
+		/*sta rec update*/
+		if (IS_NO_SECURITY_Entry(pMacEntry) || IS_CIPHER_WEP_Entry(pMacEntry))
+		{
+ 			PortSecured = STATE_PORT_SECURE;
+		}
+		else
+		{
+ 			PortSecured = STATE_CONNECTED;
+		}
+
+#if defined(MT7615) || defined(MT7622)
+#ifdef DOT11_N_SUPPORT
+		if (CLIENT_STATUS_TEST_FLAG(pMacEntry, fCLIENT_STATUS_HT_CAPABLE))
+		{
+			enableFeature |= STA_REC_BASIC_HT_INFO_FEATURE;
+		}
+#endif /*DOT11_N_SUPPORT*/
+
+#ifdef DOT11_VHT_AC
+		if (CLIENT_STATUS_TEST_FLAG(pMacEntry, fCLIENT_STATUS_VHT_CAPABLE))
+		{
+			enableFeature |= STA_REC_BASIC_VHT_INFO_FEATURE;
+		}
+#endif /*DOT11_VHT_AC*/
+#endif
+		tr_entry = &pAd->MacTab.tr_entry[pMacEntry->tr_tb_idx];
+		sta_ctrl = &tr_entry->StaRec;
+
+		sta_ctrl->BssIndex = wdev->bss_info_argument.ucBssIndex;
+		sta_ctrl->WlanIdx = pMacEntry->wcid;
+		sta_ctrl->ConnectionType = CONNECTION_INFRA_AP;
+		sta_ctrl->ConnectionState = PortSecured;
+		sta_ctrl->EnableFeature = enableFeature;
+		sta_ctrl->IsNewSTARec = FALSE; // Rakesh: as existing peer record is being updated, use FALSE
+		
+		WifiSysUpdateStaRec(pAd,tr_entry,&wifi_sys_ctrl.StaRecCtrl);
+
+			MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE,
+				("===> AsicStaRecUpdate called by (%s), wcid=%d, PortSecured=%d\n",
+				__FUNCTION__, pMacEntry->wcid, PortSecured));
+	}
+
+	/*update to hw ctrl*/
+	wifi_sys_ctrl.wdev = wdev;
+	HW_WIFISYS_LINKUP(pAd,wifi_sys_ctrl);
+	
+}
+#endif
 
 #endif /*APCLI_SUPPORT*/
 
@@ -1376,11 +1573,6 @@ VOID WifiSysTdlsPeerLinkDown(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry)
 	}
 #endif /*DOT11_VHT_AC*/
 
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-	if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
-		enableFeature |= STA_REC_RA_COMMON_INFO_FEATURE;
-#endif
-
 	sta_ctrl->BssIndex = pEntry->wdev->bss_info_argument.ucBssIndex;
 	sta_ctrl->WlanIdx = pEntry->wcid;
 	sta_ctrl->ConnectionState = PortSecured;
@@ -1392,7 +1584,7 @@ VOID WifiSysTdlsPeerLinkDown(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry)
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_TDLS, DBG_LVL_ERROR,("%s() - AsicStaRecUpdate WCID: %d\n", __FUNCTION__,pEntry->wcid));
 
 	wifi_sys_ctrl.wdev = pEntry->wdev;
-	HW_WIFISYS_PEER_LINKDOWN(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_PEER_LINKDOWN(pAd,wifi_sys_ctrl);
 #else
 	MTWF_LOG(DBG_CAT_PROTO, CATPROTO_TDLS, DBG_LVL_INFO,("%s() Not support this function\n"),__FUNCTION__);
 #endif /* MT7636 || MT7615 || MT7637 || MT7622 */
@@ -1425,7 +1617,7 @@ VOID WifiSysRaInit(RTMP_ADAPTER *pAd,MAC_TABLE_ENTRY *pEntry)
 
 	WifiSysUpdateStaRec(pAd, tr_entry, sta_ctrl);
 
-	HW_WIFISYS_PEER_UPDATE(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_PEER_UPDATE(pAd,wifi_sys_ctrl);
 }
 
 
@@ -1459,7 +1651,7 @@ VOID WifiSysUpdateRa(RTMP_ADAPTER *pAd,
 	wifi_sys_ctrl.priv = (VOID*)ra_parm;
 	wifi_sys_ctrl.wdev = pEntry->wdev;
 
-	HW_WIFISYS_PEER_UPDATE(pAd, &wifi_sys_ctrl);
+	HW_WIFISYS_PEER_UPDATE(pAd,wifi_sys_ctrl);
 
 }
 #endif /*RACTRL_FW_OFFLOAD_SUPPORT*/

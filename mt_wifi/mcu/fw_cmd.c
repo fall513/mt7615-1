@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc.
@@ -14,7 +13,7 @@
 	Module Name:
 	fw_cmd.c
 */
-#endif /* MTK_LICENSE */
+
 #ifdef COMPOS_WIN
 #include "MtConfig.h"
 #elif defined (COMPOS_TESTMODE_WIN)
@@ -22,7 +21,6 @@
 #else
 #include "rt_config.h"
 #endif
-#include "rtmp.h"
 
 static VOID EventExtCmdResult(struct cmd_msg *msg, char *Data, UINT16 Len)
 {
@@ -791,39 +789,44 @@ INT32 CmdTxContinous(RTMP_ADAPTER *pAd, UINT32 PhyMode, UINT32 BW,
 	struct _CMD_TEST_CTRL_T ContiTXParam = {0};
 	INT32 ret = 0;
 	UCHAR TXDRate = 0;
-    struct _CMD_ATTRIBUTE attr = {0};
+	struct _CMD_ATTRIBUTE attr = {0};
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-        ("%s, mode:0x%x, bw:0x%x, prich(Control CH):0x%x, "
-        "mcs:0x%x, wfsel:0x%x, on/off:0x%x\n", __FUNCTION__,
-                PhyMode, BW, PriCh, Mcs, WFSel, onoff));
+		("%s, mode:0x%x, bw:0x%x, prich(Control CH):0x%x, "
+		 "mcs:0x%x, wfsel:0x%x, on/off:0x%x\n",
+		__FUNCTION__,PhyMode, BW, PriCh, Mcs, WFSel, onoff));
 
-    msg = AndesAllocCmdMsg(pAd, sizeof(ContiTXParam));
+	msg = AndesAllocCmdMsg(pAd, sizeof(ContiTXParam));
+	if (!msg)
+	{
+		ret = NDIS_STATUS_RESOURCES;
+		goto error;
+	}
 
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_RF_TEST);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 8);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
+	SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+	SET_CMD_ATTR_TYPE(attr, EXT_CID);
+	SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_RF_TEST);
+	SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
+	SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+	SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 8);
+	SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+	SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
 
-    AndesInitCmdMsg(msg, attr);
+	AndesInitCmdMsg(msg, attr);
 
-    os_zero_mem(&ContiTXParam, sizeof(ContiTXParam));
+	os_zero_mem(&ContiTXParam, sizeof(ContiTXParam));
 
-    ContiTXParam.ucAction = ACTION_IN_RFTEST;
+	ContiTXParam.ucAction = ACTION_IN_RFTEST;
 	if (onoff == 0)
 	{
-	    ContiTXParam.u.rRfATInfo.u4FuncIndex = CONTINUOUS_TX_STOP;
+		ContiTXParam.u.rRfATInfo.u4FuncIndex = CONTINUOUS_TX_STOP;
 	}
-    else
+	else
 	{
-        ContiTXParam.u.rRfATInfo.u4FuncIndex = CONTINUOUS_TX_START;
-    }
+		ContiTXParam.u.rRfATInfo.u4FuncIndex = CONTINUOUS_TX_START;
+	}
 	/* 0: All 1:TX0 2:TX1 */
-    ContiTXParam.u.rRfATInfo.Data.rConTxParam.ucCentralCh = PriCh;
+	ContiTXParam.u.rRfATInfo.Data.rConTxParam.ucCentralCh = PriCh;
 	if (BW_40 == BW || BW_80 == BW)
 	{
 		ContiTXParam.u.rRfATInfo.Data.rConTxParam.ucCtrlCh = (PriCh + 2);
@@ -834,79 +837,82 @@ INT32 CmdTxContinous(RTMP_ADAPTER *pAd, UINT32 PhyMode, UINT32 BW,
 	}
 	ContiTXParam.u.rRfATInfo.Data.rConTxParam.ucAntIndex = WFSel;
 	if (0 == PhyMode) //CCK
-    {
-        switch(Mcs)
-        {
-            //long preamble
-            case 0:
-                TXDRate = 0;
-                break;
-            case 1:
-                TXDRate = 1;
-                break;
-            case 2:
-                TXDRate = 2;
-                break;
-            case 3:
-                TXDRate = 3;
-                break;
-            //short preamble
-            case 9:
-                TXDRate = 5;
-                break;
-            case 10:
-                TXDRate = 6;
-                break;
-            case 11:
-                TXDRate = 7;
-                break;
-        }
-    }
-    else if (1 == PhyMode) //OFDM
-    {
-         switch(Mcs)
-         {
-            case 0:
-                TXDRate = 11;
-                break;
-            case 1:
-                TXDRate = 15;
-                break;
-            case 2:
-                TXDRate = 10;
-                break;
-            case 3:
-                TXDRate = 14;
-                break;
-            case 4:
-                TXDRate = 9;
-                break;
-            case 5:
-                TXDRate = 13;
-                break;
-            case 6:
-                TXDRate = 8;
-                break;
-            case 7:
-                TXDRate = 12;
-                break;
-
-        }
-  	}
-    else if (2 == PhyMode || 3 == PhyMode || 4 == PhyMode)
-    {
-		/* 2. MODULATION_SYSTEM_HT20 ||3.MODULATION_SYSTEM_HT40 || 4. VHT*/
-        TXDRate = Mcs;
-    }
+	{
+		switch(Mcs)
+		{
+			//long preamble
+			case 0:
+				TXDRate = 0;
+				break;
+			case 1:
+				TXDRate = 1;
+				break;
+			case 2:
+				TXDRate = 2;
+				break;
+			case 3:
+				TXDRate = 3;
+				break;
+			//short preamble
+			case 9:
+				TXDRate = 5;
+				break;
+			case 10:
+				TXDRate = 6;
+				break;
+			case 11:
+				TXDRate = 7;
+				break;
+		}
+	}
+	else if (1 == PhyMode) //OFDM
+	{
+		switch(Mcs)
+		{
+			case 0:
+				TXDRate = 11;
+				break;
+			case 1:
+				TXDRate = 15;
+				break;
+			case 2:
+				TXDRate = 10;
+				break;
+			case 3:
+				TXDRate = 14;
+				break;
+			case 4:
+				TXDRate = 9;
+				break;
+			case 5:
+				TXDRate = 13;
+				break;
+			case 6:
+				TXDRate = 8;
+				break;
+			case 7:
+				TXDRate = 12;
+				break;
+		}
+	}
+	else if (2 == PhyMode || 3 == PhyMode || 4 == PhyMode)
+	{
+		/* 2. MODULATION_SYSTEM_HT20 ||3. MODULATION_SYSTEM_HT40 || 4. VHT */
+		TXDRate = Mcs;
+	}
 
 	ContiTXParam.u.rRfATInfo.Data.rConTxParam.u2RateCode = Mcs << 6 | TXDRate;
 #ifdef RT_BIG_ENDIAN
 	ContiTXParam.u.rRfATInfo.u4FuncIndex = cpu2le32(ContiTXParam.u.rRfATInfo.u4FuncIndex);
 	ContiTXParam.u.rRfATInfo.Data.rConTxParam.u2RateCode = 
-							cpu2le32(ContiTXParam.u.rRfATInfo.Data.rConTxParam.u2RateCode);
+				cpu2le32(ContiTXParam.u.rRfATInfo.Data.rConTxParam.u2RateCode);
 #endif
-    AndesAppendCmdMsg(msg, (char *)&ContiTXParam, sizeof(ContiTXParam));
+	AndesAppendCmdMsg(msg, (char *)&ContiTXParam, sizeof(ContiTXParam));
 	ret = AndesSendCmdMsg(pAd, msg);
+
+error:
+	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+		("%s:(ret = %d)\n", __FUNCTION__, ret));
 
 	return ret;
 }
@@ -917,48 +923,57 @@ INT32 CmdTxTonePower(RTMP_ADAPTER *pAd, INT32 type, INT32 dec)
 	struct _CMD_TEST_CTRL_T TestCtrl;
 	ATE_CTRL *ATECtrl = &(pAd->ATECtrl);
 	INT32 ret = 0;
-    struct _CMD_ATTRIBUTE attr = {0};
+	struct _CMD_ATTRIBUTE attr = {0};
 
 	msg = AndesAllocCmdMsg(pAd, sizeof(TestCtrl));
+	if (!msg)
+	{
+		ret = NDIS_STATUS_RESOURCES;
+		goto error;
+	}
 
 	MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
-        ("%s, type:%d, dec:%d\n", __FUNCTION__, type, dec));
+		("%s, type:%d, dec:%d\n", __FUNCTION__, type, dec));
 
-    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-    SET_CMD_ATTR_TYPE(attr, EXT_CID);
-    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_RF_TEST);
-    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
-    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 8);
-    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-    SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
+	SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+	SET_CMD_ATTR_TYPE(attr, EXT_CID);
+	SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_RF_TEST);
+	SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_WAIT_RETRY_RSP);
+	SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+	SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 8);
+	SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+	SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
 
-    AndesInitCmdMsg(msg, attr);
+	AndesInitCmdMsg(msg, attr);
 	os_zero_mem(&TestCtrl, sizeof(TestCtrl));
 
-    TestCtrl.ucAction =ACTION_IN_RFTEST;
-    TestCtrl.u.rRfATInfo.u4FuncIndex = cpu2le32(type);
+	TestCtrl.ucAction =ACTION_IN_RFTEST;
+	TestCtrl.u.rRfATInfo.u4FuncIndex = cpu2le32(type);
 	/* 0: All 1:TX0 2:TX1 */
 	switch (ATECtrl->TxAntennaSel)
-    {
-	case 0:
-		TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex = 0;
-		break;
-	case 1:
-		TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex = 1;
-		break;
-	case 2:
-		TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex = 2;
-		break;
-	default:
-        //for future more than 3*3 ant
-        TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex =
-                                        ATECtrl->TxAntennaSel - 1;
-		break;
+	{
+		case 0:
+			TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex = 0;
+			break;
+		case 1:
+			TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex = 1;
+			break;
+		case 2:
+			TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex = 2;
+			break;
+		default:
+	        //for future more than 3*3 ant
+	        TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucAntIndex =
+	                                        ATECtrl->TxAntennaSel - 1;
+			break;
 	}
 	TestCtrl.u.rRfATInfo.Data.rTxToneGainParam.ucTonePowerGain = dec;
-    AndesAppendCmdMsg(msg, (char *)&TestCtrl, sizeof(TestCtrl));
-    ret = AndesSendCmdMsg(pAd, msg);
+	AndesAppendCmdMsg(msg, (char *)&TestCtrl, sizeof(TestCtrl));
+	ret = AndesSendCmdMsg(pAd, msg);
+
+error:
+	    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+		    ("%s:(ret = %d)\n", __FUNCTION__, ret));
 
 	return ret;
 }
@@ -1993,7 +2008,7 @@ INT32 WtblResetAndDWsSet(RTMP_ADAPTER *pAd, UINT8 ucWlanIdx, UINT8 ucWtbl1234,
         ret = CmdExtWtblUpdate(pAd, ucWlanIdx, cmd_op, &rWtblRawDataRwWtblDw,
                                         rWtblRawDataRwWtblDw.u2Length);
 
-        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+        MTWF_LOG(DBG_CAT_TEST, DBG_SUBCAT_ALL, DBG_LVL_INFO,
                 ("%s: cmd_cnt/WlanIdx/Tag/Length/WtblIdx/WhichDW/DwMask/DwValue/ret=%d/%d/%d/%d/%d/%d/0x%x/0x%x/%d \n",
                 __FUNCTION__, cmd_cnt, ucWlanIdx, rWtblRawDataRwWtblDw.u2Tag, rWtblRawDataRwWtblDw.u2Length,
                 rWtblRawDataRwWtblDw.ucWtblIdx, rWtblRawDataRwWtblDw.ucWhichDW,
@@ -2017,9 +2032,10 @@ static VOID CmdExtDevInfoUpdateRsp(struct cmd_msg *msg, char *Data, UINT16 Len)
 	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
         ("%s: EventExtCmdResult.ucExTenCID = 0x%x\n",
         __FUNCTION__, EventExtCmdResult->ucExtenCID));
-
+#ifdef RT_BIG_ENDIAN
 	EventExtCmdResult->u4Status = le2cpu32(EventExtCmdResult->u4Status);
-
+	EventExtCmdResult->u2TotalElementNum = le2cpu16(EventExtCmdResult->u2TotalElementNum);
+#endif
 	if (EventExtCmdResult->u4Status != 0)
 	{
 		MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2051,8 +2067,10 @@ static VOID CmdExtStaRecUpdateRsp(struct cmd_msg *msg, char *Data, UINT16 Len)
             ("%s::EventExtCmdResult.ucExTenCID = 0x%x\n",
             __FUNCTION__, EventExtCmdResult->ucExtenCID));
 
+#ifdef RT_BIG_ENDIAN
 	EventExtCmdResult->u4Status = le2cpu32(EventExtCmdResult->u4Status);
-
+	EventExtCmdResult->u2TotalElementNum = le2cpu16(EventExtCmdResult->u2TotalElementNum);
+#endif
 	// We can consider move this to caller
 	msg->cmd_return_status = EventExtCmdResult->u4Status;
 
@@ -2073,9 +2091,9 @@ static VOID CmdExtStaRecUpdateRsp(struct cmd_msg *msg, char *Data, UINT16 Len)
 						__FUNCTION__,
 						EventExtCmdResult->ucBssInfoIdx,
 						EventExtCmdResult->ucWlanIdx,
-						le2cpu16(EventExtCmdResult->u2TotalElementNum)));
+						EventExtCmdResult->u2TotalElementNum));
 
-        if (le2cpu16(EventExtCmdResult->u2TotalElementNum > 0))
+        if (EventExtCmdResult->u2TotalElementNum > 0)
         {
             os_move_mem(&u2Tag, EventExtCmdResult->aucBuffer, sizeof(UINT16));
 
@@ -2110,8 +2128,10 @@ static VOID CmdExtBssInfoUpdateRsp(struct cmd_msg *msg, char *Data, UINT16 Len)
         ("%s: EventExtCmdResult.ucExTenCID = 0x%x\n",
         __FUNCTION__, EventExtCmdResult->ucExtenCID));
 
+#ifdef RT_BIG_ENDIAN
 	EventExtCmdResult->u4Status = le2cpu32(EventExtCmdResult->u4Status);
-
+	EventExtCmdResult->u2TotalElementNum = le2cpu16(EventExtCmdResult->u2TotalElementNum);
+#endif
 	if (EventExtCmdResult->u4Status != 0)
 	{
 		MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
@@ -2249,6 +2269,7 @@ static INT32 StaRecUpdateBasic(RTMP_ADAPTER *pAd,struct cmd_msg *msg,VOID *args)
 	StaRecCommon.u2ExtraInfo = STAREC_COMMON_EXTRAINFO_V2;
 	if (pStaRecCfg->IsNewSTARec)
 		StaRecCommon.u2ExtraInfo |= STAREC_COMMON_EXTRAINFO_NEWSTAREC;
+	StaRecCommon.u2ExtraInfo = StaRecCommon.u2ExtraInfo;
 #ifdef CONFIG_AP_SUPPORT
 	if(pEntry)
 	{
@@ -2292,8 +2313,7 @@ static INT32 StaRecUpdateBasic(RTMP_ADAPTER *pAd,struct cmd_msg *msg,VOID *args)
 
 static INT32 StaRecUpdateRa(RTMP_ADAPTER *pAd,struct cmd_msg *msg,VOID *args)
 {
-#if !defined(WIFI_BUILD_RAM) || (CFG_WIFI_DRIVER_OFFLOAD_RATE_CTRL == 1)
-#ifndef WIFI_BUILD_RAM
+#ifdef RACTRL_FW_OFFLOAD_SUPPORT
 #if defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622)
 	STA_REC_CFG_T *pStaRecCfg = (STA_REC_CFG_T*)args;
 	MAC_TABLE_ENTRY *pEntry = pStaRecCfg->pEntry;
@@ -2311,41 +2331,14 @@ static INT32 StaRecUpdateRa(RTMP_ADAPTER *pAd,struct cmd_msg *msg,VOID *args)
 	return 0;
 	}
 #endif /* defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622) */
-#endif /* WIFI_BUILD_RAM */
-#endif
-	return -1;
-}
-
-static INT32 StaRecUpdateRaInfo(RTMP_ADAPTER *pAd,struct cmd_msg *msg,VOID *args)
-{
-
-#if !defined(WIFI_BUILD_RAM) || (CFG_WIFI_DRIVER_OFFLOAD_RATE_CTRL == 1)
-#ifndef WIFI_BUILD_RAM
-#if defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622)
-	CMD_STAREC_AUTO_RATE_CFG_T CmdStaRecAutoRateCfg = {0};
-	STA_REC_CFG_T *pStaRecCfg = (STA_REC_CFG_T*)args;
-	RA_COMMON_INFO_T RaCfg;
-
-	os_zero_mem(&RaCfg, sizeof(RaCfg));
-	os_zero_mem(&CmdStaRecAutoRateCfg, sizeof(CmdStaRecAutoRateCfg));
-	raWrapperConfigSet(pAd, pStaRecCfg->wdev, &RaCfg);
-	StaRecAutoRateCommCfgSet(&RaCfg, &CmdStaRecAutoRateCfg);
-
-	/* Append this feature */
-	AndesAppendCmdMsg(msg, (char *)&CmdStaRecAutoRateCfg,
-					sizeof(CMD_STAREC_AUTO_RATE_CFG_T));
-	return 0;
-#endif /* defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622) */
-#endif /* WIFI_BUILD_RAM */
-#endif
+#endif /* RACTRL_FW_OFFLOAD_SUPPORT */
 	return -1;
 }
 
 static INT32 StaRecUpdateRaUpdate(RTMP_ADAPTER *pAd,struct cmd_msg *msg,VOID *args)
 {
 
-#if !defined(WIFI_BUILD_RAM) || (CFG_WIFI_DRIVER_OFFLOAD_RATE_CTRL == 1)
-#ifndef WIFI_BUILD_RAM
+#ifdef RACTRL_FW_OFFLOAD_SUPPORT
 #if defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622)
 	CMD_STAREC_AUTO_RATE_UPDATE_T CmdStaRecAutoRateUpdate = {0};
 	STA_REC_CFG_T *pStaRecCfg = (STA_REC_CFG_T*)args;
@@ -2364,8 +2357,7 @@ static INT32 StaRecUpdateRaUpdate(RTMP_ADAPTER *pAd,struct cmd_msg *msg,VOID *ar
 		return 0;
 	}
 #endif /* defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622) */
-#endif /* WIFI_BUILD_RAM */
-#endif
+#endif /* RACTRL_FW_OFFLOAD_SUPPORT */
 	return -1;
 }
 
@@ -2597,7 +2589,6 @@ static STAREC_HANDLE_T StaRecHandle[] =
 {
     {STA_REC_BASIC_STA_RECORD,(UINT32)sizeof(CMD_STAREC_COMMON_T),StaRecUpdateBasic},
     {STA_REC_RA,(UINT32)sizeof(CMD_STAREC_AUTO_RATE_T),StaRecUpdateRa},
-    {STA_REC_RA_COMMON_INFO,(UINT32)sizeof(CMD_STAREC_AUTO_RATE_CFG_T),StaRecUpdateRaInfo},
     {STA_REC_RA_UPDATE,(UINT32)sizeof(CMD_STAREC_AUTO_RATE_UPDATE_T),StaRecUpdateRaUpdate},
 #ifdef TXBF_SUPPORT
     {STA_REC_BF,(UINT32)sizeof(CMD_STAREC_BF),StaRecUpdateBf},
@@ -3146,9 +3137,7 @@ static VOID bssUpdateBmcMngRate(
     CmdBssInfoBmcRate.u2Length = sizeof(CMD_BSSINFO_BMC_RATE_T);
 
     MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_OFF,
-            ("%s (BSS_INFO_BROADCAST_INFO), \
-                CmdBssInfoBmcRate.u2BcTransmit= %d, \
-                CmdBssInfoBmcRate.u2McTransmit = %d\n",
+            ("%s (BSS_INFO_BROADCAST_INFO), CmdBssInfoBmcRate.u2BcTransmit= %d, CmdBssInfoBmcRate.u2McTransmit = %d\n",
                 __FUNCTION__,
                 le2cpu16(CmdBssInfoBmcRate.u2BcTransmit),
                 le2cpu16(CmdBssInfoBmcRate.u2McTransmit)));
@@ -3188,6 +3177,33 @@ static VOID bssUpdateSyncModeCtrl(
     AndesAppendCmdMsg(msg, (char *)&CmdBssInfoSyncModeCtrl, sizeof(CMD_BSSINFO_SYNC_MODE_CTRL_T));
 }
 
+
+static VOID bssUpdateRA(
+        struct _RTMP_ADAPTER *pAd,
+        BSS_INFO_ARGUMENT_T bss_info_argument,
+        struct cmd_msg *msg)
+{
+#ifdef RACTRL_FW_OFFLOAD_SUPPORT
+#if defined(MT7615) || defined(MT7622)
+	CMD_BSSINFO_AUTO_RATE_CFG_T CmdBssInfoAutoRateCfg = {0};
+	RA_COMMON_INFO_T RaCfg;
+    struct wifi_dev *wdev = NULL;
+
+    wdev = WdevSearchByOmacIdx(pAd, bss_info_argument.OwnMacIdx);
+
+	os_zero_mem(&RaCfg, sizeof(RaCfg));
+	os_zero_mem(&CmdBssInfoAutoRateCfg, sizeof(CmdBssInfoAutoRateCfg));
+	raWrapperConfigSet(pAd, wdev, &RaCfg);
+	BssInfoRACommCfgSet(&RaCfg, &CmdBssInfoAutoRateCfg);
+
+	/* Append this feature */
+	AndesAppendCmdMsg(msg, (char *)&CmdBssInfoAutoRateCfg,
+					sizeof(CMD_BSSINFO_AUTO_RATE_CFG_T));
+#endif /* defined(MT7615) || defined(MT7622) */
+#endif /* RACTRL_FW_OFFLOAD_SUPPORT */
+}
+
+
 /* BSSinfo tag handle */
 static BSS_INFO_HANDLE_T apfBssInfoTagHandle[] =
 {
@@ -3201,6 +3217,7 @@ static BSS_INFO_HANDLE_T apfBssInfoTagHandle[] =
     {BSS_INFO_EXT_BSS_FEATURE,          bssUpdateExtBssInfo},
     {BSS_INFO_BROADCAST_INFO_FEATURE,   bssUpdateBmcMngRate},
     {BSS_INFO_SYNC_MODE_FEATURE,        bssUpdateSyncModeCtrl},
+    {BSS_INFO_RA_FEATURE,               bssUpdateRA},
     {BSS_INFO_MAX_NUM_FEATURE,          NULL},
 };
 
@@ -3257,7 +3274,7 @@ INT32 CmdExtBssInfoUpdate(
     CMD_BSSINFO_UPDATE_T    CmdBssInfoUpdate = {0};
     INT32                   Ret = 0;
     UINT8                   i = 0;
-    UINT16                   ucTLVNumber = 0;
+    UINT16                  ucTLVNumber = 0;
     struct _CMD_ATTRIBUTE attr = {0};
 
     msg = AndesAllocCmdMsg(pAd, MAX_BUF_SIZE_OF_BSS_INFO);
@@ -3276,18 +3293,9 @@ INT32 CmdExtBssInfoUpdate(
         }
     }
 
-    if ((bss_info_argument.bssinfo_type == WDS) || (bss_info_argument.bssinfo_type == REPT))
-    {
-        SET_CMD_ATTR_MCU_DEST(attr, HOST2CR4);
-	    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, MT_IGNORE_PAYLOAD_LEN_CHECK);
-	    SET_CMD_ATTR_RSP_HANDLER(attr, EventExtCmdResult);
-    }
-    else
-    {
-        SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-	    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, sizeof(EVENT_BSSINFO_UPDATE_T));
-	    SET_CMD_ATTR_RSP_HANDLER(attr, CmdExtBssInfoUpdateRsp);
-    }
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, sizeof(EVENT_BSSINFO_UPDATE_T));
+    SET_CMD_ATTR_RSP_HANDLER(attr, CmdExtBssInfoUpdateRsp);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
     SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_BSSINFO_UPDATE);
     SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_LEN_VAR_CMD_SET_AND_WAIT_RETRY_RSP);
@@ -3326,9 +3334,7 @@ INT32 CmdExtBssInfoUpdate(
     Ret = AndesSendCmdMsg(pAd, msg);
 
 error:
-
-	if (Ret != NDIS_STATUS_SUCCESS)
-    	MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
+    MTWF_LOG(DBG_CAT_FW, DBG_SUBCAT_ALL, DBG_LVL_INFO,
             ("%s:(Ret = %d)\n", __FUNCTION__, Ret));
     return Ret;
 }

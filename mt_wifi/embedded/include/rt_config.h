@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -29,32 +28,22 @@
 	Paul Lin    08-01-2002    created
 
 */
-#endif /* MTK_LICENSE */
 #ifndef	__RT_CONFIG_H__
 #define	__RT_CONFIG_H__
 
-#define MT7615 1
-#define CONFIG_ATE 1
-
-#define UAPSD_SUPPORT 1
-
-#define MT_DFS_SUPPORT 1
-
-#define DOT11_VHT_AC 1
-#define RTMP_MAC_PCI 1
-
-#define CUT_THROUGH 1 
-#define CUT_THROUGH_FULL_OFFLOAD 1
-
-#define MT_MAC 1
-#define CONFIG_AP_SUPPORT 1
-//#define COMPOS_TESTMODE_WIN 1
 
 #include "rtmp_comm.h"
 
 #include "rtmp_def.h"
 #include "rtmp_chip.h"
 #include "rtmp_timer.h"
+#ifdef WH_EZ_SETUP
+#ifdef EZ_MOD_SUPPORT
+#include "easy_setup/ez_hooks.h"
+#else
+#include "easy_setup/ez_cmm.h"
+#endif
+#endif /* WH_EZ_SETUP */
 
 
 #ifdef AGS_SUPPORT
@@ -65,6 +54,11 @@
 #ifdef BAND_STEERING
 #include "band_steering_def.h"
 #endif /* BAND_STEERING */
+
+#ifdef RADIO_LINK_SELECTION
+#include "rls_def.h"
+#endif /* RADIO_LINK_SELECTION */
+
 //#ifdef VOW_SUPPORT
 /* VOW support */
 #include "ap_vow.h"
@@ -85,6 +79,11 @@
 
 #include "mlme.h"
 /*#include "rtmp_cmd.h" */
+
+#ifdef ROUTING_TAB_SUPPORT
+#include "routing_tab.h"
+#endif /* ROUTING_TAB_SUPPORT */
+
 #include "rtmp.h"
 #include "security/sec.h"
 #include "chlist.h"
@@ -121,6 +120,7 @@
 #ifdef MBSS_SUPPORT
 #include "ap_mbss.h"
 #endif /* MBSS_SUPPORT */
+
 #ifdef WDS_SUPPORT
 #include "ap_wds.h"
 #endif /* WDS_SUPPORT */
@@ -139,6 +139,15 @@
 #ifdef CLIENT_WDS
 #include "client_wds.h"
 #endif /* CLIENT_WDS */
+
+#ifdef MWDS
+#include "mwds.h"
+#endif /* MWDS */
+
+#ifdef WH_EVENT_NOTIFIER
+#include "event_notifier.h"
+#endif /* WH_EVENT_NOTIFIER */
+
 #endif /* CONFIG_AP_SUPPORT */
 
 #ifdef MAT_SUPPORT
@@ -291,6 +300,10 @@
 #include "band_steering.h"
 #endif /* BAND_STEERING */
 
+#ifdef RADIO_LINK_SELECTION
+#include "rls.h"
+#endif /* RADIO_LINK_SELECTION */
+
 #ifdef TXBF_SUPPORT
 #ifdef MT_MAC
 #include "txbf/mt_txbf.h"
@@ -370,6 +383,15 @@
 #if defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT)
 #include "phy/rlm_cal_cache.h"
 #endif /* defined(RLM_CAL_CACHE_SUPPORT) || defined(PRE_CAL_TRX_SET2_SUPPORT) */
+
+#ifdef EZ_MOD_SUPPORT
+#ifdef WH_EZ_SETUP
+#include "easy_setup/ez_hooks_proto.h"
+#endif /* WH_EZ_SETUP */
+#endif
+#ifdef GPIO_CONTROL_SUPPORT
+#include "mac/mac_mt/dmac/gpio.h"
+#endif /* GPIO_CONTROL_SUPPORT */
 
 #endif	/* __RT_CONFIG_H__ */
 

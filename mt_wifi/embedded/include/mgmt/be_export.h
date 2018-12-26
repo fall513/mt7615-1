@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /* *
  * (c) Copyright 1997-2012, MediaTek, Inc.
  *
@@ -11,7 +10,7 @@
  ***************************************************************************
 
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __BE_EXPORT_H__
 #define __BE_EXPORT_H__
 

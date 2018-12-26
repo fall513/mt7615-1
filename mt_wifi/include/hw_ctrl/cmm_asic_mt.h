@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __CMM_ASIC_MT_H__
 #define __CMM_ASIC_MT_H__
@@ -130,11 +129,11 @@ typedef struct _MT_SWITCH_CHANNEL_CFG{
 	BOOLEAN isMCC;
 #endif
 #ifdef MT_DFS_SUPPORT
-    DFS_PARAM DfsParam;//Jelly20150305
+	BOOLEAN bDfsCheck;//Jelly20150305
 #endif
 	UCHAR BandIdx;
 	UCHAR Channel_Band;
-    UINT32 OutBandFreq;
+	UINT32 OutBandFreq;
 }MT_SWITCH_CHANNEL_CFG;
 
 
@@ -224,14 +223,10 @@ typedef struct {
  BOOLEAN SupportQoS;
  BOOLEAN DisRHTR;
  BOOLEAN IsReset;
+#ifdef MWDS
+ BOOLEAN fgMwdsEnable;
+#endif
 }MT_WCID_TABLE_INFO_T;
-
-struct _wtbl_vht_info {
-        UINT8 ldpc;
-        UINT8 dyn_bw;
-        UINT8 vht;
-        UINT8 txop_ps;
-};
 
 typedef enum _ENUM_CIPHER_SUIT_T
 {
@@ -734,8 +729,7 @@ VOID MtSmacSetExtMbssEnableCR(struct _RTMP_ADAPTER *pAd, UCHAR mbss_idx, BOOLEAN
 INT MtAsicSetRtsSignalTA(struct _RTMP_ADAPTER *pAd, UINT8 BandIdx, BOOLEAN Enable);
 #endif /*DOT11_VHT_AC*/
 
-INT MtAsicRTSOnOff(struct _RTMP_ADAPTER *ad,UCHAR band_idx, UINT32 rts_num, UINT32 rts_len, BOOLEAN rts_en);
-
 INT MtAsicAMPDUEfficiencyAdjust(struct _RTMP_ADAPTER *ad,UCHAR	wmm_idx, UCHAR aifs_adjust);
+INT MtAsicRTSOnOff(struct _RTMP_ADAPTER *ad,UCHAR band_idx, UINT32 rts_num, UINT32 rts_len, BOOLEAN rts_en);
 #endif /* __CMM_ASIC_MT_H__ */
 

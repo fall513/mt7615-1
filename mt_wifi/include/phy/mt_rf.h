@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	mt_rf.h
 */
-#endif /* MTK_LICENSE */
+
 
 
 #ifndef __MT_RF_H__

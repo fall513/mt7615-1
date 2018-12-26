@@ -374,7 +374,7 @@ typedef struct  GNU_PACKED _HQA_EXT_SET_CH{
 	UINT32 pri_sel;
 	UINT32 reason;
 	UINT32 ch_band;
-    UINT32 out_band_freq;	
+	UINT32 out_band_freq;
 } HQA_EXT_SET_CH;
 
 typedef struct GNU_PACKED _HQA_EXT_TX_CONTENT{
@@ -456,7 +456,7 @@ typedef struct GNU_PACKED _HQA_RX_STAT{
 	UINT32 DriverRxCount;
 	UINT32 RCPI0;
 	UINT32 RCPI1;
-	UINT32 FreqOffsetFromRX;
+	INT32 FreqOffsetFromRX;
 	UINT32 RSSI0;
 	UINT32 RSSI1;
 	UINT32 rx_fifo_full;

@@ -5,7 +5,6 @@
     \brief
 */
 
-#ifdef MTK_LICENSE
 /*******************************************************************************
 * Copyright (c) 2014 MediaTek Inc.
 *
@@ -47,12 +46,11 @@
 * (ICC).
 ********************************************************************************
 */
-#endif /* MTK_LICENSE */
 
 /*
 ** $Log: ra_ctrl_mt_drv.c $
 **
-** 08 18 2016 by.huang
+** 08 19 2016 by.huang
 ** [WCNCR00128952] There are some limitation by current SKU algorithm in MT7615 power
 ** 	
 ** 	1) Purpose:
@@ -66,14 +64,11 @@
 ** 	2. EventTxPowerShowInfo
 ** 	3. EventTxPowerCompTable
 ** 	4. MtSingleSkuLoadParam
-** 	5. SetMUTxPower
-** 	6. SetBFNDPATxDCtrl
 ** 	
 ** 	3) Code change description brief:
 ** 	
 ** 	1. revise SKU compensation look table mechanism for Nss spatial extension combine gain backoff
 ** 	2. add compensation info command
-** 	3. add command for config MU Tx Power and NDPA Power
 ** 	
 ** 	4) Unit Test Result:
 ** 	
@@ -238,6 +233,16 @@ RAInit(
     {
         UCHAR TableSize = 0;
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+        if (RaCfg.ucRateAlg == RATE_ALG_GRP)
+        {
+            raSetMcsGroup(pRaEntry, pRaCfg, pRaInternal);
+            raClearTxQuality(pRaInternal);
+
+            raSelectTxRateTable(pRaEntry, pRaCfg, pRaInternal, &pRaInternal->pucTable, &TableSize, &pRaInternal->ucCurrTxRateIndex);
+            NewTxRateMtCore(pAd, pRaEntry, pRaCfg, pRaInternal);
+        }
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef RATE_ADAPT_AGBS_SUPPORT
         if (RaCfg.ucRateAlg == RATE_ALG_AGBS)
@@ -255,6 +260,12 @@ RAInit(
     {
 #ifdef MCS_LUT_SUPPORT
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+        if (RaCfg.ucRateAlg == RATE_ALG_GRP)
+        {
+            MtAsicMcsLutUpdateCore(pAd, pRaEntry, pRaCfg, pRaInternal);
+        }
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef RATE_ADAPT_AGBS_SUPPORT
         if (RaCfg.ucRateAlg == RATE_ALG_AGBS)
@@ -343,7 +354,71 @@ RAParamUpdate(
 }
 
 
-#if defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622)
+#if defined(MT7615) || defined(MT7622)
+/*----------------------------------------------------------------------------*/
+/*!
+* \brief     set RA Common config to FW ( Driver API)
+*
+* \param[in] pRaCfg
+* \param[out] pCmdStaRecAutoRateCfg
+*
+* \return    NDIS_STATUS_SUCCESS
+*
+*/
+/*----------------------------------------------------------------------------*/
+INT32
+BssInfoRACommCfgSet(
+    IN P_RA_COMMON_INFO_T pRaCfg,
+    OUT P_CMD_BSSINFO_AUTO_RATE_CFG_T pCmdBssInfoAutoRateCfg
+    )
+{
+    /* Fill TLV format */
+    pCmdBssInfoAutoRateCfg->u2Tag = BSS_INFO_RA;
+    pCmdBssInfoAutoRateCfg->u2Length = sizeof(CMD_BSSINFO_AUTO_RATE_CFG_T);
+#ifdef RT_BIG_ENDIAN
+    pCmdBssInfoAutoRateCfg->u2Tag = cpu2le16(pCmdBssInfoAutoRateCfg->u2Tag);
+    pCmdBssInfoAutoRateCfg->u2Length = cpu2le16(pCmdBssInfoAutoRateCfg->u2Length);
+#endif
+
+    pCmdBssInfoAutoRateCfg->OpMode = pRaCfg->OpMode;
+    pCmdBssInfoAutoRateCfg->fgAdHocOn = pRaCfg->fgAdHocOn;
+    pCmdBssInfoAutoRateCfg->fgShortPreamble = pRaCfg->fgShortPreamble;
+
+    pCmdBssInfoAutoRateCfg->TxStream = pRaCfg->TxStream;
+    pCmdBssInfoAutoRateCfg->RxStream = pRaCfg->RxStream;
+
+    pCmdBssInfoAutoRateCfg->ucRateAlg = pRaCfg->ucRateAlg;
+
+    pCmdBssInfoAutoRateCfg->TestbedForceShortGI = pRaCfg->TestbedForceShortGI;
+    pCmdBssInfoAutoRateCfg->TestbedForceGreenField = pRaCfg->TestbedForceGreenField;
+#ifdef DOT11_N_SUPPORT
+    pCmdBssInfoAutoRateCfg->HtMode = pRaCfg->HtMode;
+    pCmdBssInfoAutoRateCfg->fAnyStation20Only = pRaCfg->fAnyStation20Only;
+    pCmdBssInfoAutoRateCfg->bRcvBSSWidthTriggerEvents = pRaCfg->bRcvBSSWidthTriggerEvents;
+#ifdef DOT11_VHT_AC
+    pCmdBssInfoAutoRateCfg->vht_nss_cap = pRaCfg->vht_nss_cap;
+#endif /* DOT11_VHT_AC */
+#endif /* DOT11_N_SUPPORT */
+    pCmdBssInfoAutoRateCfg->fgSeOff = pRaCfg->fgSeOff;
+    pCmdBssInfoAutoRateCfg->ucAntennaIndex = pRaCfg->ucAntennaIndex;
+    pCmdBssInfoAutoRateCfg->TrainUpRule= pRaCfg->TrainUpRule;
+    pCmdBssInfoAutoRateCfg->TrainUpHighThrd = cpu2le16(pRaCfg->TrainUpHighThrd);
+    pCmdBssInfoAutoRateCfg->TrainUpRuleRSSI = cpu2le16(pRaCfg->TrainUpRuleRSSI);
+    pCmdBssInfoAutoRateCfg->lowTrafficThrd = cpu2le16(pRaCfg->lowTrafficThrd);
+
+#if defined(MT7615) || defined(MT7622)
+    pCmdBssInfoAutoRateCfg->u2MaxPhyRate = cpu2le16(pRaCfg->u2MaxPhyRate);
+#endif /* defined(MT7615) || defined(MT7622) */
+
+    pCmdBssInfoAutoRateCfg->PhyCaps = cpu2le32(pRaCfg->PhyCaps);
+    pCmdBssInfoAutoRateCfg->u4RaInterval = cpu2le32(pRaCfg->u4RaInterval);
+    pCmdBssInfoAutoRateCfg->u4RaFastInterval = cpu2le32(pRaCfg->u4RaFastInterval);
+
+
+    return NDIS_STATUS_SUCCESS;
+}
+
+
 /*----------------------------------------------------------------------------*/
 /*!
 * \brief     Set rate entry info to FW ( Driver API)
@@ -414,71 +489,29 @@ StaRecAutoRateParamSet(
 
     pCmdStaRecAutoRate->ClientStatusFlags = cpu2le32(pRaEntry->ClientStatusFlags);
     os_move_mem(&pCmdStaRecAutoRate->MaxPhyCfg, &pRaEntry->MaxPhyCfg, sizeof(RA_PHY_CFG_T));
+
+    if (pCmdStaRecAutoRate->fgAutoTxRateSwitch == FALSE)
+    {
+        if (pRaEntry->MaxPhyCfg.ShortGI)
+        {
+            pCmdStaRecAutoRate->MaxPhyCfg.ShortGI = SGI_20 + SGI_40 + SGI_80 + SGI_160;
+        }
+
+        if (CLIENT_STATUS_TEST_FLAG(pRaEntry, fCLIENT_STATUS_VHT_RX_LDPC_CAPABLE))
+        {
+            pCmdStaRecAutoRate->MaxPhyCfg.ldpc |= VHT_LDPC;
+        }
+        if (CLIENT_STATUS_TEST_FLAG(pRaEntry, fCLIENT_STATUS_HT_RX_LDPC_CAPABLE))
+        {
+            pCmdStaRecAutoRate->MaxPhyCfg.ldpc |= HT_LDPC;
+        }
+
+        if ((pRaEntry->MaxPhyCfg.MODE == MODE_VHT) && CLIENT_STATUS_TEST_FLAG(pRaEntry, fCLIENT_STATUS_VHT_RXSTBC_CAPABLE))
+        {
+            pCmdStaRecAutoRate->MaxPhyCfg.STBC = STBC_USE;
+        }
+    }
  
-
-    return NDIS_STATUS_SUCCESS;
-}
-
-
-/*----------------------------------------------------------------------------*/
-/*!
-* \brief     set RA Common config to FW ( Driver API)
-*
-* \param[in] pRaCfg
-* \param[out] pCmdStaRecAutoRateCfg
-*
-* \return    NDIS_STATUS_SUCCESS
-*
-*/
-/*----------------------------------------------------------------------------*/
-INT32
-StaRecAutoRateCommCfgSet(
-    IN P_RA_COMMON_INFO_T pRaCfg,
-    OUT P_CMD_STAREC_AUTO_RATE_CFG_T pCmdStaRecAutoRateCfg
-    )
-{
-    /* Fill TLV format */
-    pCmdStaRecAutoRateCfg->u2Tag = STA_REC_RA_COMMON_INFO;
-    pCmdStaRecAutoRateCfg->u2Length = sizeof(CMD_STAREC_AUTO_RATE_CFG_T);
-#ifdef RT_BIG_ENDIAN
-    pCmdStaRecAutoRateCfg->u2Tag = cpu2le16(pCmdStaRecAutoRateCfg->u2Tag);
-    pCmdStaRecAutoRateCfg->u2Length = cpu2le16(pCmdStaRecAutoRateCfg->u2Length);
-#endif
-
-    pCmdStaRecAutoRateCfg->OpMode = pRaCfg->OpMode;
-    pCmdStaRecAutoRateCfg->fgAdHocOn = pRaCfg->fgAdHocOn;
-    pCmdStaRecAutoRateCfg->fgShortPreamble = pRaCfg->fgShortPreamble;
-
-    pCmdStaRecAutoRateCfg->TxStream = pRaCfg->TxStream;
-    pCmdStaRecAutoRateCfg->RxStream = pRaCfg->RxStream;
-
-    pCmdStaRecAutoRateCfg->ucRateAlg = pRaCfg->ucRateAlg;
-
-    pCmdStaRecAutoRateCfg->TestbedForceShortGI = pRaCfg->TestbedForceShortGI;
-    pCmdStaRecAutoRateCfg->TestbedForceGreenField = pRaCfg->TestbedForceGreenField;
-#ifdef DOT11_N_SUPPORT
-    pCmdStaRecAutoRateCfg->HtMode = pRaCfg->HtMode;
-    pCmdStaRecAutoRateCfg->fAnyStation20Only = pRaCfg->fAnyStation20Only;
-    pCmdStaRecAutoRateCfg->bRcvBSSWidthTriggerEvents = pRaCfg->bRcvBSSWidthTriggerEvents;
-#ifdef DOT11_VHT_AC
-    pCmdStaRecAutoRateCfg->vht_nss_cap = pRaCfg->vht_nss_cap;
-#endif /* DOT11_VHT_AC */
-#endif /* DOT11_N_SUPPORT */
-    pCmdStaRecAutoRateCfg->fgSeOff = pRaCfg->fgSeOff;
-    pCmdStaRecAutoRateCfg->ucAntennaIndex = pRaCfg->ucAntennaIndex;
-    pCmdStaRecAutoRateCfg->TrainUpRule= pRaCfg->TrainUpRule;
-    pCmdStaRecAutoRateCfg->TrainUpHighThrd = cpu2le16(pRaCfg->TrainUpHighThrd);
-    pCmdStaRecAutoRateCfg->TrainUpRuleRSSI = cpu2le16(pRaCfg->TrainUpRuleRSSI);
-    pCmdStaRecAutoRateCfg->lowTrafficThrd = cpu2le16(pRaCfg->lowTrafficThrd);
-
-#if defined(MT7615) || defined(MT7622)
-    pCmdStaRecAutoRateCfg->u2MaxPhyRate = cpu2le16(pRaCfg->u2MaxPhyRate);
-#endif /* defined(MT7615) || defined(MT7622) */
-
-    pCmdStaRecAutoRateCfg->PhyCaps = cpu2le32(pRaCfg->PhyCaps);
-    pCmdStaRecAutoRateCfg->u4RaInterval = cpu2le32(pRaCfg->u4RaInterval);
-    pCmdStaRecAutoRateCfg->u4RaFastInterval = cpu2le32(pRaCfg->u4RaFastInterval);
-
 
     return NDIS_STATUS_SUCCESS;
 }
@@ -570,7 +603,7 @@ StaRecAutoRateUpdate(
 
 	return NDIS_STATUS_SUCCESS;
 }
-#endif /* defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622) */
+#endif /* defined(MT7615) || defined(MT7622) */
 
 #endif /* MT_MAC */
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +23,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 #ifdef SCAN_SUPPORT
@@ -79,9 +78,28 @@ INT scan_ch_restore(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 		ch = HcGetChannelByRf(pAd,(HcGetBandByWdev(wdev)+1));
 	else
 		ch = HcGetCentralChByRf(pAd,(HcGetBandByWdev(wdev)+1));	
-
-	HcBbpSetBwByChannel(pAd, pAd->hw_cfg.bbp_bw,ch);
-	MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s,central ch=%d,bw=%d\n\r",__func__,ch,pAd->hw_cfg.bbp_bw));
+		
+#ifdef WH_EZ_SETUP
+#ifdef EZ_MOD_SUPPORT
+	if (IS_EZ_SETUP_ENABLED(wdev) && ez_handle_scan_channel_restore(pAd->ApCfg.ScanReqwdev)) {
+		
+	}
+#else
+	if (IS_EZ_SETUP_ENABLED(wdev) && pAd->ApCfg.ScanReqwdev->ez_security.scan_one_channel) {
+		EZ_DEBUG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+			("AP SYNC %s() - Only scan ch.%d and keep original BW setting.\n", 
+			__FUNCTION__, pAd->ScanCtrl.Channel));
+#ifndef EZ_NETWORK_MERGE_SUPPORT	
+		pAd->ApCfg.ScanReqwdev->ez_security.scan_one_channel = FALSE;
+#endif
+	}
+#endif
+	else
+#endif /* WH_EZ_SETUP */
+	{		
+		HcBbpSetBwByChannel(pAd, pAd->hw_cfg.bbp_bw,ch);
+		MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_TRACE,("%s,central ch=%d,bw=%d\n\r",__func__,ch,pAd->hw_cfg.bbp_bw));
+	}
 
 
 	BandIdx = HcGetBandByWdev(wdev);
@@ -184,27 +202,27 @@ INT scan_ch_restore(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 			APStartUpByRf(pAd, RfIC);
 		}
 
-        if (((pAd->CommonCfg.Channel > 14) &&
-            (pAd->CommonCfg.bIEEE80211H == TRUE) &&
-            RadarChannelCheck(pAd, pAd->CommonCfg.Channel)) &&
-            pAd->Dot11_H.RDMode != RD_SWITCHING_MODE)
-        {
-            if (pAd->Dot11_H.InServiceMonitorCount)
-            {
-                pAd->Dot11_H.RDMode = RD_NORMAL_MODE;
-		        AsicSetSyncModeAndEnable(pAd, pAd->CommonCfg.BeaconPeriod, HW_BSSID_0, OPMODE_AP);
-		        AsicEnableBcnSntReq(pAd, wdev);
-            }
-            else
-            {
-                pAd->Dot11_H.RDMode = RD_SILENCE_MODE;
-            }
-        }
-        else
-        {
-		    AsicSetSyncModeAndEnable(pAd, pAd->CommonCfg.BeaconPeriod, HW_BSSID_0, OPMODE_AP);
-		    AsicEnableBcnSntReq(pAd, wdev);
-        }
+	        if (((pAd->CommonCfg.Channel > 14) &&
+	            (pAd->CommonCfg.bIEEE80211H == TRUE) &&
+	            RadarChannelCheck(pAd, pAd->CommonCfg.Channel)) &&
+	            pAd->Dot11_H.RDMode != RD_SWITCHING_MODE)
+	        {
+	            if (pAd->Dot11_H.InServiceMonitorCount)
+	            {
+	                pAd->Dot11_H.RDMode = RD_NORMAL_MODE;
+			AsicSetSyncModeAndEnable(pAd, pAd->CommonCfg.BeaconPeriod, HW_BSSID_0, OPMODE_AP);
+			AsicEnableBcnSntReq(pAd, wdev);
+	            }
+	            else
+	            {
+	                pAd->Dot11_H.RDMode = RD_SILENCE_MODE;
+	            }
+	        }
+	        else
+	        {
+			AsicSetSyncModeAndEnable(pAd, pAd->CommonCfg.BeaconPeriod, HW_BSSID_0, OPMODE_AP);
+			AsicEnableBcnSntReq(pAd, wdev);
+	        }
 #ifdef APCLI_SUPPORT
 #ifdef WSC_AP_SUPPORT
         if(pwdev && 
@@ -263,20 +281,13 @@ INT scan_ch_restore(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 #ifdef APCLI_CERT_SUPPORT
 #ifdef DOT11_N_SUPPORT
 #ifdef DOT11N_DRAFT3
-	{
-		UCHAR apcli2Gidx = 0;
-#ifdef DBDC_MODE
-		if (pAd->CommonCfg.dbdc_mode)
-			apcli2Gidx = 1;
-#endif
-		if ((pAd->bApCliCertTest == TRUE) && APCLI_IF_UP_CHECK(pAd, apcli2Gidx) && (ScanType == SCAN_2040_BSS_COEXIST))
+		if ((pAd->bApCliCertTest == TRUE) && APCLI_IF_UP_CHECK(pAd, 0) && (ScanType == SCAN_2040_BSS_COEXIST))
 		{
 			UCHAR Status = 1;
 
 			MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("@(%s)  Scan Done ScanType=%d\n", __FUNCTION__, ScanType));
-			MlmeEnqueue(pAd, APCLI_CTRL_STATE_MACHINE, APCLI_CTRL_SCAN_DONE, 2, &Status, apcli2Gidx);
+			MlmeEnqueue(pAd, APCLI_CTRL_STATE_MACHINE, APCLI_CTRL_SCAN_DONE, 2, &Status, 0);			
 		}
-	}
 #endif /* DOT11N_DRAFT3 */
 #endif /* DOT11_N_SUPPORT */
 #endif /* APCLI_CERT_SUPPORT */		
@@ -384,25 +395,25 @@ static INT scan_active(RTMP_ADAPTER *pAd, UCHAR OpMode, UCHAR ScanType,struct wi
 								src_mac_addr,
 								BROADCAST_ADDR);
 
-		MakeOutgoingFrame(frm_buf,               &FrameLen,
-						  sizeof(HEADER_802_11),    &Hdr80211,
-						  1,                        &SsidIe,
-						  1,                        &SsidLen,
-						  SsidLen,			        pAd->ScanCtrl.Ssid,
-						  1,                        &SupRateIe,
-						  1,                        &wdev->rate.SupRateLen,
-						  wdev->rate.SupRateLen,  wdev->rate.SupRate, 
-						  END_OF_ARGS);
-
-		if (wdev->rate.ExtRateLen)
-		{
-			ULONG Tmp;
-			MakeOutgoingFrame(frm_buf + FrameLen,            &Tmp,
-							  1,                                &ExtRateIe,
-							  1,                                &wdev->rate.ExtRateLen,
-							  wdev->rate.ExtRateLen,          wdev->rate.ExtRate, 
+			MakeOutgoingFrame(frm_buf,				 &FrameLen,
+							  sizeof(HEADER_802_11),	&Hdr80211,
+							  1,						&SsidIe,
+							  1,						&SsidLen,
+							  SsidLen,					pAd->ScanCtrl.Ssid,
+							  1,						&SupRateIe,
+							  1,						&wdev->rate.SupRateLen,
+							  wdev->rate.SupRateLen,  wdev->rate.SupRate, 
 							  END_OF_ARGS);
-			FrameLen += Tmp;
+			
+			if (wdev->rate.ExtRateLen)
+			{
+				ULONG Tmp;
+				MakeOutgoingFrame(frm_buf + FrameLen,			 &Tmp,
+								  1,								&ExtRateIe,
+								  1,								&wdev->rate.ExtRateLen,
+								  wdev->rate.ExtRateLen,		  wdev->rate.ExtRate, 
+								  END_OF_ARGS);
+				FrameLen += Tmp;
 			}
 		}
 #endif /* CONFIG_AP_SUPPORT */
@@ -539,6 +550,8 @@ static INT scan_active(RTMP_ADAPTER *pAd, UCHAR OpMode, UCHAR ScanType,struct wi
         FrameLen += build_vht_ies(pAd, &vht_ie_info);
 
 #if defined(TXBF_SUPPORT) && defined(VHT_TXBF_SUPPORT)
+        modify_vht_ies(pAd, &vht_ie_info, wdev);
+
 		pAd->CommonCfg.ETxBfEnCond = ucETxBfCap;
 #endif /* TXBF_SUPPORT && VHT_TXBF_SUPPORT */ 
 #endif /* DOT11_VHT_AC */
@@ -589,7 +602,35 @@ static INT scan_active(RTMP_ADAPTER *pAd, UCHAR OpMode, UCHAR ScanType,struct wi
 #endif /* WSC_STA_SUPPORT */
 
 
-
+#ifdef WH_EZ_SETUP
+		if (ez_is_triband()) {
+#ifdef EZ_NETWORK_MERGE_SUPPORT	
+				ULONG  tmp_len;
+#ifdef EZ_MOD_SUPPORT	
+				/*
+					Insert capability TLV
+				*/
+				ez_triband_insert_tlv(pAd, EZ_TAG_CAPABILITY_INFO, 
+					frm_buf + FrameLen, 
+					&tmp_len);
+#else
+				unsigned int capability;
+	
+				capability = cpu2be32(ez_adapter.ez_band_info[0].ez_cli_wdev->ez_security.capability);
+			
+				/*
+					Insert capability TLV
+				*/
+				ez_insert_tlv(EZ_TAG_CAPABILITY_INFO, 
+					(unsigned char *)&capability, 
+					EZ_CAPABILITY_LEN, 
+					frm_buf + FrameLen, 
+					&tmp_len);
+#endif
+				FrameLen += tmp_len;
+#endif		
+		}
+#endif
 	MiniportMMRequest(pAd, 0, frm_buf, FrameLen);
 #ifdef MT_MAC_BTCOEX
 	if (pAd->BtCoexMode == MT7636_COEX_MODE_TDD)
@@ -643,7 +684,10 @@ VOID ScanNextChannel(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 	RALINK_TIMER_STRUCT *sc_timer = NULL;
 	UINT stay_time = 0;
 	struct wifi_dev *wdev = pwdev;
-
+#ifdef WH_EZ_SETUP
+	CHAR apcli_idx;
+	MAC_TABLE_ENTRY *pMacEntry;
+#endif
 	// TODO: Star, fix me when Scan is prepare to modify
 
 	// TODO: Star, fix me when Scan is prepare to modify
@@ -655,6 +699,14 @@ VOID ScanNextChannel(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 	}
 #endif
 
+#ifdef WH_EZ_SETUP
+#ifdef CONFIG_AP_SUPPORT
+#ifdef APCLI_SUPPORT
+	apcli_idx = wdev->func_idx;
+	pMacEntry = MacTableLookup(pAd, pAd->ApCfg.ApCliTab[apcli_idx].wdev.bssid);
+#endif
+#endif
+#endif
 
 #ifdef CONFIG_ATE
 	/* Nothing to do in ATE mode. */
@@ -669,24 +721,105 @@ VOID ScanNextChannel(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 		ScanType = pAd->ScanCtrl.ScanType;
 #endif /* CONFIG_AP_SUPPORT */
 	if (ScanType == SCAN_TYPE_MAX) {
+#ifdef WH_EZ_SETUP
+		if((IS_EZ_SETUP_ENABLED(&pAd->ApCfg.ApCliTab[apcli_idx].wdev))
+			&& (pAd->Mlme.ApSyncMachine.CurrState == AP_SCAN_LISTEN)) 
+			pAd->Mlme.ApSyncMachine.CurrState = AP_SYNC_IDLE;
+#endif
 		MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s():Incorrect ScanType!\n", __FUNCTION__));
 		return;
 	}
 	if ((pAd->ScanCtrl.Channel == 0) || ScanPending) 
 	{
 #ifdef RT_CFG80211_SUPPORT
-		pAd->cfg80211_ctrl.Cfg80211CurChanIndex--;
+		//pAd->cfg80211_ctrl.Cfg80211CurChanIndex--;
 #endif /* RT_CFG80211_SUPPORT */
 		scan_ch_restore(pAd, OpMode, wdev);
-#ifdef CUSTOMER_RSG_FEATURE
-		pAd->ChannelStats.LastReadTime = 0;
-#endif	
+
+#ifdef WH_EZ_SETUP
+#ifdef CONFIG_AP_SUPPORT
+#ifdef APCLI_SUPPORT
+			if(pMacEntry && pAd->ApCfg.ApCliTab[apcli_idx].Valid 
+				&& IS_EZ_SETUP_ENABLED(&pAd->ApCfg.ApCliTab[apcli_idx].wdev))
+			{
+				ApCliRTMPSendNullFrame(pAd,pMacEntry->CurrTxRate, FALSE, pMacEntry, PWR_ACTIVE);
+			}
+#ifdef EZ_MOD_SUPPORT			
+			if (IS_EZ_SETUP_ENABLED(&pAd->ApCfg.ApCliTab[apcli_idx].wdev) && wdev->ez_driver_params.ez_scan == TRUE)
+			{
+				wdev->ez_driver_params.ez_scan = FALSE;
+				EZ_DEBUG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("Start Join For  wdev-> type = %d wdev = %d\n", wdev->wdev_type,wdev->wdev_idx));
+				ApCliIfUp(pAd);
+			} 
+#else
+			if (pAd->ApCfg.ApCliTab[apcli_idx].wdev.enable_easy_setup == TRUE && wdev->ez_security.ez_scan == TRUE)
+			{
+				wdev->ez_security.ez_scan = FALSE;
+				EZ_DEBUG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("Start Join For  wdev-> type = %d wdev = %d\n", wdev->wdev_type,wdev->wdev_idx));
+				ApCliIfUp(pAd);
+				
+			} 
+#endif
+#ifdef MOBILE_APP_SUPPORT
+			else if (IS_EZ_SETUP_ENABLED(&pAd->ApCfg.ApCliTab[apcli_idx].wdev)){
+				int i=0;
+				unsigned char bssid[6] = {0};
+						
+				for (i = 0; i < pAd->ScanTab.BssNr; i++) 
+					{
+						BSS_ENTRY *bss_entry = NULL;					
+						PAPCLI_STRUCT apcli_entry = &pAd->ApCfg.ApCliTab[apcli_idx];
+						bss_entry = &pAd->ScanTab.BssEntry[i];
+												
+
+						if (bss_entry->non_ez_beacon)
+						{
+							continue;
+						}
+						if (bss_entry->support_easy_setup == TRUE)
+						{
+							continue;		
+						}
+						if (SSID_EQUAL(apcli_entry->CfgSsid, apcli_entry->CfgSsidLen,bss_entry->Ssid, bss_entry->SsidLen))
+						{
+							
+							COPY_MAC_ADDR(bssid, bss_entry->Bssid);
+						}
+					}
+					if((pAd->ScanCtrl.PartialScan.bScanning == TRUE) && (pAd->ScanCtrl.PartialScan.LastScanChannel != 0)) {
+						MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("\n Dont send event Partial scan running \n"));	
+					} else {
+						RtmpOSWrielessEventSend(pAd->net_dev, RT_WLAN_EVENT_CUSTOM, OID_WH_EZ_MAN_TRIBAND_SCAN_COMPLETE_EVENT,
+								NULL, bssid, MAC_ADDR_LEN);
+					}	
+			}
+#endif			
+#endif	//APCLI_SUPPORT
+#endif	//CONFIG_AP_SUPPORT
+#endif	// WH_EZ_SETUP
+
 	} 
 	else 
 	{
 
-		AsicSwitchChannel(pAd, pAd->ScanCtrl.Channel, TRUE);
-		AsicLockChannel(pAd, pAd->ScanCtrl.Channel);
+#ifdef WH_EZ_SETUP
+		if (IS_EZ_SETUP_ENABLED(pAd->ApCfg.ScanReqwdev) && 
+#ifdef EZ_MOD_SUPPORT
+		pAd->ApCfg.ScanReqwdev->ez_driver_params.scan_one_channel
+#else
+		pAd->ApCfg.ScanReqwdev->ez_security.scan_one_channel
+#endif
+		) {
+			EZ_DEBUG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_TRACE, 
+				("AP SYNC %s() - Only scan ch.%d and keep original channel setting.\n", 
+				__FUNCTION__, pAd->ScanCtrl.Channel));
+		}
+		else
+#endif /* WH_EZ_SETUP */
+		{
+			AsicSwitchChannel(pAd, pAd->ScanCtrl.Channel, TRUE);
+			AsicLockChannel(pAd, pAd->ScanCtrl.Channel);
+		}
 
 		{
 			BOOLEAN bScanPassive = FALSE;
@@ -723,6 +856,11 @@ VOID ScanNextChannel(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 			sc_timer = &pAd->ScanCtrl.APScanTimer;
 #endif /* CONFIG_AP_SUPPORT */
 		if (!sc_timer) {
+#ifdef WH_EZ_SETUP
+			if(IS_EZ_SETUP_ENABLED(&pAd->ApCfg.ApCliTab[apcli_idx].wdev)
+				&& (pAd->Mlme.ApSyncMachine.CurrState == AP_SCAN_LISTEN)) 
+				pAd->Mlme.ApSyncMachine.CurrState = AP_SYNC_IDLE;
+#endif			
 			MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("%s():ScanTimer not assigned!\n", __FUNCTION__));
 			return;
 		}
@@ -739,31 +877,70 @@ VOID ScanNextChannel(RTMP_ADAPTER *pAd, UCHAR OpMode, struct wifi_dev *pwdev)
 				stay_time = AUTO_CHANNEL_SEL_TIMEOUT;
 			else
 #endif /* CONFIG_AP_SUPPORT */
-			if (WMODE_CAP_2G(wdev->PhyMode) &&
+			if ((WMODE_CAP_2G(wdev->PhyMode) &&
 				WMODE_CAP_5G(wdev->PhyMode))
+			)
 			{
 				if (pAd->ScanCtrl.Channel > 14)
 					stay_time = ScanTimeIn5gChannel;
 				else
 					stay_time = MIN_CHANNEL_TIME;
-			}
-			else
-				stay_time = MAX_CHANNEL_TIME;
-#ifdef CONFIG_AP_SUPPORT					
-#ifdef CUSTOMER_DCC_FEATURE
-			if(pAd->ScanCtrl.ScanTime != 0)
-			{
-				stay_time = pAd->ScanCtrl.ScanTime;
-			}
+
+				
+#ifdef WH_EZ_SETUP
+				if ((IS_EZ_SETUP_ENABLED(wdev)) && ScanType != SCAN_PASSIVE)
+					stay_time = FAST_ACTIVE_SCAN_TIME;
 #endif
-#endif						
+			}
+			else {
+#if defined (EZ_NETWORK_MERGE_SUPPORT) && defined (WH_EZ_SETUP)
+				if (IS_EZ_SETUP_ENABLED(wdev))
+				{
+					if (ScanType != SCAN_PASSIVE)
+						stay_time = FAST_ACTIVE_SCAN_TIME;
+					else
+						stay_time = MIN_CHANNEL_TIME;
+				}
+				else
+#endif
+					stay_time = MAX_CHANNEL_TIME;
+			}
 		}
 		RTMPSetTimer(sc_timer, stay_time);
 			
 		if (SCAN_MODE_ACT(ScanType))
 		{
+#ifdef APCLI_SUPPORT
+#ifdef WH_EZ_SETUP
+            PAPCLI_STRUCT pApCliEntry = NULL;
+            UINT index = 0;
+#endif
+#endif			
 			if (scan_active(pAd, OpMode, ScanType, wdev) == FALSE)
+			{
+#ifdef WH_EZ_SETUP
+				if(IS_EZ_SETUP_ENABLED(&pAd->ApCfg.ApCliTab[apcli_idx].wdev)
+					&& (pAd->Mlme.ApSyncMachine.CurrState == AP_SCAN_LISTEN)) 
+					pAd->Mlme.ApSyncMachine.CurrState = AP_SYNC_IDLE;
+#endif
+			
 				return;
+			}
+
+#ifdef APCLI_SUPPORT
+#ifdef WH_EZ_SETUP
+			if (IS_EZ_SETUP_ENABLED(wdev)) {
+                for(index = 0; index < MAX_APCLI_NUM; index++)
+                {
+                    pApCliEntry = &pAd->ApCfg.ApCliTab[index];
+                    if(pApCliEntry->CfgHideSsidLen > 0){
+                        FireExtraProbeReq(pAd,  OpMode, ScanType, wdev,
+                            pApCliEntry->CfgHideSsid, pApCliEntry->CfgHideSsidLen);
+                    }
+                }
+			}
+#endif
+#endif
 
 			{
 #ifdef APCLI_SUPPORT
@@ -876,7 +1053,7 @@ UCHAR FindPartialScanChannel(RTMP_ADAPTER *pAd)
 		PartialScanCtrl->LastScanChannel = scan_channel;
 		if (scan_channel == 0)
 		{
-		    PartialScanCtrl->BreakTime = 0;
+			PartialScanCtrl->BreakTime = 0;
 			PartialScanCtrl->bScanning = FALSE;
 			PartialScanCtrl->pwdev = NULL;
 			PartialScanCtrl->NumOfChannels = DEFLAUT_PARTIAL_SCAN_CH_NUM;
@@ -888,6 +1065,14 @@ UCHAR FindPartialScanChannel(RTMP_ADAPTER *pAd)
 		scan_channel = 0;
 		PartialScanCtrl->NumOfChannels = DEFLAUT_PARTIAL_SCAN_CH_NUM;
 	}
+
+#ifdef WH_EZ_SETUP
+	if(IS_ADPTR_EZ_SETUP_ENABLED(pAd)){
+		EZ_DEBUG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
+			("%s, %u, scan_channel = %u,\n", __FUNCTION__, __LINE__, scan_channel));
+	} else
+#endif // WH_EZ_SETUP
+	{
 	MTWF_LOG(DBG_CAT_PROTO, DBG_SUBCAT_ALL, DBG_LVL_TRACE,
 			("%s, %u, scan_channel = %u, NumOfChannels = %u, LastScanChannel = %u, bScanning = %u\n",
 			__FUNCTION__, __LINE__,
@@ -895,6 +1080,7 @@ UCHAR FindPartialScanChannel(RTMP_ADAPTER *pAd)
 			PartialScanCtrl->NumOfChannels,
 			PartialScanCtrl->LastScanChannel,
 			PartialScanCtrl->bScanning));
+	}
 	return scan_channel;
 }
 
@@ -907,6 +1093,10 @@ INT PartialScanInit(RTMP_ADAPTER *pAd)
 	PartialScanCtrl->NumOfChannels = DEFLAUT_PARTIAL_SCAN_CH_NUM;
 	PartialScanCtrl->LastScanChannel = 0;
 	PartialScanCtrl->BreakTime = 0;
+#ifdef WH_EZ_SETUP
+	PartialScanCtrl->bPartialScanAllowed = FALSE;
+#endif
+
 	return 0;
 }
 

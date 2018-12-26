@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
  /***************************************************************************
  * MediaTek Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -28,7 +27,7 @@
     Hugo        2016-0505     create
 
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __PROTECTION_H__
 #define __PROTECTION_H__
 

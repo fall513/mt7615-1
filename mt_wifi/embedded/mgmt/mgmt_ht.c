@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +23,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #include "rt_config.h"
 
@@ -42,8 +41,7 @@ INT ht_support_bw_by_channel_boundary(RTMP_ADAPTER *pAd, MAC_TABLE_ENTRY *pEntry
 
 	supported_bw = wlan_operate_get_ht_bw(wdev);
 	ext_cha = wlan_operate_get_ext_cha(wdev);
-
-
+	
 	if (!peer_ie_list)
 		return supported_bw;
 
@@ -249,15 +247,10 @@ UCHAR get_cent_ch_by_htinfo(
 
 VOID set_sta_ht_cap(RTMP_ADAPTER *pAd, MAC_TABLE_ENTRY *entry, HT_CAPABILITY_IE *ht_ie)
 {
-	UCHAR ht_gi = GI_400;
-
-	if (!entry->wdev)
-		return;
 	/* set HT capabilty flag for entry */
 	CLIENT_STATUS_SET_FLAG(entry, fCLIENT_STATUS_HT_CAPABLE);
 
-	ht_gi = wlan_config_get_ht_gi(entry->wdev);
-	if (ht_gi == GI_400)
+	if (pAd->CommonCfg.RegTransmitSetting.field.ShortGI == GI_400)
 	{      
 		if (ht_ie->HtCapInfo.ShortGIfor20)
 			CLIENT_STATUS_SET_FLAG(entry, fCLIENT_STATUS_SGI20_CAPABLE);
@@ -624,6 +617,7 @@ VOID RTMPSetIndividualHT(RTMP_ADAPTER *pAd, UCHAR apidx, UCHAR channel)
 	UCHAR DesiredMcs = MCS_AUTO;
 	UINT32 encrypt_mode = 0;
 	struct wifi_dev *wdev = get_default_wdev(pAd);
+	EDCA_PARM *pEdca;
 	UCHAR cfg_ht_bw;
 
 	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_INFO, ("%s(): apidx=%d\n", __FUNCTION__, apidx));
@@ -720,6 +714,10 @@ VOID RTMPSetIndividualHT(RTMP_ADAPTER *pAd, UCHAR apidx, UCHAR channel)
 #endif /* CONFIG_AP_SUPPORT */
 
 
+	pEdca = &pAd->CommonCfg.APEdcaParm[wdev->EdcaIdx];
+	/* EDCA parameters used for AP's own transmission*/
+	if (pEdca->bValid == FALSE)
+		set_default_ap_edca_param(pEdca);
 	} while (FALSE);
 
 	if (wdev->channel != channel)
@@ -928,7 +926,7 @@ INT	SetCommonHT(RTMP_ADAPTER *pAd, UCHAR PhyMode, UCHAR Channel,struct wifi_dev 
 	SetHT.MCS = MCS_AUTO;
 	SetHT.BW = (UCHAR)op_ht_bw;
 	SetHT.STBC = (UCHAR)wlan_config_get_ht_stbc(wdev);
-	SetHT.SHORTGI = (UCHAR)wlan_config_get_ht_gi(wdev);		
+	SetHT.SHORTGI = (UCHAR)pAd->CommonCfg.RegTransmitSetting.field.ShortGI;		
 	SetHT.Channel = Channel;
 	SetHT.BandIdx=0;
 

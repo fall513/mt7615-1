@@ -1,6 +1,9 @@
 #ifndef __AP_CFG_H__
 #define __AP_CFG_H__
 
+
+#include "rt_config.h"
+
 INT RTMPAPPrivIoctlSet(
 	IN RTMP_ADAPTER *pAd,
 	IN RTMP_IOCTL_INPUT_STRUCT *pIoctlCmdStr);
@@ -8,9 +11,12 @@ INT RTMPAPPrivIoctlSet(
 INT RTMPAPPrivIoctlShow(
 	IN RTMP_ADAPTER *pAd,
 	IN RTMP_IOCTL_INPUT_STRUCT *pIoctlCmdStr);
+
+#ifdef VENDOR_FEATURE6_SUPPORT
 VOID RTMPAPGetAssoMacTable(
 	IN RTMP_ADAPTER *pAd, 
 	IN RTMP_IOCTL_INPUT_STRUCT *pIoctlCmdStr);
+#endif /* VENDOR_FEATURE6_SUPPORT */
 
 #if defined(INF_AR9) || defined(BB_SOC)
 #if defined(AR9_MAPI_SUPPORT) || defined(BB_SOC)
@@ -87,9 +93,12 @@ VOID RtmpDrvMaxRateGet(
 	OUT	UINT32					*pRate);
 
 #ifdef WSC_AP_SUPPORT
+#ifdef VENDOR_FEATURE6_SUPPORT
 VOID RTMPGetCurrentCred(
 	IN PRTMP_ADAPTER pAdapter, 
 	IN RTMP_IOCTL_INPUT_STRUCT *wrq);
+#endif /* VENDOR_FEATURE6_SUPPORT */
+
 VOID RTMPIoctlWscProfile(
 	IN PRTMP_ADAPTER pAdapter,
 	IN RTMP_IOCTL_INPUT_STRUCT *wrq);
@@ -149,6 +158,23 @@ VOID RTMPIoctlQueryStaData(
         IN      RTMP_IOCTL_INPUT_STRUCT *wrq);
 #endif /* RADIUS_ACCOUNTING_SUPPORT */
 
+#ifdef RADIUS_MAC_ACL_SUPPORT
+PRT_802_11_RADIUS_ACL_ENTRY RadiusFindAclEntry(
+        PLIST_HEADER            pCacheList,
+        IN      PUCHAR          pMacAddr);
+
+VOID RTMPIoctlAddRadiusMacAuthCache(
+	IN	PRTMP_ADAPTER	pAd, 
+	IN	RTMP_IOCTL_INPUT_STRUCT	*wrq);
+
+VOID RTMPIoctlDelRadiusMacAuthCache(
+        IN      PRTMP_ADAPTER   pAd,
+        IN      RTMP_IOCTL_INPUT_STRUCT *wrq);
+
+VOID RTMPIoctlClearRadiusMacAuthCache(
+        IN      PRTMP_ADAPTER   pAd,
+        IN      RTMP_IOCTL_INPUT_STRUCT *wrq);
+#endif /* RADIUS_MAC_ACL_SUPPORT */
 #endif /* DOT1X_SUPPORT */
 
 INT Set_AP_Daemon_Status(
@@ -181,6 +207,73 @@ INT Set_AP_IE(
 	IN RTMP_STRING *IE,
 	IN UINT32 IELen);
 
+struct apcfg_parameters {
+	LONG cfg_mode[2]; /*WirelessMode*/
+	ULONG tx_power_percentage; /*TxPower*/
+	ULONG tx_preamble; /*TxPreamble*/
+	UINT32 conf_len_thld; /*RTSThreshold*/
+	UINT32 oper_len_thld;
+	UINT32 conf_frag_thld; /*FragThreshold*/
+	UINT32 oper_frag_thld;
+	BOOLEAN bEnableTxBurst; /*TxBurst*/
+	BOOLEAN bUseShortSlotTime; /*ShortSlot*/	
+#ifdef DOT11_N_SUPPORT	
+	UCHAR conf_ht_bw; /*HT_BW*/
+	UCHAR oper_ht_bw;
+#ifdef DOT11N_DRAFT3
+	BOOLEAN bBssCoexEnable; /*HT_BSSCoexistence*/
+#endif	
+	UCHAR ht_tx_streams; /*HT_TxStream*/
+	UCHAR ht_rx_streams; /*HT_RxStream*/
+	BOOLEAN bBADecline; /*HT_BADecline*/
+	UINT32 AutoBA; /*HT_AutoBA*/
+	UINT32 AmsduEnable; /*HT_AMSDU*/
+	UINT32 RxBAWinLimit; /*HT_BAWinSize*/
+	UCHAR ht_gi; /*HT_GI*/
+	UCHAR ht_stbc; /*HT_STBC*/
+	UCHAR ht_ldpc; /*HT_LDPC*/
+	BOOLEAN bRdg; /*HT_RDG*/
+#endif
+
+	BOOLEAN HT_DisallowTKIP; /*HT_DisallowTKIP*/
+
+#ifdef DOT11_VHT_AC
+	UCHAR conf_vht_bw; /*VHT_BW*/	
+	UCHAR oper_vht_bw;
+	UCHAR vht_sgi; /*VHT_SGI*/
+	UCHAR vht_stbc; /*VHT_STBC*/
+	UCHAR vht_bw_signal; /*VHT_BW_SIGNAL*/
+	UCHAR vht_ldpc; /*VHT_LDPC*/
+	BOOLEAN g_band_256_qam; /*G_BAND_256QAM*/	
+#endif
+
+	BOOLEAN bIEEE80211H; /*IEEE80211H*/
+
+#ifdef MT_DFS_SUPPORT
+	BOOLEAN bDfsEnable; /*DfsEnable*/	 
+#endif	 
+
+#ifdef BACKGROUND_SCAN_SUPPORT
+	BOOLEAN DfsZeroWaitSupport; /*DfsZeroWait*/
+#endif
+	 
+#ifdef DOT11_N_SUPPORT
+#ifdef TXBF_SUPPORT
+	ULONG ETxBfEnCond; /*ETxBfEnCond*/
+#endif
+#endif
+
+	UINT32 ITxBfEn; /*ITxBfEn*/
+
+#ifdef DOT11_N_SUPPORT
+#ifdef TXBF_SUPPORT
+	ULONG MUTxRxEnable; /*MUTxRxEnable*/
+#endif
+#endif
+	UCHAR channel;
+	UCHAR CentralChannel;
+	UCHAR ext_channel;	
+};
 #ifdef APCLI_SUPPORT
 #endif /* APCLI_SUPPORT */
 #endif /* __AP_CFG_H__ */

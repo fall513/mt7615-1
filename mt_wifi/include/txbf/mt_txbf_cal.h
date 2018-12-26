@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * MediaTek Inc. 
@@ -14,7 +13,7 @@
 	Module Name:
 	mt_txbf_cal.h
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef _RT_TXBF_CAL_H_
 #define _RT_TXBF_CAL_H_

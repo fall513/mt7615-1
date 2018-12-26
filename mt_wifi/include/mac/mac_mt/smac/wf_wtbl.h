@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #ifndef __WF_WTBL_H__
 #define __WF_WTBL_H__
@@ -337,16 +336,16 @@ union WTBL_2_DW12 {
 #ifdef RT_BIG_ENDIAN
 union WTBL_2_DW13 {
 	struct {
-                 UINT32 af:3;
-                UINT32 mm:3;
-                UINT32 rsv_13_24:2;
+        UINT32 rsv_13_24:8;
 		UINT32 resp_rcpi_2:8;
 		UINT32 resp_rcpi_1:8;
 		UINT32 resp_rcpi_0:8;
 	} field;
 
 	struct { 
-		UINT32 rsv_13_24:8;
+		UINT32 af:3;
+		UINT32 mm:3;
+		UINT32 rsv_13_24:2;
 		UINT32 resp_rcpi_2:8;
 		UINT32 resp_rcpi_1:8;
 		UINT32 resp_rcpi_0:8;

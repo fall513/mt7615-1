@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,6 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
 #include	"rt_config.h"
 #ifdef DOT11R_FT_SUPPORT
 #include	"ft.h"
@@ -188,7 +186,6 @@ static INT rtmp_sys_init(RTMP_ADAPTER *pAd,RTMP_STRING *pHostName)
 	NDIS_STATUS status;
 
 	WifiSysInfoReset(&pAd->WifiSysInfo);
-	WifiSysInfoDump(pAd);
 
 	status = RtmpMgmtTaskInit(pAd);
 	if (status != NDIS_STATUS_SUCCESS)
@@ -235,17 +232,20 @@ static INT rtmp_sys_init(RTMP_ADAPTER *pAd,RTMP_STRING *pHostName)
 		InitTxSCommonCallBack(pAd);
 	}
 #endif
+#ifdef WH_EZ_SETUP
+	pAd->CurWdevIdx = 0;
+#endif
 
 	/* hwnat optimize */
-#if (!defined(CONFIG_RA_NAT_NONE)) || ( defined(BB_SOC) && defined(BB_RA_HWNAT_WIFI) )
-			pAd->LanNatSpeedUpEn = 1;
-#else
-			pAd->LanNatSpeedUpEn = 0;
-#endif
-	pAd->CurWdevIdx = 0;
+#ifdef CONFIG_WLAN_LAN_BY_PASS_HWNAT
+	/* Default set LanNatSpeedUpEn=0 to disable this function */
+	pAd->LanNatSpeedUpEn = 0;
+	pAd->HwnatCurWdevIdx = 0;
 	pAd->isInitBrLan = 0;
 	pAd->BrLanIpAddr = 0xffffffff;
 	pAd->BrLanMask = 0xffffffff;
+#endif
+
 	return TRUE;
 
 
@@ -262,13 +262,16 @@ err0:
 /*rename from rt28xx_init*/
 int mt_wifi_init(VOID *pAdSrc, RTMP_STRING *pDefaultMac, RTMP_STRING *pHostName)
 {
-#ifdef SMART_CARRIER_SENSE_SUPPORT
+#if defined(SMART_CARRIER_SENSE_SUPPORT) || defined(BACKGROUND_SCAN_SUPPORT)
         UINT32  CrValue;
-#endif /* SMART_CARRIER_SENSE_SUPPORT */
+#endif /* SMART_CARRIER_SENSE_SUPPORT || BACKGROUND_SCAN_SUPPORT */
 	RTMP_ADAPTER *pAd = (RTMP_ADAPTER *)pAdSrc;
 	NDIS_STATUS Status;
 //    UCHAR EDCCACtrl;
     UCHAR BandIdx = 0;
+#ifdef GPIO_CONTROL_SUPPORT
+	UCHAR GpioIndex = 0;
+#endif /* GPIO_CONTROL_SUPPORT */
 
 	if (!pAd)
 		return FALSE;
@@ -290,9 +293,15 @@ int mt_wifi_init(VOID *pAdSrc, RTMP_STRING *pDefaultMac, RTMP_STRING *pHostName)
 	{
 		RTMP_ASIC_INTERRUPT_DISABLE(pAd);
 	}
-
-	/* reset Adapter flags */
-	RTMP_CLEAR_FLAGS(pAd);
+	
+#ifdef FWDL_IN_PROBE
+	/* bypass flags reset if the FW DL is done in probe */
+	if (pAd->MCUCtrl.fwdl_in_probe == FALSE)
+#endif
+	{
+		/* reset Adapter flags */
+		RTMP_CLEAR_FLAGS(pAd);
+	}
 
 	/*for software system initialize*/
 	if (rtmp_sys_init(pAd,pHostName) != TRUE)
@@ -450,6 +459,9 @@ int mt_wifi_init(VOID *pAdSrc, RTMP_STRING *pDefaultMac, RTMP_STRING *pHostName)
     AsicTxBfHwEnStatusUpdate(pAd,
                              pAd->CommonCfg.ETxBfEnCond,
                              pAd->CommonCfg.RegTransmitSetting.field.ITxBfEn);
+#ifdef TXBF_DYNAMIC_DISABLE
+	pAd->CommonCfg.ucAutoSoundingCtrl = 0;/* After interface down up, BF disable will be cancelled */
+#endif /* TXBF_DYNAMIC_DISABLE */
 #endif /* TXBF_SUPPORT */
 
     /* EDCCA support */
@@ -485,7 +497,15 @@ int mt_wifi_init(VOID *pAdSrc, RTMP_STRING *pDefaultMac, RTMP_STRING *pHostName)
         pAd->fgWifiInitDone = TRUE;
     }
 #endif /* NR_PD_DETECTION */
-
+#ifdef CONFIG_AP_SUPPORT
+#ifdef GPIO_CONTROL_SUPPORT
+	for(GpioIndex = 0; GpioIndex < pAd->ApCfg.NoOfGPIOOutput; GpioIndex++)
+	{
+		if(IS_GPIO_AVAILABLE(pAd->ApCfg.GPIOOutputPin[GpioIndex]))
+			GPIODirectionOuput(pAd,pAd->ApCfg.GPIOOutputPin[GpioIndex],pAd->ApCfg.GPIOOutputData[GpioIndex]);
+	}
+#endif /* GPIO_CONTROL_SUPPORT */
+#endif /* CONFIG_AP_SUPPORT */
 	return TRUE;
 err3:
 	MlmeHalt(pAd);
@@ -572,9 +592,25 @@ VOID RTMPDrvOpen(VOID *pAdSrc)
 		MTWF_LOG(DBG_CAT_INIT, DBG_SUBCAT_ALL, DBG_LVL_TRACE, ("Trigger DFS Zero wait procedure Support=%d, DfsZeroWaitChannel=%d", pAd->BgndScanCtrl.DfsZeroWaitSupport, pAd->BgndScanCtrl.DfsZeroWaitChannel));
 		if (pAd->BgndScanCtrl.DfsZeroWaitSupport == 1 && pAd->BgndScanCtrl.DfsZeroWaitChannel !=0)
 			DfsZeroWaitStart(pAd, TRUE);
+		/*DfsDedicatedScanStart(pAd);*/
 	}
 #endif /* defined(MT_DFS_SUPPORT) && defined(BACKGROUND_SCAN_SUPPORT) */
 
+#ifdef BAND_STEERING
+#ifdef CONFIG_AP_SUPPORT
+    if(pAd->ApCfg.BandSteering)
+    {
+        PBND_STRG_CLI_TABLE table;
+        table = Get_BndStrgTable(pAd, BSS0);
+        if(table)
+        {
+            /* Inform daemon interface ready */
+            struct wifi_dev *wdev = &pAd->ApCfg.MBSSID[BSS0].wdev;
+            BndStrg_SetInfFlags(pAd, wdev, table, TRUE);
+        }
+    }
+#endif /* CONFIG_AP_SUPPORT */
+#endif /* BAND_STEERING */
 }
 
 
@@ -625,9 +661,6 @@ VOID RTMPDrvClose(VOID *pAdSrc, VOID *net_dev)
 	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
 	{
 		BOOLEAN Cancelled = FALSE;
-#if defined (RTMP_MAC_USB) || defined (RTMP_MAC_SDIO)
-		RTMPCancelTimer(&pAd->CommonCfg.BeaconUpdateTimer, &Cancelled);
-#endif /* RTMP_MAC_USB */
 
 #ifdef DOT11N_DRAFT3
 		if (pAd->CommonCfg.Bss2040CoexistFlag & BSS_2040_COEXIST_TIMER_FIRED)
@@ -840,11 +873,12 @@ VOID RTMPDrvClose(VOID *pAdSrc, VOID *net_dev)
 	}
 	if(pAd->PreCalReStoreBuffer != NULL)
 	{
-		os_free_mem(pAd->PreCalReStoreBuffer);    
+		os_free_mem(pAd->PreCalReStoreBuffer);
 		pAd->PreCalReStoreBuffer = NULL;
 	}
-#endif/* PRE_CAL_TRX_SET2_SUPPORT */    
-/*multi profile release*/
+#endif/* PRE_CAL_TRX_SET2_SUPPORT */
+
+	/*multi profile release*/
 #ifdef MULTI_PROFILE
 	multi_profile_exit(pAd);
 #endif /*MULTI_PROFILE*/
@@ -861,8 +895,26 @@ VOID RTMPInfClose(VOID *pAdSrc)
 	{
 		wdev = &pAd->ApCfg.MBSSID[MAIN_MBSSID].wdev;
 		wdev->bAllowBeaconing = FALSE;
+
+#ifdef RADIO_LINK_SELECTION
+		if (pAd->ApCfg.RadioLinkSelection)
+			Rls_SetInfInfo(pAd, FALSE, wdev);
+#endif	/* RADIO_LINK_SELECTION */	
 		WifiSysApLinkDown(pAd,wdev);
 		WifiSysClose(pAd,wdev);
+
+#ifdef BAND_STEERING
+        if(pAd->ApCfg.BandSteering)
+        {
+            PBND_STRG_CLI_TABLE table;
+            table = Get_BndStrgTable(pAd, BSS0);
+            if(table)
+            {
+                /* Inform daemon interface down */
+                BndStrg_SetInfFlags(pAd, wdev, table, FALSE);
+            }
+        }
+#endif /* BAND_STEERING */
 	}
 #endif /*CONFIG_AP_SUPPROT*/
 
@@ -889,14 +941,6 @@ PNET_DEV RtmpPhyNetDevMainCreate(VOID *pAdSrc)
 #endif /* HOSTAPD_SUPPORT */
 
 	dev_name = get_dev_name_prefix(pAd, INT_MAIN);
-#ifdef INTELP6_SUPPORT
-#ifdef MT_SECOND_CARD
-	if (pAd->dev_idx == 1)
-		pDevNew = RtmpOSNetDevCreate((INT32)MC_RowID, (UINT32 *)&IoctlIF,
-					INT_MAIN, MAX_MBSS_NUM, sizeof(struct mt_dev_priv), dev_name);
-	else
-#endif
-#endif
 	pDevNew = RtmpOSNetDevCreate((INT32)MC_RowID, (UINT32 *)&IoctlIF,
 					INT_MAIN, 0, sizeof(struct mt_dev_priv), dev_name);
 

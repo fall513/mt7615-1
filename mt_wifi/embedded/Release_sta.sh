@@ -2,8 +2,8 @@ OSABL=NO
 EmbeddedDir=`pwd`
 BaseCodeDir=`dirname $EmbeddedDir`
 ChipName="mt7615"
-WiFiMode=AP
-DriverVersion="V4.4.1.1"
+WiFiMode=STA
+DriverVersion="V4.4.1.0"
 Release="DPA"
 Note=$1
 Description="Formal release."
@@ -17,7 +17,7 @@ Hour=`date +%H`
 Minute=`date +%M`
 HomeDir=`dirname $BaseCodeDir`
 #ModuleName=mt$ChipName\_wifi_$DriverVersion
-ModulePrefix=MT7615_LinuxAP
+ModulePrefix=MT7615_LinuxSTA
 ModuleName=$ModulePrefix\_$DriverVersion
 WorkDir=$HomeDir/release
 TargetDir=$WorkDir/$ModuleName\_$Date\_$Hour$Minute
@@ -103,11 +103,11 @@ fi
 		echo $ModulePrefix > $ReleaseDir/$release_profile
 		echo $DriverVersion >> $ReleaseDir/$release_profile
 		echo $Date >> $ReleaseDir/$release_profile
-		cp Pack_Release.sh $ReleaseDir/embedded
+		cp Pack_Release_sta.sh $ReleaseDir/embedded
 		##Copy sku_tables .dat to release package##
 		cp -R $TargetDir/txpwr/sku_tables $ReleaseDir/txpwr/
 		cd $ReleaseDir/embedded
-		sh Pack_Release.sh $1
+		sh Pack_Release_sta.sh $1
 
     	#tar -jcvf $ReleaseDir.tar.bz2 $ReleaseDir
 	else

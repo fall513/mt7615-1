@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -120,7 +119,13 @@ UINT32 TYPE_FUNC FT_RIC_ResourceRequestHandle(
 	BOOLEAN FlgIsTspecAccepted;
 
 
-    /* sanity check */
+	/* init */
+	pBufReqElm = pBufReq;
+	pBufRspElm = pBufRsp;
+	*pRspLen = 0;
+	HandledSize = 0;
+
+	/* sanity check */
 	if ((pCdb == NULL) ||
 		(pBufReq == NULL) ||
 		(pBufRsp == NULL) ||
@@ -130,12 +135,6 @@ UINT32 TYPE_FUNC FT_RIC_ResourceRequestHandle(
 				("ft_ric> (ResourceRequestHandle) Error! NULL pointer!\n"));
 		return 0;
 	} /* End of if */
-    
-	/* init */
-	pBufReqElm = pBufReq;
-	pBufRspElm = pBufRsp;
-	*pRspLen = 0;
-	HandledSize = 0;
 
 	/* handle all RDIEs */
 	/*
@@ -331,7 +330,7 @@ extern BOOLEAN BARecSessionAdd(
 		AddreqFrame.TimeOutValue = le2cpu16(pRicBaInfo->TimeOutValue);
 		AddreqFrame.BaStartSeq.word = le2cpu16(pRicBaInfo->BaStartSeq);
 
-		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_OFF, ("Rcv Wcid(%d) AddBAReq\n", pMacEntry->Aid));
+		MTWF_LOG(DBG_CAT_PROTO, CATPROTO_FT, DBG_LVL_TRACE, ("Rcv Wcid(%d) AddBAReq\n", pMacEntry->Aid));
 		if (BARecSessionAdd(pAd, pMacEntry, &AddreqFrame))
 			Status = 0;
 		else

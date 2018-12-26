@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -24,7 +23,7 @@
 	Who 		When			What
 	--------	----------		----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 
 #include "rt_config.h"
 
@@ -417,7 +416,7 @@ INT dot11_vht_mcs_to_internal_mcs(
 	HTTRANSMIT_SETTING *tx)
 {
 	HTTRANSMIT_SETTING *tx_mode = tx;
-	UCHAR spec_cap, peer_cap, cap_offset = 0, nss;
+	UCHAR spec_cap, peer_cap, cap_offset = 0, nss = 1;
 
 	/* TODO: implement get_vht_max_mcs to get peer max MCS */
 	switch (tx_mode->field.BW) {
@@ -481,6 +480,12 @@ INT dot11_vht_mcs_to_internal_mcs(
 		else
 			tx_mode->field.MCS = ((nss -1) << 4) | spec_cap;
 	}
+
+	if (wdev->DesiredTransmitSetting.field.MCS != MCS_AUTO)
+	{
+		tx_mode->field.MCS = ((nss -1) << 4) | (wdev->DesiredTransmitSetting.field.MCS & 0xF);
+	}
+
 
 	return TRUE;
 }
@@ -888,6 +893,35 @@ INT build_vht_cap_ie(RTMP_ADAPTER *pAd, UCHAR *buf, struct wifi_dev *wdev)
 	return sizeof(VHT_CAP_IE);
 }
 
+VOID modify_vht_cap_ie(RTMP_ADAPTER *pAd, UCHAR *buf, struct wifi_dev *wdev)
+{
+	VHT_CAP_IE *vht_cap_ie;
+
+
+    vht_cap_ie = (VHT_CAP_IE*) buf;
+
+	if (wdev->peer_vendor_ie.is_quant)
+    {
+        if ((wdev->peer_vendor_ie.quant_cap == 3) && (wlan_config_get_tx_stream(wdev) == 4))
+        {
+            vht_cap_ie->vht_cap.bfee_cap_su = FALSE;
+            vht_cap_ie->vht_cap.bfee_cap_mu = FALSE;
+#ifdef VHT_TXBF_SUPPORT
+            AsicTxBfeeHwCtrl(pAd, FALSE);
+#endif            
+            //printk("Quantenna AP is 4x4 so STA should disable BFee !!!!!!\n");
+        }
+    }
+#ifdef VHT_TXBF_SUPPORT    
+    else
+    {
+        AsicTxBfeeHwCtrl(pAd, TRUE);
+    }
+#endif
+	return;
+}
+
+
 static INT build_vht_op_mode_ie(RTMP_ADAPTER *pAd, struct wifi_dev *wdev, UCHAR *buf)
 {
 	INT len = 0;
@@ -997,9 +1031,6 @@ INT build_vht_ies(RTMP_ADAPTER *pAd, struct _build_ie_info *info)
 	UCHAR *vht_op_start = NULL;
 	UCHAR need_adjust = 0;
 
-	if ((info == NULL) || (info->wdev == NULL))
-		return len;
-
     if (
 #if defined(G_BAND_256QAM)
             g_band_256_qam_enable(pAd, info) ||
@@ -1041,7 +1072,7 @@ INT build_vht_ies(RTMP_ADAPTER *pAd, struct _build_ie_info *info)
     		/* optional IE, Now only FOR VHT40 STA/ApClient with op_mode ie to notify AP 
                and avoid the BW info not sync. 
              */ 
-            if ((wlan_operate_get_vht_bw(info->wdev) == VHT_BW_2040) && 
+            if (info->wdev && (wlan_operate_get_vht_bw(info->wdev) == VHT_BW_2040) && 
                 (wlan_operate_get_ht_bw(info->wdev) == HT_BW_40))
     		{
     			len += build_vht_op_mode_ie(pAd, info->wdev, (UCHAR *)(info->frame_buf + len));
@@ -1058,6 +1089,31 @@ INT build_vht_ies(RTMP_ADAPTER *pAd, struct _build_ie_info *info)
     }
 
     return len;
+}
+
+
+VOID modify_vht_ies(RTMP_ADAPTER *pAd, struct _build_ie_info *info, struct wifi_dev *wdev)
+{
+	INT len = 0;
+	EID_STRUCT eid_hdr;
+	UCHAR *vht_cap_start = NULL;
+
+
+    if (WMODE_CAP_AC(info->phy_mode) &&
+        (info->channel > 14))
+    {
+        NdisZeroMemory(&eid_hdr, sizeof(EID_STRUCT));
+
+        eid_hdr.Eid = IE_VHT_CAP;
+        eid_hdr.Len = sizeof(VHT_CAP_IE);
+        NdisMoveMemory(info->frame_buf, (UCHAR *)&eid_hdr, 2);
+        len = 2;
+	    vht_cap_start = (UCHAR *)(info->frame_buf + len);
+
+        modify_vht_cap_ie(pAd, vht_cap_start, wdev);
+    }
+
+    return;
 }
 
 
@@ -1161,7 +1217,7 @@ void update_vht_op_info(UINT8 cap_bw, VHT_OP_INFO *vht_op_info, struct _op_info 
 BOOLEAN vht80_channel_group( RTMP_ADAPTER *pAd, UCHAR channel)
 {
 	INT idx = 0;
-	UCHAR region = GetCountryRegionFromCountryCode(pAd);
+	UCHAR region = GetCountryRegionFromCountryCode(pAd->CommonCfg.CountryCode);
 
 	if (channel <= 14)
 		return FALSE;
@@ -1197,7 +1253,7 @@ BOOLEAN vht80_channel_group( RTMP_ADAPTER *pAd, UCHAR channel)
 BOOLEAN vht160_channel_group( RTMP_ADAPTER *pAd, UCHAR channel)
 {
         INT idx = 0;
-        //UCHAR region = GetCountryRegionFromCountryCode(pAd);
+        //UCHAR region = GetCountryRegionFromCountryCode(pAd->CommonCfg.CountryCode);
 
         if (channel <= 14)
                 return FALSE;

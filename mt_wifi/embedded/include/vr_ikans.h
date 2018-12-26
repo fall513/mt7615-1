@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -26,7 +25,7 @@
     Sample Lin	01-28-2008    Created
 
  */
-#endif /* MTK_LICENSE */
+
 #ifndef __VR_IKANS_H__
 #define __VR_IKANS_H__
 

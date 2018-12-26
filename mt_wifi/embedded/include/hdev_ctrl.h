@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	--------	----------  ----------------------------------------------
 	Name		Date	    Modification logs
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __HDEV_CTRL_H__
 #define __HDEV_CTRL_H__
 
@@ -81,7 +80,7 @@ UCHAR HcHwReleaseWcid(struct _RTMP_ADAPTER *pAd,UCHAR idx);
 VOID HcWtblRecDump(struct _RTMP_ADAPTER *pAd);
 
 VOID RxTrackingInit(struct wifi_dev *wdev);
-VOID TaTidRecAndCmp(struct _RTMP_ADAPTER *pAd, struct _RXD_BASE_STRUCT *rx_base, UINT16 SN, UCHAR Tid);
+VOID TaTidRecAndCmp(struct _RTMP_ADAPTER *pAd, struct _RXD_BASE_STRUCT *rx_base, UINT16 SN);
 
 
 #ifdef DBDC_MODE

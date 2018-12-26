@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -25,7 +24,7 @@
 	Who         When          What
 	--------    ----------    ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __WNM_H__
 #define __WNM_H__
 
@@ -34,6 +33,10 @@
 
 #define BTM_MACHINE_BASE 0
 #define WaitPeerBTMRspTimeoutVale 1024
+#define WaitPeerBTMReqTimeoutVale (1024)
+
+
+#define BTM_ENABLE_OFFSET   (1<<0)
 
 /* BTM states */
 enum BTM_STATE {
@@ -103,6 +106,7 @@ typedef struct _BTM_PEER_ENTRY {
 	void *Priv;
 #ifdef CONFIG_AP_SUPPORT
 	RALINK_TIMER_STRUCT WaitPeerBTMRspTimer;
+	RALINK_TIMER_STRUCT WaitPeerBTMReqTimer;
 #endif /* CONFIG_AP_SUPPORT */
 } BTM_PEER_ENTRY, *PBTM_PEER_ENTRY;
 
@@ -246,6 +250,7 @@ VOID WNMIPv6ProxyARPCheck(
 
 DECLARE_TIMER_FUNCTION(WaitPeerBTMRspTimeout);
 DECLARE_TIMER_FUNCTION(WaitPeerWNMNotifyRspTimeout);
+DECLARE_TIMER_FUNCTION(WaitPeerBTMReqTimeout);
 
 VOID BTMStateMachineInit(
 			IN	PRTMP_ADAPTER pAd, 
@@ -255,6 +260,15 @@ VOID BTMStateMachineInit(
 enum BTM_STATE BTMPeerCurrentState(
 	IN PRTMP_ADAPTER pAd,
 	IN MLME_QUEUE_ELEM *Elem);
+
+#ifndef CONFIG_HOTSPOT_R2//#ifdef WNM_NEW_API
+NDIS_STATUS wnm_handle_command(IN PRTMP_ADAPTER pAd, 
+										IN struct wnm_command *pCmd_data);
+void WNM_ReadParametersFromFile(
+        IN PRTMP_ADAPTER pAd,
+        RTMP_STRING *tmpbuf,
+        RTMP_STRING *buffer);
+#endif
 
 VOID ReceiveWNMNotifyRsp(IN PRTMP_ADAPTER pAd,
 						  IN MLME_QUEUE_ELEM *Elem);

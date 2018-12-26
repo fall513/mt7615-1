@@ -20,16 +20,15 @@
 #define CHANNEL5G_GROUP_8 8
 #define CHANNEL_GROUP_NUM 9
 
-#define TXLPF_PER_GROUP_DATA_SIZE    (SCN_NUM * sizeof(UINT32))
-#define TXIQ_PER_GROUP_DATA_SIZE     (SCN_NUM * 6 * sizeof(UINT32))
-#define TXDC_PER_GROUP_DATA_SIZE     (SCN_NUM * 6 * sizeof(UINT32)) 
-#define RXFI_PER_GROUP_DATA_SIZE     (SCN_NUM * 4 * sizeof(UINT32))
-#define RXFD_PER_GROUP_DATA_SIZE     (((SCN_NUM * RX_SWAGC_LNA_NUM) +  \
-                                     (SCN_NUM * RX_FDIQ_LPF_GAIN_NUM * \
-                                      RX_FDIQ_TABLE_SIZE * 3)) * sizeof(UINT32))
+#define TXLPF_PER_GROUP_DATA_SIZE	(SCN_NUM * sizeof(UINT32))
+#define TXIQ_PER_GROUP_DATA_SIZE	(SCN_NUM * 6 * sizeof(UINT32))
+#define TXDC_PER_GROUP_DATA_SIZE	(SCN_NUM * 6 * sizeof(UINT32)) 
+#define RXFI_PER_GROUP_DATA_SIZE	(SCN_NUM * 4 * sizeof(UINT32))
+#define RXFD_PER_GROUP_DATA_SIZE	(((SCN_NUM * RX_SWAGC_LNA_NUM) +  \
+                                	(SCN_NUM * RX_FDIQ_LPF_GAIN_NUM * \
+                                	RX_FDIQ_TABLE_SIZE * 3)) * sizeof(UINT32))
 
 #define PRECAL_FLASH_MODE 1
-
 
 #define RLM_CAL_CACHE_TXLPF_CAL_INFO(_C) (((P_RLM_CAL_CACHE)(_C))->txLpfCalInfo)
 #define RLM_CAL_CACHE_TXIQ_CAL_INFO(_C) (((P_RLM_CAL_CACHE)(_C))->txIqCalInfo)
@@ -45,106 +44,104 @@
 #define RXFD_GROUP_READY(_I) BIT((_I)+4)
 
 #define RLM_CAL_CACHE_TXLPF_CAL_DONE(_C) \
-    ((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= TXPLF_READY)
+	((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= TXPLF_READY)
 #define RLM_CAL_CACHE_TXIQ_CAL_DONE(_C) \
-    ((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= TXIQ_READY)
+	((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= TXIQ_READY)
 #define RLM_CAL_CACHE_TXDC_CAL_DONE(_C) \
-    ((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= TXPDC_READY)
+	((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= TXPDC_READY)
 #define RLM_CAL_CACHE_RXFI_CAL_DONE(_C) \
-    ((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= RXFI_READY)
+	((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= RXFI_READY)
 #define RLM_CAL_CACHE_RXFD_CAL_DONE(_C, _I) \
-    ((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= RXFD_GROUP_READY(_I))
+	((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) |= RXFD_GROUP_READY(_I))
 
 #define RLM_CAL_CACHE_IS_TXLPF_CAL_DONE(_C) \
-    (((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & TXPLF_READY) == TXPLF_READY)
+	(((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & TXPLF_READY) == TXPLF_READY)
 #define RLM_CAL_CACHE_IS_TXIQ_CAL_DONE(_C) \
-    (((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & TXIQ_READY) == TXIQ_READY)
+	(((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & TXIQ_READY) == TXIQ_READY)
 #define RLM_CAL_CACHE_IS_TXDC_CAL_DONE(_C) \
-    (((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & TXPDC_READY) == TXPDC_READY)
+	(((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & TXPDC_READY) == TXPDC_READY)
 #define RLM_CAL_CACHE_IS_RXFI_CAL_DONE(_C) \
-    (((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & RXFI_READY) == RXFI_READY)
+	(((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & RXFI_READY) == RXFI_READY)
 #define RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, _I) \
-    (((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & RXFD_GROUP_READY(_I)) == RXFD_GROUP_READY(_I))
+	(((((P_RLM_CAL_CACHE)(_C))->rlmCalStatus) & RXFD_GROUP_READY(_I)) == RXFD_GROUP_READY(_I))
 
 #define RLM_CAL_CACHE_IS_DONE(_C) \
-    RLM_CAL_CACHE_IS_RXFI_CAL_DONE(_C) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 0) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 1) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 2) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 3) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 4) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 5) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 6) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 7) & \
-    RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 8)
+	RLM_CAL_CACHE_IS_RXFI_CAL_DONE(_C) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 0) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 1) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 2) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 3) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 4) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 5) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 6) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 7) & \
+	RLM_CAL_CACHE_IS_RXFD_CAL_DONE(_C, 8)
 
 #define RLM_PRECAL_TXLPF_TO_FLASH_CHECK(_C) \
-    ((((P_TXLPF_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
+	((((P_TXLPF_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
 #define RLM_PRECAL_TXIQ_TO_FLASH_CHECK(_C) \
-    ((((P_TXIQ_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
+	((((P_TXIQ_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
 #define RLM_PRECAL_TXDC_TO_FLASH_CHECK(_C) \
-    ((((P_TXDC_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
+	((((P_TXDC_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
 #define RLM_PRECAL_RXFI_TO_FLASH_CHECK(_C) \
-    ((((P_RXFI_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
+	((((P_RXFI_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)
 #define RLM_PRECAL_RXFD_TO_FLASH_CHECK(_C) \
-    ((((P_RXFD_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)   
-
-
+	((((P_RXFD_CAL_INFO_T)(_C))->ucDataToFromFlash) == PRECAL_FLASH_MODE)   
 
 typedef struct _TXLPF_CAL_INFO_T
 {
-    UINT8  ucDataToFromFlash;
-    UINT8  ucDataValid;
-    UINT16 u2BitMap;
-    INT8   cPreCalTemp;
-    UINT8  ucReserved[3]; 
-    UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM];
+	UINT8  ucDataToFromFlash;
+	UINT8  ucDataValid;
+	UINT16 u2BitMap;
+	INT8   cPreCalTemp;
+	UINT8  ucReserved[3]; 
+	UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM];
 } TXLPF_CAL_INFO_T, *P_TXLPF_CAL_INFO_T;
 
 typedef struct _TXIQ_CAL_INFO_T
 {
-    UINT8  ucDataToFromFlash;
-    UINT8  ucDataValid;
-    UINT16 u2BitMap;
-    UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM*6];
+	UINT8  ucDataToFromFlash;
+	UINT8  ucDataValid;
+	UINT16 u2BitMap;
+	UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM*6];
 } TXIQ_CAL_INFO_T, *P_TXIQ_CAL_INFO_T;
 
 typedef struct _TXDC_CAL_INFO_T
 {
-    UINT8  ucDataToFromFlash;
-    UINT8  ucDataValid;
-    UINT16 u2BitMap;
-    UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM*6];
+	UINT8  ucDataToFromFlash;
+	UINT8  ucDataValid;
+	UINT16 u2BitMap;
+	UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM*6];
 } TXDC_CAL_INFO_T, *P_TXDC_CAL_INFO_T;
 
 typedef struct _RXFI_CAL_INFO_T
 {
-    UINT8  ucDataToFromFlash;
-    UINT8  ucDataValid;
-    UINT16 u2BitMap;
-    UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM*4];
+	UINT8  ucDataToFromFlash;
+	UINT8  ucDataValid;
+	UINT16 u2BitMap;
+	UINT32 au4Data[CHANNEL_GROUP_NUM*SCN_NUM*4];
 } RXFI_CAL_INFO_T, *P_RXFI_CAL_INFO_T;
 
 typedef struct _RXFD_CAL_INFO_T
 {
-    UINT8  ucDataToFromFlash;
-    UINT8  ucDataValid;
-    UINT16 u2BitMap;
-    UINT32 u4ChGroupId;
-    UINT32 au4Data[
-        (SCN_NUM*RX_SWAGC_LNA_NUM)
-        + (SCN_NUM*RX_FDIQ_LPF_GAIN_NUM*RX_FDIQ_TABLE_SIZE*3)];
+	UINT8  ucDataToFromFlash;
+	UINT8  ucDataValid;
+	UINT16 u2BitMap;
+	UINT32 u4ChGroupId;
+	UINT32 au4Data[
+	(SCN_NUM*RX_SWAGC_LNA_NUM)
+	+ (SCN_NUM*RX_FDIQ_LPF_GAIN_NUM*RX_FDIQ_TABLE_SIZE*3)];
 } RXFD_CAL_INFO_T, *P_RXFD_CAL_INFO_T;
 
 typedef struct _RXFD_CAL_CACHE_T
 {
-    UINT8  ucDataToFromFlash;
-    UINT8  ucDataValid;
-    UINT16 u2BitMap;
-    UINT32 u4ChGroupId;
-    UINT32 au4Data[
-        (SCN_NUM*RX_SWAGC_LNA_NUM)
-        + (SCN_NUM*RX_FDIQ_LPF_GAIN_NUM* RX_FDIQ_TABLE_SIZE*3)];
+	UINT8  ucDataToFromFlash;
+	UINT8  ucDataValid;
+	UINT16 u2BitMap;
+	UINT32 u4ChGroupId;
+	UINT32 au4Data[
+	(SCN_NUM*RX_SWAGC_LNA_NUM)
+	+ (SCN_NUM*RX_FDIQ_LPF_GAIN_NUM* RX_FDIQ_TABLE_SIZE*3)];
 } RXFD_CAL_CACHE_T, *P_RXFD_CAL_CACHE_T;
 
 typedef struct _RLM_POR_CAL_INFO_T
@@ -162,8 +159,6 @@ typedef struct _RLM_CAL_CACHE {
     RXFD_CAL_CACHE_T rxFdCalInfo[CHANNEL_GROUP_NUM];
 } RLM_CAL_CACHE, *P_RLM_CAL_CACHE;
 
-
-
 INT rlmCalCacheDone(VOID *rlmCalCache);
 INT rlmCalCacheInit(VOID *pAd, VOID **ppRlmCalCache);
 INT rlmCalCacheDeinit(VOID **ppRlmCalCache);
@@ -174,7 +169,6 @@ INT RlmCalCacheRxFiInfo(VOID *rlmCalCtrl, UINT8 *Data, UINT32 Length);
 INT RlmCalCacheRxFdInfo(VOID *rlmCalCtrl, UINT8 *Data, UINT32 Length);
 VOID rlmCalCacheStatus(VOID *rlmCalCache);
 VOID rlmCalCacheDump(VOID *rlmCalCache);
-
 INT TxLpfCalInfoAlloc(VOID *pAd, VOID *rlmCalCache, VOID **pptr);
 INT TxIqCalInfoAlloc(VOID *pAd, VOID *rlmCalCache, VOID **pptr);
 INT TxDcCalInfoAlloc(VOID *pAd, VOID *rlmCalCache, VOID **pptr);

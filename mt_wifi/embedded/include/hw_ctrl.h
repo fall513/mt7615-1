@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	--------	----------  ----------------------------------------------
 	Name		Date	    Modification logs
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __HW_CTRL_H__
 #define __HW_CTRL_H__
 #include "rtmp_type.h"
@@ -144,10 +143,9 @@ enum {
 	HWCMD_ID_GET_TX_STATISTIC,
 	HWCMD_ID_PBC_CTRL,
 	HWCMD_ID_RADIO_ON_OFF,
-#ifdef NR_PD_DETECTION
-    HWCMD_ID_NR_PD_DETECTION,
-    HWCMD_ID_CMW_LINK_CTRL,
-#endif /* NR_PD_DETECTION */	
+#ifdef LINK_TEST_SUPPORT
+	HWCMD_ID_AUTO_LINK_TEST,
+#endif /* LINK_TEST_SUPPORT */
 #ifdef GREENAP_SUPPORT
 	HWCMD_ID_GREENAP_ON_OFF,
 #endif /* GREENAP_SUPPORT */	
@@ -185,7 +183,6 @@ typedef struct _HwCmdQElmt {
 
 typedef struct _HwCmdQ {
 	UINT32 size;
-	UINT32 max_size;
 	HwCmdQElmt *head;
 	HwCmdQElmt *tail;
 	UINT32 CmdQState;
@@ -441,6 +438,7 @@ typedef struct _ADD_REPT_ENTRY_STRUC {
 typedef struct _TX_STAT_STRUC {
     UINT32 Field;	/* Tx Statistic update method from N9 (GET_TX_STAT_XXX) */
     UINT8 Wcid;
+    UINT8 Band;
 } TX_STAT_STRUC, *PTX_STAT_STRUC;
 
 #ifdef TXBF_SUPPORT
@@ -649,19 +647,18 @@ void SerTimeLogDump(struct _RTMP_ADAPTER *pAd);
 
 
 
-VOID HW_WIFISYS_OPEN(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL *wifi_sys_ctrl);
-VOID HW_WIFISYS_CLOSE(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL *wifi_sys_ctrl);
-VOID HW_WIFISYS_LINKUP(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL *wifi_sys_ctrl);
-VOID HW_WIFISYS_LINKDOWN(struct _RTMP_ADAPTER *pAd, struct _WIFI_SYS_CTRL *wifi_sys_ctrl);
-VOID HW_WIFISYS_PEER_LINKUP(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL *wifi_sys_ctrl);
-VOID HW_WIFISYS_PEER_LINKDOWN(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL *wifi_sys_ctrl);
-VOID HW_WIFISYS_PEER_UPDATE(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL *wifi_sys_ctrl);
+VOID HW_WIFISYS_OPEN(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL wifi_sys_ctrl);
+VOID HW_WIFISYS_CLOSE(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL wifi_sys_ctrl);
+VOID HW_WIFISYS_LINKUP(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL wifi_sys_ctrl);
+VOID HW_WIFISYS_LINKDOWN(struct _RTMP_ADAPTER *pAd, struct _WIFI_SYS_CTRL wifi_sys_ctrl);
+VOID HW_WIFISYS_PEER_LINKUP(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL wifi_sys_ctrl);
+VOID HW_WIFISYS_PEER_LINKDOWN(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL wifi_sys_ctrl);
+VOID HW_WIFISYS_PEER_UPDATE(struct _RTMP_ADAPTER *pAd,struct _WIFI_SYS_CTRL wifi_sys_ctrl);
 
 VOID HW_GET_TX_STATISTIC(struct _RTMP_ADAPTER *pAd, UINT32 Field, UINT8 Wcid);
 
-#ifdef NR_PD_DETECTION
-VOID RTMP_NR_PD_DETECTION(struct _RTMP_ADAPTER *pAd);
-VOID RTMP_CMW_LINK_CTRL(struct _RTMP_ADAPTER *pAd);
-#endif /* NR_PD_DETECTION */
+#ifdef LINK_TEST_SUPPORT
+VOID RTMP_AUTO_LINK_TEST(struct _RTMP_ADAPTER *pAd);
+#endif /* LINK_TEST_SUPPORT */
 
 #endif

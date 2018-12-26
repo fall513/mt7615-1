@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -44,10 +43,13 @@
     --------------  ----------      ----------------------------------------------
     Shiang, Fonchi  02-13-2007      created
 */
-#endif /* MTK_LICENSE */
+
 #ifdef APCLI_SUPPORT
 
 #include "rt_config.h"
+#ifdef ROAMING_ENHANCE_SUPPORT
+#include <net/arp.h>
+#endif /* ROAMING_ENHANCE_SUPPORT */
 
 #ifdef MAC_REPEATER_SUPPORT
 VOID ReptWaitLinkDown(REPEATER_CLIENT_ENTRY *pReptEntry);
@@ -477,9 +479,25 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 #ifdef APCLI_AUTO_CONNECT_SUPPORT
 	USHORT apcli_ifIndex;
 #endif
+#ifdef MWDS
+	UCHAR ApCliIdx = 0; /* default use apcli0 */
+#endif /* MWDS */
 
 	do
 	{
+#ifdef MWDS
+		if (ifIndex < MAX_APCLI_NUM)
+			ApCliIdx = ifIndex;
+#ifdef MAC_REPEATER_SUPPORT
+		else if(ifIndex >= REPT_MLME_START_IDX)
+        {
+            pReptEntry = &pAd->ApCfg.pRepeaterCliPool[(ifIndex - REPT_MLME_START_IDX)];
+            ApCliIdx = pReptEntry->wdev->func_idx;
+            pReptEntry = NULL;
+        }
+#endif /* MAC_REPEATER_SUPPORT */
+#endif /* MWDS */
+
 		if ((ifIndex < MAX_APCLI_NUM)
 #ifdef MAC_REPEATER_SUPPORT
 			|| (ifIndex >= REPT_MLME_START_IDX)
@@ -487,7 +505,13 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 		)
 		{
 #ifdef MAC_REPEATER_SUPPORT
-			if (pAd->ApCfg.bMACRepeaterEn)
+			if ((pAd->ApCfg.bMACRepeaterEn)
+#ifdef MWDS
+				&& ((pAd->ApCfg.ApCliTab[ApCliIdx].wdev.bSupportMWDS == FALSE) ||
+					(pAd->ApCfg.ApCliTab[ApCliIdx].MlmeAux.bSupportMWDS == FALSE))
+#endif /* MWDS */			
+
+			)
 			{
 				if (ifIndex < MAX_APCLI_NUM)
 				{
@@ -557,7 +581,13 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 		}
 
 #ifdef MAC_REPEATER_SUPPORT
-		if (CliIdx != 0xFF)
+		if ((CliIdx != 0xFF)
+#ifdef MWDS
+		&& ((pAd->ApCfg.ApCliTab[ApCliIdx].wdev.bSupportMWDS == FALSE) ||
+			(pAd->ApCfg.ApCliTab[ApCliIdx].MlmeAux.bSupportMWDS == FALSE))
+#endif /* MWDS */
+
+		)
 			MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_ERROR,
                     ("(%s) ifIndex = %d, CliIdx = %d !!!\n",
                                 __FUNCTION__, ifIndex, CliIdx));
@@ -601,17 +631,30 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 				wf_fwd_entry_insert_hook (wdev->if_dev, pAd->net_dev, pAd);
 
 			if (wf_fwd_insert_repeater_mapping_hook)
+#ifdef MAC_REPEATER_SUPPORT
 				wf_fwd_insert_repeater_mapping_hook (pAd, &pAd->ApCfg.ReptCliEntryLock, &pAd->ApCfg.ReptCliHash[0], &pAd->ApCfg.ReptMapHash[0], &pAd->ApCfg.ApCliTab[ifIndex].wdev.if_addr);
+#else
+				wf_fwd_insert_repeater_mapping_hook (pAd, NULL, NULL, NULL, &pAd->ApCfg.ApCliTab[ifIndex].wdev.if_addr);
+#endif /* MAC_REPEATER_SUPPORT */
 		}
 
 #endif /* CONFIG_WIFI_PKT_FWD */
 		/* Insert the Remote AP to our MacTable. */
 		/*pMacEntry = MacTableInsertApCliEntry(pAd, (PUCHAR)(pAd->ApCfg.ApCliTab[0].MlmeAux.Bssid)); */
+#ifdef RADIO_LINK_SELECTION
+#ifdef MAC_REPEATER_SUPPORT
+	if (CliIdx == 0xFF)
+#endif /* MAC_REPEATER_SUPPORT */
+	{
+		if (pAd->ApCfg.RadioLinkSelection)
+			Rls_InfCliLinkUp(pAd, wdev);
+	}
+#endif /* RADIO_LINK_SELECTION */
 
 #ifdef FAST_EAPOL_WAR
 #ifdef MAC_REPEATER_SUPPORT
 		if ((pAd->ApCfg.bMACRepeaterEn) &&
-			(pAd->chipCap.hif_type == HIF_MT) &&
+			/*(pAd->chipCap.hif_type == HIF_MT) &&*/
 			(CliIdx != 0xFF))
 		{
 			pReptEntry = &pAd->ApCfg.pRepeaterCliPool[CliIdx];
@@ -645,8 +688,14 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
         else 
 #endif /* RTMP_MAC || RLT_MAC  */
 	if ((pAd->ApCfg.bMACRepeaterEn) &&
-                (pAd->chipCap.hif_type == HIF_MT) &&
-                (CliIdx != 0xFF))
+                /*(pAd->chipCap.hif_type == HIF_MT) &&*/
+        (CliIdx != 0xFF)
+#ifdef MWDS
+		&& (pApCliEntry != NULL)
+		&& ((pApCliEntry->wdev.bSupportMWDS == FALSE) ||
+			(pApCliEntry->MlmeAux.bSupportMWDS == FALSE))
+#endif /* MWDS */
+		)
         {
                 pMacEntry = MacTableInsertEntry(
                                         pAd,
@@ -706,13 +755,52 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 			else
 			{
 				CHAR rsne_idx = 0;
-
+#ifdef WH_EZ_SETUP
+#ifdef EZ_MOD_SUPPORT
+				if (IS_EZ_SETUP_ENABLED(wdev) && (wdev->ez_driver_params.ez_api_mode != CONNECTION_OFFLOAD)
+					&& !wdev->ez_driver_params.ez_wps_reconnect ){
+					NdisCopyMemory(pEntry_SecConfig->PMK, wdev->SecConfig.PMK,PMK_LEN);
+				} else if (IS_EZ_SETUP_ENABLED(wdev) && (wdev->ez_driver_params.ez_api_mode != CONNECTION_OFFLOAD)
+					&& wdev->ez_driver_params.ez_wps_reconnect)
+				{
+					/* Calculate PMK */
+					SetWPAPSKKey(pAd, pApCliEntry->WscControl.WpaPsk, 
+						pApCliEntry->WscControl.WpaPskLen, 
+						pApCliEntry->MlmeAux.Ssid, 
+						pApCliEntry->MlmeAux.SsidLen, pEntry_SecConfig->PMK);				
+				
+				} else
+#else
+				if (wdev->enable_easy_setup && (wdev->ez_security.ez_api_mode != CONNECTION_OFFLOAD)
+					&& !wdev->ez_security.ez_wps_reconnect ){
+					NdisCopyMemory(pEntry_SecConfig->PMK, wdev->ez_security.this_band_info.pmk,PMK_LEN);
+				} else if (wdev->enable_easy_setup && (wdev->ez_security.ez_api_mode != CONNECTION_OFFLOAD)
+					&& wdev->ez_security.ez_wps_reconnect)
+				{
+					/* Calculate PMK */
+					SetWPAPSKKey(pAd, pApCliEntry->WscControl.WpaPsk, 
+						pApCliEntry->WscControl.WpaPskLen, 
+						pApCliEntry->MlmeAux.Ssid, 
+						pApCliEntry->MlmeAux.SsidLen, pEntry_SecConfig->PMK);				
+				
+				} else
+#endif				
+#endif
+				{
 				/* Calculate PMK */
 				SetWPAPSKKey(pAd, pProfile_SecConfig->PSK, strlen(pProfile_SecConfig->PSK), pApCliEntry->MlmeAux.Ssid, pApCliEntry->MlmeAux.SsidLen, pEntry_SecConfig->PMK);
+				}
+
 #ifdef MAC_REPEATER_SUPPORT
 				if ((pAd->ApCfg.bMACRepeaterEn)
-					&&(pAd->chipCap.hif_type == HIF_MT)
-					&& (CliIdx != 0xFF))
+					/*&&(pAd->chipCap.hif_type == HIF_MT)*/
+					&& (CliIdx != 0xFF)
+#ifdef MWDS
+					&& (pApCliEntry != NULL)
+					&& ((pApCliEntry->wdev.bSupportMWDS == FALSE) ||
+						(pApCliEntry->MlmeAux.bSupportMWDS == FALSE))
+#endif /* MWDS */
+				)
 				{
 					os_move_mem(pEntry_SecConfig->Handshake.AAddr, pMacEntry->Addr,MAC_ADDR_LEN);
 					os_move_mem(pEntry_SecConfig->Handshake.SAddr, pReptEntry->CurrentAddress,MAC_ADDR_LEN);
@@ -760,9 +848,36 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 
 			tr_entry = &pAd->MacTab.tr_entry[pMacEntry->wcid];
 			pMacEntry->Sst = SST_ASSOC;
+
+
+#ifdef HTC_DECRYPT_IOT
+	if ((pMacEntry->HTC_ICVErrCnt)
+		|| (pMacEntry->HTC_AAD_OM_Force)
+		|| (pMacEntry->HTC_AAD_OM_CountDown)
+		|| (pMacEntry->HTC_AAD_OM_Freeze)
+		)
+	{
+		MTWF_LOG(DBG_CAT_RX, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("@@@ %s(): (wcid=%u), HTC_ICVErrCnt(%u), HTC_AAD_OM_Freeze(%u), HTC_AAD_OM_CountDown(%u),  HTC_AAD_OM_Freeze(%u) is in Asso. stage!\n",
+		__FUNCTION__, pMacEntry->wcid, pMacEntry->HTC_ICVErrCnt, pMacEntry->HTC_AAD_OM_Force, pMacEntry->HTC_AAD_OM_CountDown, pMacEntry->HTC_AAD_OM_Freeze));
+
+		//Force clean.	
+		pMacEntry->HTC_ICVErrCnt = 0;
+		pMacEntry->HTC_AAD_OM_Force = 0;
+		pMacEntry->HTC_AAD_OM_CountDown = 0;
+		pMacEntry->HTC_AAD_OM_Freeze = 0;
+	}
+#endif /* HTC_DECRYPT_IOT */
+
+			
 			//pMacEntry->wdev = &pApCliEntry->wdev;//duplicate assign.
 #ifdef MAC_REPEATER_SUPPORT
-			if (CliIdx != 0xFF)
+			if ((CliIdx != 0xFF)
+#ifdef MWDS
+				&& (pApCliEntry != NULL)
+				&& ((pApCliEntry->wdev.bSupportMWDS == FALSE) ||
+					(pApCliEntry->MlmeAux.bSupportMWDS == FALSE))
+#endif /* MWDS */
+			)
 			{
                 pReptEntry = &pAd->ApCfg.pRepeaterCliPool[CliIdx];
 				pReptEntry->MacTabWCID = pMacEntry->wcid;
@@ -813,8 +928,15 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 			else
 			{
 					tr_entry->PortSecured = WPA_802_1X_PORT_SECURED;
+
 #ifdef MAC_REPEATER_SUPPORT
-				if (CliIdx != 0xFF)
+				if ((CliIdx != 0xFF)
+#ifdef MWDS
+				&& (pApCliEntry != NULL)
+				&& ((pApCliEntry->wdev.bSupportMWDS == FALSE) ||
+					(pApCliEntry->MlmeAux.bSupportMWDS == FALSE))
+#endif /* MWDS */
+				)
 					pReptEntry->CliConnectState = REPT_ENTRY_CONNTED;
 #endif /* MAC_REPEATER_SUPPORT */
 			}
@@ -926,7 +1048,7 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 
 #ifdef DOT11_VHT_AC
 			if (WMODE_CAP_AC(pApCliEntry->wdev.PhyMode) && pApCliEntry->MlmeAux.vht_cap_len &&  pApCliEntry->MlmeAux.vht_op_len)
-			{
+            		{
 				vht_mode_adjust(pAd, pMacEntry, &(pApCliEntry->MlmeAux.vht_cap), &(pApCliEntry->MlmeAux.vht_op));
 				dot11_vht_mcs_to_internal_mcs(pAd, wdev, &pApCliEntry->MlmeAux.vht_cap, &pMacEntry->MaxHTPhyMode);
 
@@ -941,7 +1063,7 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 				NdisMoveMemory(&pMacEntry->vht_cap_ie, &pApCliEntry->MlmeAux.vht_cap, sizeof(VHT_CAP_IE));
 
                 		assoc_vht_info_debugshow(pAd, pMacEntry, &pApCliEntry->MlmeAux.vht_cap, &pApCliEntry->MlmeAux.vht_op);
-			}
+            		}
 #endif /* DOT11_VHT_AC */
 
 			//update per wdev bw
@@ -999,6 +1121,9 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 
 					MlmeSelectTxRateTable(pAd, pMacEntry, &pMacEntry->pTable, &TableSize, &pMacEntry->CurrTxRateIndex);
 					MlmeNewTxRate(pAd, pMacEntry);
+#ifdef NEW_RATE_ADAPT_SUPPORT
+					if (! ADAPT_RATE_TABLE(pMacEntry->pTable))
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 						pMacEntry->HTPhyMode.field.ShortGI = GI_800;
 				}
 			}
@@ -1006,7 +1131,8 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 
 #ifdef MT_MAC
 #ifdef MT7615
-			if (pAd->chipCap.hif_type == HIF_MT) {
+			//if (pAd->chipCap.hif_type == HIF_MT) 
+			{
 				if (pApCliEntry->MlmeAux.APEdcaParm.bValid) {
 					pMacEntry->bACMBit[WMM_AC_BK] = pApCliEntry->MlmeAux.APEdcaParm.bACM[WMM_AC_BK];
 					pMacEntry->bACMBit[WMM_AC_BE] = pApCliEntry->MlmeAux.APEdcaParm.bACM[WMM_AC_BE];
@@ -1040,7 +1166,8 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
             MacTableSetEntryRaCap(pAd, pMacEntry, &pApCliEntry->MlmeAux.vendor_ie);
 
 #ifdef MT_MAC
-            if (pAd->chipCap.hif_type == HIF_MT) {
+            //if (pAd->chipCap.hif_type == HIF_MT) 
+			{
 
 				if(pMacEntry && CliIdx == 0xff)
 				{
@@ -1132,9 +1259,55 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 			}
 #endif /* PIGGYBACK_SUPPORT */
 
+#ifdef WH_EZ_SETUP
+			if (CliIdx == 0xff) {
+				if (IS_EZ_SETUP_ENABLED(wdev)) {
+					if (pApCliEntry->MlmeAux.support_easy_setup) {
+						result = ez_port_secured(pAd, pMacEntry, ifIndex, FALSE);
+						if(result == FALSE){
+							EZ_DEBUG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,("ApCliLinkUp: connection failed/broken\n"));
+							break;
+						}
+					}
+#ifndef EZ_MOD_SUPPORT
+					else {
+						struct wifi_dev *ap_wdev;
+						ap_wdev = &pAd->ApCfg.MBSSID[ifIndex].wdev;
+						EZ_SET_CAP_CONNECTED(ap_wdev->ez_security.capability);
+						UpdateBeaconHandler(pAd, ap_wdev, IE_CHANGE);
+					}
+#endif					
+				}
+			}
+#endif /* WH_EZ_SETUP */
+
+#ifdef MWDS
+            if((CliIdx == 0xff) && (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+            {	
+		MWDSAPCliPeerEnable(pAd, pApCliEntry, pMacEntry);
+#ifdef WH_EZ_SETUP
+		//! If security is disabled on this link, 
+		//!ez_hanle_pairmsg4 needs to be called to trigger config push
+		if (IS_EZ_SETUP_ENABLED(wdev) && !IS_AKM_PSK_Entry(pMacEntry) 
+#ifdef WSC_AP_SUPPORT
+			&& (!((pApCliEntry->WscControl.WscConfMode != WSC_DISABLE) && (pApCliEntry->WscControl.bWscTrigger == TRUE)))
+#endif /* WSC_AP_SUPPORT */
+		) {
+			ez_handle_pairmsg4(pAd, pMacEntry);
+		}
+#endif				
+            }
+#endif /* MWDS */
+
 #ifdef MT_MAC
 #ifdef MAC_REPEATER_SUPPORT
-			if (CliIdx != 0xff && pAd->chipCap.hif_type == HIF_MT) {
+			if ((CliIdx != 0xff) /*&& (pAd->chipCap.hif_type == HIF_MT)*/
+#ifdef MWDS
+				&& (pApCliEntry != NULL)
+				&& ((pApCliEntry->wdev.bSupportMWDS == FALSE) ||
+					(pApCliEntry->MlmeAux.bSupportMWDS == FALSE))
+#endif /* MWDS */
+                ) {
 				AsicInsertRepeaterRootEntry(
                                     pAd,
                                     pMacEntry->wcid,
@@ -1220,6 +1393,17 @@ BOOLEAN ApCliLinkUp(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 #endif /* DOT11N_DRAFT3 */
 #endif /* DOT11_N_SUPPORT */
 
+#ifdef WH_EVENT_NOTIFIER
+    if ((result == TRUE) && pMacEntry &&
+        tr_entry && (tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+    {
+        EventHdlr pEventHdlrHook = NULL;
+        pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_EXT_UPLINK_STAT);
+        if(pEventHdlrHook && pMacEntry->wdev)
+            pEventHdlrHook(pAd, pMacEntry, (UINT32)WHC_UPLINK_STAT_CONNECTED);
+    }
+#endif /* WH_EVENT_NOTIFIER */
+
 	return result;
 }
 
@@ -1232,6 +1416,24 @@ static CHAR LinkDownReason[APCLI_LINKDOWN_PEER_DEASSOC_RSP+1][30] =
 "got disconnect req",
 "recv deassociate resp"};
 
+#if (defined(WH_EZ_SETUP) && defined(NEW_CONNECTION_ALGO))
+static CHAR SubLinkDownReason[APCLI_DISCONNECT_SUB_REASON_APCLI_EZ_CONNECTION_LOOP+1][30] =
+{
+"none",
+"rept connect too long",
+"idle too long",
+"remove sta",
+"apcli if down",
+"beacon miss",
+"recv sta disassociate req",
+"recv sta deauth req",
+"manually del mac entry",
+"repter bind to other apcli",
+"apcli connect too long",
+"Ez Connection Loop Detected"};
+
+
+#else
 static CHAR SubLinkDownReason[APCLI_DISCONNECT_SUB_REASON_APCLI_TRIGGER_TOO_LONG+1][30] =
 {
 "none",
@@ -1245,6 +1447,7 @@ static CHAR SubLinkDownReason[APCLI_DISCONNECT_SUB_REASON_APCLI_TRIGGER_TOO_LONG
 "manually del mac entry",
 "repter bind to other apcli",
 "apcli connect too long"};
+#endif
 /*
     ==========================================================================
 
@@ -1340,10 +1543,43 @@ VOID ApCliLinkDown(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 #endif /* MAC_REPEATER_SUPPORT */
 #endif /* CONFIG_WIFI_PKT_FWD */
 
+#ifdef RADIO_LINK_SELECTION
+#ifdef MAC_REPEATER_SUPPORT
+	if (CliIdx == 0xFF)
+#endif /* MAC_REPEATER_SUPPORT */
+	{
+		if (pAd->ApCfg.RadioLinkSelection)
+			Rls_InfCliLinkDown(pAd, wdev);
+	}
+#endif /* RADIO_LINK_SELECTION */
+
 #ifdef MAC_REPEATER_SUPPORT
 	if (CliIdx == 0xFF)
 #endif /* MAC_REPEATER_SUPPORT */
 	pAd->ApCfg.ApCliInfRunned--;
+
+#ifdef WH_EVENT_NOTIFIER
+    {
+        MAC_TABLE_ENTRY *pMacEntry = NULL;
+        EventHdlr pEventHdlrHook = NULL;
+#ifdef MAC_REPEATER_SUPPORT
+        if (CliIdx != 0xFF)
+        {
+            if(VALID_UCAST_ENTRY_WCID(pAd, pReptEntry->MacTabWCID))
+                pMacEntry = &pAd->MacTab.Content[pReptEntry->MacTabWCID];
+        }
+        else
+#endif /* MAC_REPEATER_SUPPORT */
+        {
+            if(VALID_UCAST_ENTRY_WCID(pAd, pApCliEntry->MacTabWCID))
+                pMacEntry = &pAd->MacTab.Content[pApCliEntry->MacTabWCID];
+        }
+
+        pEventHdlrHook = GetEventNotiferHook(WHC_DRVEVNT_EXT_UPLINK_STAT);
+        if(pEventHdlrHook && pMacEntry->wdev)
+            pEventHdlrHook(pAd, pMacEntry, (UINT32)WHC_UPLINK_STAT_DISCONNECT);
+    }
+#endif /* WH_EVENT_NOTIFIER */
 
 #ifdef MAC_REPEATER_SUPPORT
 	if (CliIdx != 0xFF) {
@@ -1356,6 +1592,10 @@ VOID ApCliLinkDown(RTMP_ADAPTER *pAd, UCHAR ifIndex)
 #endif /* MAC_REPEATER_SUPPORT */
         {
             MacTabWCID = pApCliEntry->MacTabWCID;
+#ifdef WH_EZ_SETUP
+			if(IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev))
+				ez_apcli_link_down(pAd, pApCliEntry, ifIndex);
+#endif /* WH_EZ_SETUP */
             MacTableDeleteEntry(pAd, MacTabWCID, APCLI_ROOT_BSSID_GET(pAd, MacTabWCID));
 #ifdef FAST_EAPOL_WAR
 			pApCliEntry->pre_entry_alloc = FALSE;
@@ -1376,8 +1616,16 @@ VOID ApCliLinkDown(RTMP_ADAPTER *pAd, UCHAR ifIndex)
         HW_SET_DEL_ASIC_WCID(pAd, wdev->bss_info_argument.ucBcMcWlanIdx);
 #ifdef DOT11W_PMF_SUPPORT
 		BssTableDeleteEntry(&pAd->ScanTab, pApCliEntry->MlmeAux.Bssid, wdev->channel);
-#endif /* DOT11W_PMF_SUPPORT */
+#else
+#ifdef WH_EZ_SETUP
+		if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
+			BssTableDeleteEntry(&pAd->ScanTab, pApCliEntry->MlmeAux.Bssid, wdev->channel);
+#endif
+#endif
 	}
+#ifdef MWDS
+	pApCliEntry->bEnableMWDS = FALSE;
+#endif /* MWDS */
 
 	pAd->ApCfg.ApCliTab[ifIndex].bPeerExist = FALSE;
 
@@ -1630,40 +1878,103 @@ VOID ApCliIfMonitor(RTMP_ADAPTER *pAd)
 				bWpa_4way_too_log = TRUE;
 				bForceBrocken = TRUE;
 			}
-
+			// Generic Change done by Kun-ze in WHC codebase for improving Beacon loss detection logic, so keeping in easy enabled case
 #ifdef CONFIG_MULTI_CHANNEL
- 			//increase to 12
- 			if (RTMP_TIME_AFTER(pAd->Mlme.Now32 , (pApCliEntry->ApCliRcvBeaconTime + (12 * OS_HZ)))) {
+			//increase to 12
+			if (RTMP_TIME_AFTER(pAd->Mlme.Now32 , (pApCliEntry->ApCliRcvBeaconTime + (12 * OS_HZ)))) {
+#ifdef WH_EZ_SETUP
+				if(IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev)) {
+#ifdef EZ_MOD_SUPPORT 
+					unsigned char delay_disconnect_count = ez_get_delay_disconnect_count(&pApCliEntry->wdev);
+					if (delay_disconnect_count > 0) {
+						delay_disconnect_count--;
+						ez_set_delay_disconnect_count(&pApCliEntry->wdev, delay_disconnect_count);
+					}else
 #else
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-			if (pAd->chipCap.fgRateAdaptFWOffload == TRUE)
-			{
-				if ((RTMP_TIME_AFTER(pAd->Mlme.Now32 , pApCliEntry->ApCliRcvBeaconTime + (1 * OS_HZ)))
-					&& (RTMP_TIME_BEFORE(pAd->Mlme.Now32, pApCliEntry->ApCliRcvBeaconTime + (3 * OS_HZ))))
-				{
-					pMacEntry->TxStatRspCnt = 0;
-					pMacEntry->TotalTxSuccessCnt = 0;
-				}
-
-				if (RTMP_TIME_AFTER(pAd->Mlme.Now32 , pApCliEntry->ApCliRcvBeaconTime + (1 * OS_HZ)))
-					HW_GET_TX_STATISTIC(pAd, GET_TX_STAT_TOTAL_TX_CNT | GET_TX_STAT_LAST_TX_RATE, pMacEntry->wcid);
-			}
-#endif /* RACTRL_FW_OFFLOAD_SUPPORT */
-			if (RTMP_TIME_AFTER(pAd->Mlme.Now32 , (pApCliEntry->ApCliRcvBeaconTime + (6 * OS_HZ)))) {
-#endif /* CONFIG_MULTI_CHANNEL */
-#ifdef RACTRL_FW_OFFLOAD_SUPPORT
-				if ((pAd->chipCap.fgRateAdaptFWOffload == TRUE) &&
-					(pMacEntry->TxStatRspCnt > 1) && (pMacEntry->TotalTxSuccessCnt))
-				{
-					pApCliEntry->ApCliRcvBeaconTime = pAd->Mlme.Now32;
+						if (pApCliEntry->wdev.ez_security.delay_disconnect_count > 0) {
+							pApCliEntry->wdev.ez_security.delay_disconnect_count--;
+						}else
+#endif
+						{
+							bBeacon_miss = TRUE;
+							bForceBrocken = TRUE;
+						}
 				}
 				else
-#endif /* RACTRL_FW_OFFLOAD_SUPPORT */
+#endif
 				{
-				bBeacon_miss = TRUE;
-				bForceBrocken = TRUE;
+					bBeacon_miss = TRUE;
+					bForceBrocken = TRUE;
+				}
 			}
+#else
+#ifdef RACTRL_FW_OFFLOAD_SUPPORT
+			if (pAd->chipCap.fgRateAdaptFWOffload == TRUE &&
+					(tr_entry->PortSecured == WPA_802_1X_PORT_SECURED))
+			{		  
+				if (!pMacEntry->bTxPktChk &&
+						(RTMP_TIME_AFTER(pAd->Mlme.Now32, pApCliEntry->ApCliRcvBeaconTime + (1 * OS_HZ))))
+				{
+					pMacEntry->bTxPktChk = TRUE;
+					pMacEntry->TxStatRspCnt = 0;
+					pMacEntry->TotalTxSuccessCnt = 0;
+					pApCliEntry->ApCliLastRcvBeaconTime = pApCliEntry->ApCliRcvBeaconTime;
+					HW_GET_TX_STATISTIC(pAd, GET_TX_STAT_ENTRY_TX_CNT, pMacEntry->wcid);
+				}
+				else if(pMacEntry->bTxPktChk)
+				{
+					if(pApCliEntry->ApCliLastRcvBeaconTime != pApCliEntry->ApCliRcvBeaconTime)
+					{
+						pApCliEntry->ApCliRcvBeaconTime = pAd->Mlme.Now32;
+						pMacEntry->bTxPktChk = FALSE;
+					}
+					else
+					{
+						if(RTMP_TIME_AFTER(pAd->Mlme.Now32, pApCliEntry->ApCliRcvBeaconTime + (4 * OS_HZ)))
+						{
+							HW_GET_TX_STATISTIC(pAd, GET_TX_STAT_ENTRY_TX_CNT, pMacEntry->wcid);
+							if ((pMacEntry->TxStatRspCnt >= 1))
+							{
+								if(pMacEntry->TotalTxSuccessCnt)
+								{
+									pApCliEntry->ApCliRcvBeaconTime = pAd->Mlme.Now32;
+									pMacEntry->bTxPktChk = FALSE;
+								}
+								else
+								{
+#ifdef WH_EZ_SETUP
+									if(IS_EZ_SETUP_ENABLED(&pApCliEntry->wdev)) {
+#ifdef EZ_MOD_SUPPORT 
+										unsigned char delay_disconnect_count = ez_get_delay_disconnect_count(&pApCliEntry->wdev);
+										if (delay_disconnect_count > 0) {
+											delay_disconnect_count--;
+											ez_set_delay_disconnect_count(&pApCliEntry->wdev, delay_disconnect_count);
+										}else
+#else
+											if (pApCliEntry->wdev.ez_security.delay_disconnect_count > 0) {
+												pApCliEntry->wdev.ez_security.delay_disconnect_count--;
+											}else
+#endif
+											{
+												bBeacon_miss = TRUE;
+												bForceBrocken = TRUE;
+											}
+									}
+									else
+#endif
+									{
+										bBeacon_miss = TRUE;
+										bForceBrocken = TRUE;
+									}
+								}
+							}
+						}
+					}
+				}
 			}
+#endif /* RACTRL_FW_OFFLOAD_SUPPORT */
+#endif /* CONFIG_MULTI_CHANNEL */
+			
 
 			if (CLIENT_STATUS_TEST_FLAG(pMacEntry, fCLIENT_STATUS_WMM_CAPABLE))
 				ApclibQosNull = TRUE;
@@ -1673,7 +1984,23 @@ VOID ApCliIfMonitor(RTMP_ADAPTER *pAd)
 			&& (pAd->Mlme.bStartMcc == FALSE)
 #endif /* CONFIG_MULTI_CHANNEL */
 			)
+            {
+#if (defined(WH_EZ_SETUP) && defined(RACTRL_FW_OFFLOAD_SUPPORT))
+                UCHAR idx, Total;
+
+				if(IS_ADPTR_EZ_SETUP_ENABLED(pAd)){
+                	if(pAd->chipCap.fgRateAdaptFWOffload == TRUE)
+                    	Total = 3;
+                	else
+                    	Total = 1;
+
+	                for(idx = 0; idx < Total; idx++)
+		        		ApCliRTMPSendNullFrame(pAd, pMacEntry->CurrTxRate, ApclibQosNull, pMacEntry, PWR_ACTIVE);
+				}
+				else
+#endif
 				ApCliRTMPSendNullFrame(pAd, pMacEntry->CurrTxRate, ApclibQosNull, pMacEntry, PWR_ACTIVE);
+		}
 		}
 		else
 			continue;
@@ -2114,7 +2441,7 @@ MAC_TABLE_ENTRY *ApCliTableLookUpByWcid(RTMP_ADAPTER *pAd, UCHAR wcid, UCHAR *pA
 		Check the Apcli Entry is valid or not.
 	==========================================================================
  */
-static inline BOOLEAN ValidApCliEntry(RTMP_ADAPTER *pAd, INT apCliIdx)
+inline BOOLEAN ValidApCliEntry(RTMP_ADAPTER *pAd, INT apCliIdx)
 {
 	BOOLEAN result;
 	PMAC_TABLE_ENTRY pMacEntry;
@@ -2193,13 +2520,21 @@ INT ApCliAllowToSendPacket(
 			}
 
 #ifdef MAC_REPEATER_SUPPORT
-			if (pAd->ApCfg.bMACRepeaterEn == TRUE)
+			if ((pAd->ApCfg.bMACRepeaterEn == TRUE)
+#ifdef MWDS
+				&& (apcli_entry->bEnableMWDS == FALSE)
+#endif /* MWDS */
+
+			)
 			{
                 Ret = ReptTxPktCheckHandler(pAd, wdev, pPacket, pWcid);
                 if (Ret == REPEATER_ENTRY_EXIST)
                     return TRUE;
-                else if (Ret == INSERT_REPT_ENTRY)
+                else if (Ret == INSERT_REPT_ENTRY){
+					//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,
+					//    ("ApCliAllowToSendPacket: return FALSE as ReptTxPktCheckHandler indicated INSERT_REPT_ENTRY\n"));
                     return FALSE;
+                }
                 else if (Ret == USE_CLI_LINK_INFO)
                     *pWcid = apcli_entry->MacTabWCID;
 			}
@@ -2211,6 +2546,15 @@ INT ApCliAllowToSendPacket(
 				*pWcid = apcli_entry->MacTabWCID;
 			}
 			allowed = TRUE;
+#ifdef MWDS
+            if((apcli_entry->bEnableMWDS == FALSE) &&
+                (apcli_entry->MlmeAux.bSupportMWDS) &&
+                (wdev->bSupportMWDS)){
+				//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,
+				//    ("ApCliAllowToSendPacket: return FALSE as MWDS not enabled even though supported\n"));
+                allowed = FALSE;
+            }
+#endif /* MWDS */
 			break;
 		}
 	}
@@ -2254,6 +2598,11 @@ BOOLEAN ApCliValidateRSNIE(
     PCIPHER_SUITE_STRUCT pCipher;
     PAKM_SUITE_STRUCT pAKM;
     struct _SECURITY_CONFIG *pSecConfig;
+
+#ifdef WH_EZ_SETUP
+	struct wifi_dev *ap_wdev;
+	ap_wdev = &pAd->ApCfg.MBSSID[idx].wdev;
+#endif	
 
     pVIE = (PUCHAR) pEid_ptr;
     len  = eid_len;
@@ -2395,6 +2744,7 @@ BOOLEAN ApCliValidateRSNIE(
             pCipher = (PCIPHER_SUITE_STRUCT) pTmp;
             if (!RTMPEqualMemory(&pCipher->Oui, RSN_OUI, 3))
                 break;
+
 
             /* Parse group cipher*/
             switch (pCipher->Type)
@@ -2615,6 +2965,12 @@ BOOLEAN  ApCliHandleRxBroadcastFrame(
 
 	/* Filter out Bcast frame which AP relayed for us */
 	/* Multicast packet send from AP1 , received by AP2 and send back to AP1, drop this frame */
+#ifdef MWDS
+    if(IS_MWDS_OPMODE_APCLI(pEntry) &&
+       MAC_ADDR_EQUAL(pRxBlk->Addr4, pApCliEntry->wdev.if_addr))
+        return FALSE;
+#endif /* MWDS */
+
 	if (MAC_ADDR_EQUAL(pRxBlk->Addr3, pApCliEntry->wdev.if_addr))
 		return FALSE;
 
@@ -2622,11 +2978,18 @@ BOOLEAN  ApCliHandleRxBroadcastFrame(
 		return FALSE;
 
 #ifdef MAC_REPEATER_SUPPORT
-	if (pAd->ApCfg.bMACRepeaterEn)
+	if (pAd->ApCfg.bMACRepeaterEn
+#ifdef MWDS
+        && (pApCliEntry->bEnableMWDS == FALSE)
+#endif /* MWDS */
+    )
 	{
 		pReptEntry = RTMPLookupRepeaterCliEntry(pAd, FALSE, pRxBlk->Addr3, TRUE);
-		if (pReptEntry)
+		if (pReptEntry){
+			//MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_WARN,
+			//    ("ApCliHandleRxBroadcastFrame: return FALSE  pReptEntry found\n"));
 			return FALSE;	/* give up this frame */
+	}
 	}
 #endif /* MAC_REPEATER_SUPPORT */
 
@@ -2868,6 +3231,10 @@ static void apcli_sync_wdev(struct _RTMP_ADAPTER *pAd,struct wifi_dev *wdev)
 		{
 			if (pAd->ApCfg.MBSSID[mbss_idx].wdev.PhyMode == wdev->PhyMode) {
 				update_att_from_wdev(wdev,&pAd->ApCfg.MBSSID[mbss_idx].wdev);
+#ifdef WH_EZ_SETUP // Rakesh: optimization added
+				if(IS_ADPTR_EZ_SETUP_ENABLED(pAd))
+					break;
+#endif
 			}
 		}
 	} else {
@@ -3156,6 +3523,8 @@ BOOLEAN ApCli_Open(RTMP_ADAPTER *pAd, PNET_DEV dev_p)
 	{
 		if (pAd->ApCfg.ApCliTab[ifIndex].wdev.if_dev == dev_p)
 		{
+			apcli_sync_wdev(pAd,&pAd->ApCfg.ApCliTab[ifIndex].wdev);
+
 			RTMP_OS_NETDEV_START_QUEUE(dev_p);
 
 			pApCliEntry = &pAd->ApCfg.ApCliTab[ifIndex];
@@ -3185,7 +3554,27 @@ BOOLEAN ApCli_Open(RTMP_ADAPTER *pAd, PNET_DEV dev_p)
 			N_ChannelCheck(pAd,wdev->PhyMode,wdev->channel);
 #endif /*DOT11_N_SUPPORT*/
 
+#ifdef MWDS
+			if (wdev->bDefaultMwdsStatus == TRUE)
+				MWDSEnable(pAd,ifIndex,FALSE,FALSE);
+#endif
+
+#ifdef WH_EZ_SETUP
+			if(IS_EZ_SETUP_ENABLED(wdev)){
+				ez_start(wdev, FALSE);
+#ifndef EZ_MOD_SUPPORT
+				if(pApCliEntry->Enable == TRUE){
+					EZ_UPDATE_CAPABILITY_INFO(pAd, EZ_SET_ACTION, HAS_APCLI_INF, ifIndex);
+				}
+#endif				
+			}
+#endif /* WH_EZ_SETUP */
 			ApCliIfUp(pAd);
+#ifdef RADIO_LINK_SELECTION
+		if (pAd->ApCfg.RadioLinkSelection)
+			Rls_SetInfInfo(pAd, TRUE, wdev);
+#endif /* RADIO_LINK_SELECTION */
+
 
 			return TRUE;
 		}
@@ -3212,6 +3601,11 @@ BOOLEAN ApCli_Close(RTMP_ADAPTER *pAd, PNET_DEV dev_p)
 		wdev = &apcli_entry->wdev;
 		if (wdev->if_dev == dev_p)
 		{
+#ifdef MWDS
+			MWDSDisable(pAd, ifIndex, FALSE, TRUE);
+#endif /* MWDS */
+
+
 
 			RTMP_OS_NETDEV_STOP_QUEUE(dev_p);
 
@@ -3259,11 +3653,23 @@ BOOLEAN ApCli_Close(RTMP_ADAPTER *pAd, PNET_DEV dev_p)
 				MTWF_LOG(DBG_CAT_CLIENT, CATCLIENT_APCLI, DBG_LVL_TRACE,
                         ("(%s) ApCli interface[%d] startdown.\n", __FUNCTION__, ifIndex));
 			}
+#ifdef WH_EZ_SETUP
+			if (IS_EZ_SETUP_ENABLED(wdev)) {
+#ifndef EZ_MOD_SUPPORT
+				EZ_UPDATE_CAPABILITY_INFO(pAd, EZ_CLEAR_ACTION, HAS_APCLI_INF, ifIndex);
+#endif
+				ez_stop(wdev);
+			}
+#endif /* WH_EZ_SETUP */
 			WifiSysClose(pAd,wdev);
 
 			/*send for ApOpen can know interface down is done*/
 			ApCliIfDownComplete(apcli_entry);
-			
+
+#ifdef RADIO_LINK_SELECTION
+			if (pAd->ApCfg.RadioLinkSelection)
+				Rls_SetInfInfo(pAd, FALSE, wdev);
+#endif /* RADIO_LINK_SELECTION */
 			return TRUE;
 		}
 
@@ -3553,7 +3959,14 @@ BOOLEAN ApCliAutoConnectExec(
 		if (NdisEqualMemory(pCfgSsid, pBssEntry->Ssid, CfgSsidLen) &&
 							pBssEntry->SsidLen &&
 							(pBssEntry->SsidLen == CfgSsidLen) &&
-							(pSsidBssTab->BssNr < MAX_LEN_OF_BSS_TABLE))
+#if defined(DBDC_MODE) && defined(DOT11K_RRM_SUPPORT)
+/*
+	double check the SSID in the same band could be in candidate list
+*/
+							(((pBssEntry->Channel > 14) && WMODE_CAP_5G(wdev->PhyMode)) || ((pBssEntry->Channel <= 14) && WMODE_CAP_2G(wdev->PhyMode))) &&
+#endif /* defined(DBDC_MODE) && defined(DOT11K_RRM_SUPPORT) */
+							(pSsidBssTab->BssNr < MAX_LEN_OF_BSS_TABLE)
+							)
 		{
 			if ((((wdev->SecConfig.AKMMap & pBssEntry->AKMMap) != 0) ||
 			    (IS_AKM_AUTOSWITCH(wdev->SecConfig.AKMMap) && IS_AKM_SHARED(pBssEntry->AKMMap))) && 
@@ -3598,7 +4011,8 @@ BOOLEAN ApCliAutoConnectExec(
 		BSS_ENTRY *pBssEntry = &pSsidBssTab->BssEntry[pSsidBssTab->BssNr -1];
 
 #ifdef APCLI_AUTO_BW_TMP /* should be removed after apcli auto-bw is applied */
-		if (ApCliAutoConnectBWAdjust(pAd, wdev, pBssEntry))
+		if (ApCliAutoConnectBWAdjust(pAd, wdev, pBssEntry)
+			|| (!IS_INVALID_HT_SECURITY(pBssEntry->PairwiseCipher)))		//In TKIP security, ht_phy info is null, so in succussive case, we need to refill ht_phy_info
 #endif /* APCLI_AUTO_BW_TMP */
 		{
 			pAd->ApCfg.ApCliAutoBWAdjustCnt[ifIdx]++;
@@ -4111,5 +4525,107 @@ INT apcli_phy_rrm_init_byRf(RTMP_ADAPTER *pAd, UCHAR RfIC)
 #endif /* DOT11_VHT_AC */
 	return TRUE;
 }
+
+#ifdef ROAMING_ENHANCE_SUPPORT
+#ifndef ETH_HDR_LEN
+#define ETH_HDR_LEN 14 /* dstMac(6) + srcMac(6) + protoType(2) */
+#endif
+
+#ifndef ETH_P_VLAN
+#define ETH_P_VLAN       	0x8100          /* 802.1q (VLAN)  */
+#endif
+
+#ifndef VLAN_ETH_HDR_LEN
+#define VLAN_ETH_HDR_LEN (ETH_HDR_LEN+4) /* 4 for h_vlan_TCI and h_vlan_encapsulated_proto */
+#endif
+
+#ifndef IP_HDR_SRC_OFFSET
+#define IP_HDR_SRC_OFFSET 12 /* shift 12 for IP header len. */
+#endif
+
+#ifndef ARP_OP_OFFSET
+#define ARP_OP_OFFSET 6 /* shift 6 len for ARP. */
+#endif
+
+BOOLEAN ApCliDoRoamingRefresh(
+    IN RTMP_ADAPTER *pAd, 
+    IN MAC_TABLE_ENTRY *pEntry, 
+    IN PNDIS_PACKET pRxPacket, 
+    IN struct wifi_dev *wdev,
+    IN UCHAR *DestAddr)
+{
+    UCHAR *pPktHdr = NULL, *pLayerHdr = NULL;
+    UINT16 ProtoType;
+    BOOLEAN bUnicastARPReq = FALSE, bSendARP = FALSE;
+    PNDIS_PACKET pPacket = NULL;
+
+    if(!pRxPacket || !wdev)
+        return FALSE;
+
+    /* Get the upper layer protocol type of this 802.3 pkt */
+    pPktHdr = GET_OS_PKT_DATAPTR(pRxPacket);
+    ProtoType = OS_NTOHS(get_unaligned((PUINT16)(pPktHdr + (ETH_HDR_LEN-2))));
+    if (ProtoType == ETH_P_VLAN)
+    {
+		pLayerHdr = (pPktHdr + VLAN_ETH_HDR_LEN);
+        ProtoType = OS_NTOHS(get_unaligned((PUINT16)pLayerHdr));
+    }
+    else
+		pLayerHdr = (pPktHdr + ETH_HDR_LEN);
+
+    if(ProtoType == ETH_P_ARP)
+    {
+        UINT16 OpType;
+        OpType = OS_NTOHS(get_unaligned((PUINT16)(pLayerHdr+ARP_OP_OFFSET))); /* ARP Operation */
+        if(OpType == 0x0001) // ARP Request
+        {
+            if(DestAddr && !MAC_ADDR_IS_GROUP(DestAddr))
+                bUnicastARPReq = TRUE;
+
+            if(bUnicastARPReq)
+            {
+                struct sk_buff *skb = NULL;
+                skb = skb_copy(RTPKT_TO_OSPKT(pRxPacket), GFP_ATOMIC);
+                if(skb)
+                {
+                    bSendARP = TRUE;
+                    skb->dev = wdev->if_dev;
+                    pPacket = OSPKT_TO_RTPKT(skb);
+                    NdisMoveMemory(GET_OS_PKT_DATAPTR(pPacket), BROADCAST_ADDR, MAC_ADDR_LEN);
+                }
+            }
+            else
+                pEntry->bRoamingRefreshDone = TRUE;
+            MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+                ("Got original ARP Request(Unicast:%d) from wireless STA!\n",bUnicastARPReq));
+        }
+    }
+    else if(ProtoType == ETH_P_IP)
+    {
+        UINT32 SrcIP = 0;
+        NdisMoveMemory(&SrcIP, (pLayerHdr + IP_HDR_SRC_OFFSET), 4);
+        if(SrcIP != 0)
+        {
+            bSendARP = TRUE;
+            pPacket = (PNDIS_PACKET)arp_create(ARPOP_REQUEST, ETH_P_ARP, SrcIP, wdev->if_dev,
+                                    SrcIP, BROADCAST_ADDR, pEntry->Addr, BROADCAST_ADDR);
+        }
+    }
+
+    if(bSendARP && pPacket)
+    {
+#if defined(CONFIG_WIFI_PKT_FWD) || defined(CONFIG_WIFI_PKT_FWD_MODULE)
+        set_wf_fwd_cb(pAd, pPacket, wdev);
+#endif /* CONFIG_WIFI_PKT_FWD */
+        RtmpOsPktProtocolAssign(pPacket);
+        RtmpOsPktRcvHandle(pPacket);
+        pEntry->bRoamingRefreshDone = TRUE;
+        MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_OFF,("Send roaming refresh done!\n"));
+        return TRUE;
+    }
+
+    return FALSE;
+}
+#endif /* ROAMING_ENHANCE_SUPPORT */
 #endif /* APCLI_SUPPORT */
 

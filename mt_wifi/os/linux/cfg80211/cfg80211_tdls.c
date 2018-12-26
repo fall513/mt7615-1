@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -200,7 +199,7 @@ VOID InitPeerEntryRateCapability(
 		}
 
 		if ((pHtCapability->HtCapInfo.ChannelWidth) &&
-			cfg_ht_bw)
+			cfg_ht_bw))
 		{
 			pEntry->MaxHTPhyMode.field.BW= BW_40;
 			pEntry->MaxHTPhyMode.field.ShortGI = ((pAd->CommonCfg.DesiredHtPhy.ShortGIfor40)&(pHtCapability->HtCapInfo.ShortGIfor40));
@@ -252,7 +251,7 @@ VOID InitPeerEntryRateCapability(
 		pEntry->AMsduSize = (UCHAR)pHtCapability->HtCapInfo.AMsduSize;
 		pEntry->HTPhyMode.word = pEntry->MaxHTPhyMode.word;
 
-		if (wlan_config_get_ht_gi(wdev) == GI_400)
+		if (pAd->CommonCfg.RegTransmitSetting.field.ShortGI == GI_400)
 		{
 			if (pHtCapability->HtCapInfo.ShortGIfor20)
 					CLIENT_STATUS_SET_FLAG(pEntry, fCLIENT_STATUS_SGI20_CAPABLE);

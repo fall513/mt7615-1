@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -23,7 +22,7 @@
     Who          When          What
     ---------    ----------    ----------------------------------------------
  */
-#endif /* MTK_LICENSE */
+
 #ifndef __CHIP_ID_H__
 #define __CHIP_ID_H__
 
@@ -83,6 +82,7 @@
 
 #define NIC7603_PCIe_DEVICE_ID	0x7603
 #define NIC7615_PCIe_DEVICE_ID	0x7615
+#define NIC7611_PCIe_DEVICE_ID	0x7611
 
 #define NIC7637_PCIe_DEVICE_ID	0x7637
 

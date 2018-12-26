@@ -4,7 +4,7 @@
 /*! \file   "ra_ctrl.h"
     \brief  All Dynamic Rate Switch Related Structure & Definition
 */
-#ifdef MTK_LICENSE
+
 /*******************************************************************************
 * Copyright (c) 2014 MediaTek Inc.
 *
@@ -46,11 +46,11 @@
 * (ICC).
 ********************************************************************************
 */
-#endif /* MTK_LICENSE */
+
 /*
 ** $Log: ra_ctrl.h $
 **
-** 08 18 2016 by.huang
+** 08 19 2016 by.huang
 ** [WCNCR00128952] There are some limitation by current SKU algorithm in MT7615 power
 ** 	
 ** 	1) Purpose:
@@ -64,14 +64,11 @@
 ** 	2. EventTxPowerShowInfo
 ** 	3. EventTxPowerCompTable
 ** 	4. MtSingleSkuLoadParam
-** 	5. SetMUTxPower
-** 	6. SetBFNDPATxDCtrl
 ** 	
 ** 	3) Code change description brief:
 ** 	
 ** 	1. revise SKU compensation look table mechanism for Nss spatial extension combine gain backoff
 ** 	2. add compensation info command
-** 	3. add command for config MU Tx Power and NDPA Power
 ** 	
 ** 	4) Unit Test Result:
 ** 	
@@ -206,17 +203,12 @@
 #define GET_TX_STAT_TOTAL_TX_CNT    0x00000001
 #define GET_TX_STAT_LAST_TX_RATE    0x00000002
 #define GET_TX_STAT_ENTRY_TX_RATE   0x00000004
+#define GET_TX_STAT_ENTRY_TX_CNT    0x00000008
 
 #define HT_LDPC                 0x01
 #define VHT_LDPC                0x02
 
 #define G_BAND_256QAM_AMPDU_FACTOR  7
-
-#if defined(CUSTOMER_RSG_FEATURE) || defined (CUSTOMER_DCC_FEATURE)
-#define GET_WTBL_TX_COUNT			0x00000001
-#define GET_WTBL_PER_BSS_TX_COUNT	0x00000002
-#define GET_WTBL_PER_STA_TX_COUNT	0x00000004
-#endif
 
 #define LIMIT_MAX_PHY_RATE_THRESHOLD    50
 #define MAX_PHY_RATE_3SS                1300
@@ -583,6 +575,46 @@ typedef struct _RA_COMMON_INFO_T {
 #endif /* DBG_CTRL_SUPPORT */
 } RA_COMMON_INFO_T, *P_RA_COMMON_INFO_T;
 
+typedef struct _BSSINFO_AUTO_RATE_CFG_T {
+    /* Auto Rate (Group2) */
+    UINT_16 u2Tag;                          /* Tag = 0x02 */
+    UINT_16 u2Length;
+
+    UINT_8  OpMode;
+    BOOL    fgAdHocOn;
+    BOOL    fgShortPreamble;
+
+    UCHAR   TxStream;
+    UCHAR   RxStream;
+
+    UINT_8  ucRateAlg;
+
+    BOOL    TestbedForceShortGI;
+    BOOL    TestbedForceGreenField;
+    UCHAR   HtMode;
+    BOOL    fAnyStation20Only;              /* Check if any Station can't support GF. */
+    BOOL    bRcvBSSWidthTriggerEvents;
+    UCHAR   vht_nss_cap;
+    UCHAR   vht_bw_signal;
+    BOOL    vht_force_sgi;
+
+    BOOL    fgSeOff;
+    UINT_8  ucAntennaIndex;
+
+    UINT_8  TrainUpRule;                    /* QuickDRS train up criterion: 0=>Throughput, 1=>PER, 2=> Throughput & PER */
+    UINT_8  Resv[3];
+    USHORT  TrainUpHighThrd;
+    SHORT   TrainUpRuleRSSI;
+    USHORT  lowTrafficThrd;
+
+    UINT_16 u2MaxPhyRate;
+
+    UINT_32 PhyCaps;                        /* pAd->chipCap.phy_caps 0x1:2.4G 0x2:5G 0x10:ht 0x20:vht 0x100:TXBF 0x200:ldpc */
+
+    UINT_32 u4RaInterval;
+    UINT_32 u4RaFastInterval;
+} CMD_BSSINFO_AUTO_RATE_CFG_T, *P_CMD_BSSINFO_AUTO_RATE_CFG_T;
+
 typedef struct _STAREC_AUTO_RATE_T {
     /* Auto Rate (Group1) */
     UINT_16 u2Tag;                          /* Tag = 0x01 */
@@ -625,46 +657,6 @@ typedef struct _STAREC_AUTO_RATE_T {
     RA_PHY_CFG_T MaxPhyCfg;
 } CMD_STAREC_AUTO_RATE_T, *P_CMD_STAREC_AUTO_RATE_T;
 
-typedef struct _STAREC_AUTO_RATE_CFG_T {
-    /* Auto Rate (Group2) */
-    UINT_16 u2Tag;                          /* Tag = 0x02 */
-    UINT_16 u2Length;
-
-    UINT_8  OpMode;
-    BOOL    fgAdHocOn;
-    BOOL    fgShortPreamble;
-
-    UCHAR   TxStream;
-    UCHAR   RxStream;
-
-    UINT_8  ucRateAlg;
-
-    BOOL    TestbedForceShortGI;
-    BOOL    TestbedForceGreenField;
-    UCHAR   HtMode;
-    BOOL    fAnyStation20Only;              /* Check if any Station can't support GF. */
-    BOOL    bRcvBSSWidthTriggerEvents;
-    UCHAR   vht_nss_cap;
-    UCHAR   vht_bw_signal;
-    BOOL    vht_force_sgi;
-
-    BOOL    fgSeOff;
-    UINT_8  ucAntennaIndex;
-
-    UINT_8  TrainUpRule;                    /* QuickDRS train up criterion: 0=>Throughput, 1=>PER, 2=> Throughput & PER */
-    UINT_8  Resv[3];
-    USHORT  TrainUpHighThrd;
-    SHORT   TrainUpRuleRSSI;
-    USHORT  lowTrafficThrd;
-
-    UINT_16 u2MaxPhyRate;
-
-    UINT_32 PhyCaps;                        /* pAd->chipCap.phy_caps 0x1:2.4G 0x2:5G 0x10:ht 0x20:vht 0x100:TXBF 0x200:ldpc */
-
-    UINT_32 u4RaInterval;
-    UINT_32 u4RaFastInterval;
-} CMD_STAREC_AUTO_RATE_CFG_T, *P_CMD_STAREC_AUTO_RATE_CFG_T;
-
 typedef struct _STAREC_AUTO_RATE_UPDATE_T {
     /* Auto Rate (Group3) */
     UINT_16 u2Tag;                          /* Tag = 0x03 */
@@ -688,7 +680,8 @@ typedef struct _STAREC_AUTO_RATE_UPDATE_T {
 typedef struct GNU_PACKED _EXT_CMD_GET_TX_STATISTIC_T {
     UINT_32 u4Field;
     UINT_8 ucWlanIdx;
-    UINT_8 aucReserved[3];
+    UINT_8 ucBandIdx;
+    UINT_8 aucReserved[6];
 } EXT_CMD_GET_TX_STATISTIC_T, *P_EXT_CMD_GET_TX_STATISTIC_T;
 
 typedef struct _CMD_SET_MAX_PHY_RATA_T {
@@ -702,13 +695,21 @@ typedef struct _EXT_EVENT_MAX_AMSDU_LENGTH_UPDATE_T {
 } EXT_EVENT_MAX_AMSDU_LENGTH_UPDATE_T, *P_EXT_EVENT_MAX_AMSDU_LENGTH_UPDATE_T;
 
 typedef struct _EXT_EVENT_TX_STATISTIC_RESULT_T {
+    UINT_8 ucWlanIdx;
+    UINT_8 ucBandIdx;
+    UINT_8 aucResv1[2];
     UINT_32 u4Field;
     UINT_32 u4TotalTxCount;
     UINT_32 u4TotalTxFailCount;
+    UINT_32 u4CurrBwTxCnt;
+    UINT_32 u4CurrBwTxFailCnt;
+    UINT_32 u4OtherBwTxCnt;
+    UINT_32 u4OtherBwTxFailCnt;
+    UINT_32 u4EntryTxCount;
+    UINT_32 u4EntryTxFailCount;
     RA_PHY_CFG_T rLastTxRate;
     RA_PHY_CFG_T rEntryTxRate;
-    UINT_32	u4TotalCurrBwTxCnt;
-    UINT_32	u4TotalOtherBwTxCnt;
+    UINT_8 aucResv2[8];
 } EXT_EVENT_TX_STATISTIC_RESULT_T, *P_EXT_EVENT_TX_STATISTIC_RESULT_T;
 
 typedef struct _EXT_EVENT_G_BAND_256QAM_PROBE_RESULT_T {
@@ -718,6 +719,32 @@ typedef struct _EXT_EVENT_G_BAND_256QAM_PROBE_RESULT_T {
 } EXT_EVENT_G_BAND_256QAM_PROBE_RESULT_T, *P_EXT_EVENT_G_BAND_256QAM_PROBE_RESULT_T;
 #endif /* defined(NEW_RATE_ADAPT_SUPPORT) || defined(RATE_ADAPT_AGBS_SUPPORT) */
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+typedef struct  _RTMP_RA_GRP_TB {
+    UCHAR   ItemNo;
+#ifdef RT_BIG_ENDIAN
+    UCHAR   Rsv2:1;
+    UCHAR   Mode:3;	
+    UCHAR   BW:2;
+    UCHAR   ShortGI:1;
+    UCHAR   STBC:1;
+#else
+    UCHAR   STBC:1;
+    UCHAR   ShortGI:1;
+    UCHAR   BW:2;
+    UCHAR   Mode:3;
+    UCHAR   Rsv2:1;
+#endif	
+    UCHAR   CurrMCS;
+    UCHAR   TrainUp;
+    UCHAR   TrainDown;
+    UCHAR   downMcs;
+    UCHAR   upMcs3;
+    UCHAR   upMcs2;
+    UCHAR   upMcs1;
+    UCHAR   dataRate;
+} RTMP_RA_GRP_TB;
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef RATE_ADAPT_AGBS_SUPPORT
 typedef struct  __RA_AGBS_TABLE_ENTRY {
@@ -918,6 +945,38 @@ union WTBL_2_DW9 {
                                     ((__Bw == BW_80) && (__Nss == 3) && (__MCS == MCS_6)) || \
                                     ((__Bw == BW_160) && (__Nss == 3) && (__MCS == MCS_9)))
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+#ifdef DOT11_N_SUPPORT
+#ifdef DOT11_VHT_AC
+/* VHT */
+#define ADAPT_RATE_TABLE(pTable)    ((pTable)==RateSwitchTableAdapt11B || \
+                                    (pTable)==RateSwitchTableAdapt11G || \
+                                    (pTable)==RateSwitchTableAdapt11BG || \
+                                    (pTable)==RateSwitchTableAdapt11N1S ||\
+                                    (pTable)==RateSwitchTableAdapt11N2S ||\
+                                    (pTable)==RateSwitchTableAdapt11N3S ||\
+                                    (pTable)==RateTableVht1S ||\
+                                    (pTable)==RateTableVht1S_MCS9 ||\
+                                    (pTable)==RateTableVht2S || \
+                                    (pTable)==RateTableVht2S_MCS7 || \
+                                    (pTable)==RateTableVht2S_BW20 ||\
+                                    (pTable)==RateTableVht2S_BW40)
+#else
+/* 11n */
+#define ADAPT_RATE_TABLE(pTable)    ((pTable)==RateSwitchTableAdapt11B || \
+                                    (pTable)==RateSwitchTableAdapt11G || \
+                                    (pTable)==RateSwitchTableAdapt11BG || \
+                                    (pTable)==RateSwitchTableAdapt11N1S || \
+                                    (pTable)==RateSwitchTableAdapt11N2S || \
+                                    (pTable)==RateSwitchTableAdapt11N3S)
+#endif /* DOT11_VHT_AC */
+#else
+/* Legacy */
+#define ADAPT_RATE_TABLE(pTable)    ((pTable)==RateSwitchTableAdapt11B || \
+                                    (pTable)==RateSwitchTableAdapt11G || \
+                                    (pTable)==RateSwitchTableAdapt11BG)
+#endif /* DOT11_N_SUPPORT */
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef RATE_ADAPT_AGBS_SUPPORT
 #ifdef DOT11_N_SUPPORT
@@ -1046,6 +1105,27 @@ extern UCHAR RateSwitchTable11BGN3SForABand[];
 #endif /* DOT11_N_SUPPORT */
 #endif /* defined(RTMP_MAC) || defined(RLT_MAC) */
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+extern UCHAR RateSwitchTableAdapt11B[];
+extern UCHAR RateSwitchTableAdapt11G[];
+extern UCHAR RateSwitchTableAdapt11BG[];
+
+#ifdef DOT11_N_SUPPORT
+extern UCHAR RateSwitchTableAdapt11N1S[];
+extern UCHAR RateSwitchTableAdapt11N2S[];
+extern UCHAR RateSwitchTableAdapt11N3S[];
+
+/* ADAPT_RATE_TABLE - true if pTable is one of the Adaptive Rate Switch tables */
+#ifdef DOT11_VHT_AC
+extern UCHAR RateTableVht1S[];
+extern UCHAR RateTableVht1S_MCS9[];
+extern UCHAR RateTableVht2S[];
+extern UCHAR RateTableVht2S_MCS7[];
+extern UCHAR RateTableVht2S_BW20[];
+extern UCHAR RateTableVht2S_BW40[];
+#endif /* DOT11_VHT_AC */
+#endif /* DOT11_N_SUPPORT*/
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef RATE_ADAPT_AGBS_SUPPORT
 extern UCHAR RateSwitchTableAGBS11B[];
@@ -1193,6 +1273,83 @@ VOID RATriggerQuickResponeTimer(
     IN struct _RA_ENTRY_INFO_T *pRaEntry
     );
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+VOID
+raClearTxQuality(
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal
+    );
+
+VOID
+raDecTxQuality(
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal,
+    IN UCHAR ucRateIndex
+    );
+
+VOID
+raSetTxQuality(
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal,
+    IN UINT_8 ucRateIndex,
+    IN UINT_8 ucQuality
+    );
+
+UINT_8
+raGetTxQuality(
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal,
+    IN UINT_8 ucRateIndex
+    );
+
+VOID
+raRestoreLastRate(
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal
+    );
+
+VOID
+raSetMcsGroup(
+    IN struct _RA_ENTRY_INFO_T *pRaEntry,
+    IN struct _RA_COMMON_INFO_T *pRaCfg,
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal
+    );
+
+UCHAR
+raSelectUpRate(
+    IN struct _RA_ENTRY_INFO_T *pRaEntry,
+    IN struct _RA_COMMON_INFO_T *pRaCfg,
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal,
+    IN struct _RTMP_RA_GRP_TB *pCurrTxRate
+    );
+
+UCHAR
+raSelectDownRate(
+    IN struct _RA_ENTRY_INFO_T *pRaEntry,
+    IN struct _RA_COMMON_INFO_T *pRaCfg,
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal,
+    IN UCHAR CurrRateIdx
+    );
+
+VOID
+QuickResponeForRateAdaptMTCore(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _RA_ENTRY_INFO_T *pRaEntry,
+    IN struct _RA_COMMON_INFO_T *pRaCfg,
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal
+    );
+
+VOID
+DynamicTxRateSwitchingAdaptMtCore(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _RA_ENTRY_INFO_T *pRaEntry,
+    IN struct _RA_COMMON_INFO_T *pRaCfg,
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal
+    );
+
+VOID
+NewTxRateMtCore(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _RA_ENTRY_INFO_T *pRaEntry,
+    IN struct _RA_COMMON_INFO_T *pRaCfg,
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal
+    );
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef RATE_ADAPT_AGBS_SUPPORT
 VOID
@@ -1276,6 +1433,15 @@ raStbcSettingCheck(
     BOOL fgBFOn,
     BOOL fgForceOneTx
     );
+#ifdef NEW_RATE_ADAPT_SUPPORT
+VOID
+MtAsicMcsLutUpdateCore(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _RA_ENTRY_INFO_T *pRaEntry,
+    IN struct _RA_COMMON_INFO_T *pRaCfg,
+    IN struct _RA_INTERNAL_INFO_T *pRaInternal
+    );
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef RATE_ADAPT_AGBS_SUPPORT
 VOID
@@ -1288,7 +1454,6 @@ MtAsicMcsLutUpdateCoreAGBS(
 #endif /* RATE_ADAPT_AGBS_SUPPORT */
 #endif /* MCS_LUT_SUPPORT */
 
-#ifndef WIFI_BUILD_RAM
 #ifdef DBG
 INT
 Set_Fixed_Rate_Proc(
@@ -1303,17 +1468,19 @@ Set_Fixed_Rate_With_FallBack_Proc(
     );
 #endif /* DBG */
 
+#if defined(MT7615) || defined(MT7622)
+INT32
+BssInfoRACommCfgSet(
+	IN P_RA_COMMON_INFO_T pRaCfg,
+    OUT P_CMD_BSSINFO_AUTO_RATE_CFG_T pCmdBssInfoAutoRateCfg
+);
+#endif /* defined(MT7615) || defined(MT7622) */
+
 #if defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622)
 INT32
 StaRecAutoRateParamSet(
     IN struct _RA_ENTRY_INFO_T *pRaEntry,
     OUT struct _STAREC_AUTO_RATE_T *pCmdStaRecAutoRate
-    );
-
-INT32
-StaRecAutoRateCommCfgSet(
-    IN struct _RA_COMMON_INFO_T *pRaCfg,
-    OUT struct _STAREC_AUTO_RATE_CFG_T *pCmdStaRecAutoRateCfg
     );
 
 INT32
@@ -1324,7 +1491,6 @@ StaRecAutoRateUpdate(
     OUT struct _STAREC_AUTO_RATE_UPDATE_T *pCmdStaRecAutoRate
     );
 #endif /* defined(MT7636) || defined(MT7615) || defined(MT7637) || defined(MT7622) */
-#endif /* WIFI_BUILD_RAM */
 
 #endif /* MT_MAC */
 
@@ -1542,6 +1708,148 @@ RTMPSetSupportMCS(
     IN UCHAR HtCapabilityLen
     );
 
+#ifdef NEW_RATE_ADAPT_SUPPORT
+VOID
+MlmeSetMcsGroup(
+    struct _RTMP_ADAPTER *pAd,
+    struct _MAC_TABLE_ENTRY *pEnt
+    );
+
+UCHAR
+MlmeSelectUpRate(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _MAC_TABLE_ENTRY *pEntry,
+    IN RTMP_RA_GRP_TB *pCurrTxRate
+    );
+
+UCHAR
+MlmeSelectDownRate(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _MAC_TABLE_ENTRY *pEntry,
+    IN UINT_8 cur_ch,
+    IN UINT_8 cap_bw,
+    IN UINT_8 cap_mcs32,
+    IN UINT_8 curr_phy_bw,
+    IN UINT_8 CurrRateIdx
+    );
+
+VOID
+MlmeGetSupportedMcsAdapt(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _MAC_TABLE_ENTRY *pEntry,
+    IN UCHAR	mcs23GI,
+    OUT CHAR 	mcs[]
+    );
+
+UCHAR
+MlmeSelectTxRateAdapt(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _MAC_TABLE_ENTRY *pEntry,
+    IN CHAR		mcs[],
+    IN CHAR		Rssi,
+    IN CHAR		RssiOffset
+    );
+
+BOOLEAN
+MlmeRAHybridRule(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _MAC_TABLE_ENTRY *pEntry,
+    IN RTMP_RA_GRP_TB *pCurrTxRate,
+    IN ULONG NewTxOkCount,
+    IN ULONG TxErrorRatio
+    );
+
+VOID
+MlmeNewRateAdapt(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN struct _MAC_TABLE_ENTRY *pEntry,
+    IN UCHAR UpRateIdx,
+    IN UCHAR DownRateIdx,
+    IN ULONG TrainUp,
+    IN ULONG TrainDown,
+    IN ULONG TxErrorRatio)
+    ;
+
+INT
+Set_PerThrdAdj_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+INT
+Set_LowTrafficThrd_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+INT
+Set_TrainUpRule_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+INT
+Set_TrainUpRuleRSSI_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+INT
+Set_TrainUpLowThrd_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+INT
+Set_TrainUpHighThrd_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+INT
+Set_RateTable_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+#ifdef AGS_SUPPORT
+INT
+Show_AGS_Proc(
+    struct _RTMP_ADAPTER *pAd,
+    RTMP_STRING *arg
+    );
+
+
+#ifdef CONFIG_AP_SUPPORT
+VOID
+ApMlmeDynamicTxRateSwitchingAGS(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN UINT idx
+    );
+
+VOID
+ApQuickResponeForRateUpExecAGS(
+    IN struct _RTMP_ADAPTER *pAd,
+    IN INT idx
+    );
+#endif /* CONFIG_AP_SUPPORT */
+#endif /* AGS_SUPPORT */
+
+#ifdef CONFIG_AP_SUPPORT
+VOID
+APMlmeDynamicTxRateSwitchingAdapt(
+    struct _RTMP_ADAPTER *pAd,
+    UINT idx
+    );
+
+VOID
+APQuickResponeForRateUpExecAdapt(
+    struct _RTMP_ADAPTER *pAd,
+    UINT idx
+    );
+#endif /* CONFIG_AP_SUPPORT */
+
+#endif /* NEW_RATE_ADAPT_SUPPORT */
 
 #ifdef CONFIG_AP_SUPPORT
 VOID

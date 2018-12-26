@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,7 @@
     --------------    ----------      ----------------------------------------------
     Shiang, Fonchi    02-13-2007      created
 */
-#endif /* MTK_LICENSE */
+
 #ifndef _AP_APCLI_H_
 #define _AP_APCLI_H_
 
@@ -105,6 +104,10 @@ MAC_TABLE_ENTRY *ApCliTableLookUpByWcid(
 	IN RTMP_ADAPTER *pAd,
 	IN UCHAR wcid,
 	IN UCHAR *pAddrs);
+	
+BOOLEAN ValidApCliEntry(
+	IN PRTMP_ADAPTER pAd,
+	IN INT apCliIdx);
 	
 BOOLEAN ApCliValidateRSNIE(
 	IN RTMP_ADAPTER *pAd, 
@@ -314,6 +317,16 @@ VOID apcli_dync_txop_alg(
 	UINT rx_tp);
 
 INT apcli_phy_rrm_init_byRf(RTMP_ADAPTER *pAd, UCHAR RfIC);
+
+#ifdef WH_EZ_SETUP
+void send_unicast_deauth_apcli(void *ad_obj, USHORT idx);
+
+VOID ApCliMlmeDeauthReqAction(
+	IN PRTMP_ADAPTER pAd,
+	IN MLME_QUEUE_ELEM *Elem); 
+
+#endif
+
 #endif /* APCLI_SUPPORT */
 
 #endif /* _AP_APCLI_H_ */

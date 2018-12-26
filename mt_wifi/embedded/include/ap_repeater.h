@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -27,7 +26,6 @@
     --------    ----------    ----------------------------------------------
     Carter.Chen 2015-April-14   init version.
 */
-#endif /* MTK_LICENSE */
 #ifndef __AP_REPEATER_H__
 #define __AP_REPEATER_H__
 

@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	--------	----------		----------------------------------------------
 	Albert		2008-4-3      	Supoort WAPI protocol
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __WAPI_H__
 #define __WAPI_H__
 

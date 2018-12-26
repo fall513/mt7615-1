@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -26,7 +25,7 @@
 	Who			When		  What
 	--------	----------	  ----------------------------------------------
 */
-#endif /* MTK_LICENSE */
+
 #ifndef __RTMP_BBP_H__
 #define __RTMP_BBP_H__
 
@@ -523,9 +522,6 @@ typedef union _BBP_R182_STRUC {
 	RTMP_BBP_IO_WRITE8_BY_REG_ID(_A, BBP_R141, _V);          \
 }
 #endif /*DFS_SUPPORT*/
-
-
-
 
 
 struct _RMTP_ADAPTER;

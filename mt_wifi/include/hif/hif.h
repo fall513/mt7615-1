@@ -15,9 +15,6 @@
 #endif /* RTMP_MAC_PCI */
 
 
-#ifdef RTMP_MAC_SDIO
-#include "hif/mt_hif_sdio.h"
-#endif /* RTMP_MAC_SDIO */
 #endif /* MT_MAC */
 
 

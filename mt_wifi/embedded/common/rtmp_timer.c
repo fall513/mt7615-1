@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /*
  ***************************************************************************
  * Ralink Tech Inc.
@@ -29,7 +28,7 @@
     Shiang Tu	08-28-2008   init version
 
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 
@@ -43,9 +42,6 @@ BUILD_TIMER_FUNCTION(PMF_SAQueryTimeOut);
 BUILD_TIMER_FUNCTION(PMF_SAQueryConfirmTimeOut);
 #endif /* DOT11W_PMF_SUPPORT */
 
-#if defined (RTMP_MAC_USB) || defined(RTMP_MAC_SDIO)
-BUILD_TIMER_FUNCTION(BeaconUpdateExec);
-#endif /* RTMP_MAC_USB */
 
 #ifdef CONFIG_AP_SUPPORT
 extern VOID APDetectOverlappingExec(
@@ -129,6 +125,22 @@ BUILD_TIMER_FUNCTION(DfsZeroWaitTimeout);
 #ifdef CONFIG_AP_SUPPORT
 BUILD_TIMER_FUNCTION(AutoChSelScanTimeout);
 #endif/* CONFIG_AP_SUPPORT */
+
+#ifdef WH_EZ_SETUP
+BUILD_TIMER_FUNCTION(ez_scan_timeout);
+//BUILD_TIMER_FUNCTION(ez_stop_scan_timeout);
+BUILD_TIMER_FUNCTION(ez_scan_pause_timeout);
+#ifdef EZ_NETWORK_MERGE_SUPPORT
+BUILD_TIMER_FUNCTION(ez_group_merge_timeout);
+#endif
+#ifdef NEW_CONNECTION_ALGO
+BUILD_TIMER_FUNCTION(ez_wait_for_connection_allow_timeout);
+#endif
+#ifdef EZ_DUAL_BAND_SUPPORT
+BUILD_TIMER_FUNCTION(ez_loop_chk_timeout);
+#endif
+
+#endif /* WH_EZ_SETUP */
 
 #ifdef RTMP_TIMER_TASK_SUPPORT
 static void RtmpTimerQHandle(RTMP_ADAPTER *pAd)

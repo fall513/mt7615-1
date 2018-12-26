@@ -6,7 +6,7 @@
 /*
      This file contains IOCTL for MU-MIMO specfic commands
  */
-#ifdef MTK_LICENSE
+
 /*******************************************************************************
  * Copyright (c) 2014 MediaTek Inc.
  *
@@ -48,7 +48,7 @@
  * (ICC).
  * ******************************************************************************
  */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 
 #ifdef CFG_SUPPORT_MU_MIMO_RA
@@ -189,7 +189,10 @@ INT SetMuraTestAlgorithmProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
     }
 
     value = simple_strtol(arg, 0, 10);
-    param.u2Reserved = cpu2le16(value);
+#ifdef RT_BIG_ENDIAN
+	value = cpu2le16(value);
+#endif
+    param.u2Reserved = value;
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -738,9 +741,143 @@ INT SetMuraPlatformTypeProc(RTMP_ADAPTER *pAd)
     param.ucPlatformType = 2;  /*MT7623*/		
 #endif
 
-#if defined (CONFIG_RALINK_MT7620)||defined (CONFIG_RALINK_MT7628)
-    param.ucPlatformType = 3;  /*MT7620/MT7628*/
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
+
+#ifdef RT_BIG_ENDIAN
+	cmd = cpu2le32(cmd);
 #endif
+
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
+
+error:
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+
+    return Ret;
+}
+
+/*
+==========================================================================
+Description:
+	Set MU_RGA Mobility Detect On Off
+
+Parameters:
+	Standard MU-RGA  Paramter
+
+==========================================================================
+ */
+INT SetMuraMobilityCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+{
+    INT32 Ret = TRUE;
+
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_CTRL;
+    CMD_MURGA_SET_MOBILITY_TYPE param = {0};
+
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+    BOOLEAN fgMobilityDetectEn = 0;
+
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
+
+    fgMobilityDetectEn = simple_strtol(pflag, 0, 10);
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.fgMobilityType = fgMobilityDetectEn;
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
+
+#ifdef RT_BIG_ENDIAN
+	cmd = cpu2le32(cmd);
+#endif
+
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
+
+    return Ret;
+
+error:
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+
+    return Ret;
+}
+
+/*
+==========================================================================
+Description:
+	Set MU_RGA Mobility Detect Interval Ctrl
+
+Parameters:
+	Standard MU-RGA  Paramter
+
+==========================================================================
+ */
+INT SetMuraMobilityIntervalCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+{
+    INT32 Ret = TRUE;
+
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_INTERVAL_CTRL;
+    CMD_MURGA_SET_MOBILITY_INTERVAL param = {0};
+
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+    UINT16 u2MobilityInteral = 0;
+
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
+
+    u2MobilityInteral = simple_strtol(pflag, 0, 10);
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.u2MobilityInteral = u2MobilityInteral;
 
     SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
     SET_CMD_ATTR_TYPE(attr, EXT_CID);
@@ -767,60 +904,448 @@ error:
     return Ret;
 }
 
-
 /*
 ==========================================================================
 Description:
-	Set MU_RGA Disable CN3, CN4 Group Entry
+	Set MU_RGA Mobility Detect SNR Ctrl
 
 Parameters:
 	Standard MU-RGA  Paramter
 
 ==========================================================================
  */
-INT SetMuraDisableCN3CN4Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+INT SetMuraMobilitySNRCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
 {
-	INT32 Ret = TRUE;
+    INT32 Ret = TRUE;
 
-	// prepare command message
-	struct _CMD_ATTRIBUTE attr = {0};
-	struct cmd_msg *msg = NULL;
-	UINT32 cmd = MURA_DISABLE_CN3_CN4;
-	CMD_SET_DISABLE_CN3_CN4 param = {0};
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_SNR_CTRL;
+    CMD_MURGA_SET_MOBILITY_SNR param = {0};
 
-	msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
-	if (!msg)
-	{
-		Ret = FALSE;
-		goto error;
-	}
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+    UINT8 ucMobilitySNR = 0;
 
-	param.ucDisableCn3Cn4 = simple_strtol(arg, 0, 10);
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
 
-	SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
-	SET_CMD_ATTR_TYPE(attr, EXT_CID);
-	SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
-	SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
-	SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
-	SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
-	SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
-	SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
-	AndesInitCmdMsg(msg, attr);
+    ucMobilitySNR = simple_strtol(pflag, 0, 10);
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.ucMobilitySNR = ucMobilitySNR;
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
 
 #ifdef RT_BIG_ENDIAN
 	cmd = cpu2le32(cmd);
 #endif
 
-	AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
-	AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
-	AndesSendCmdMsg(pAd, msg);
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
 
 error:
-	MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
-				("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
 
-	return Ret;
+    return Ret;
+}
 
+/*
+==========================================================================
+Description:
+	Set MU_RGA Mobility Detect Threshold Ctrl
+
+Parameters:
+	Standard MU-RGA  Paramter
+
+==========================================================================
+ */
+INT SetMuraMobilityThresholdCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+{
+    INT32 Ret = TRUE;
+
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_THRESHOLD_CTRL;
+    CMD_MURGA_SET_MOBILITY_THRESHOLD param = {0};
+
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+    UINT8 ucMobilityThreshold = 0;
+
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
+
+    ucMobilityThreshold = simple_strtol(pflag, 0, 10);
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.ucMobilityThreshold = ucMobilityThreshold;
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
+
+#ifdef RT_BIG_ENDIAN
+	cmd = cpu2le32(cmd);
+#endif
+
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
+
+error:
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+
+    return Ret;
+}
+
+/*
+==========================================================================
+Description:
+	Set MU_RGA Sounding counter info
+
+Parameters:
+	Standard MU-RGA  Paramter
+
+==========================================================================
+ */
+INT SetMuraMobilitySndCountProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+{
+    INT32 Ret = TRUE;
+
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_SOUNDING_INTERVAL_COUNT;
+    CMD_MURGA_GET_MOBILITY_SND_INTERVAL param = {0};
+
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+    UINT8 fgMobilitySndIntvalCnt = 0;
+
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
+
+    fgMobilitySndIntvalCnt = simple_strtol(pflag, 0, 10);
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.fgMobilitySndIntvalCnt = fgMobilitySndIntvalCnt;
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
+
+#ifdef RT_BIG_ENDIAN
+	cmd = cpu2le32(cmd);
+#endif
+
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
+
+    return Ret;
+
+error:
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+
+    return Ret;
+}
+
+/*
+==========================================================================
+Description:
+	Set MU_RGA Mobility Mode Ctrl
+
+Parameters:
+	Standard MU-RGA  Paramter
+
+==========================================================================
+ */
+INT SetMuraMobilityModeCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+{
+    INT32 Ret = TRUE;
+    UINT8 i;
+	CHAR  *value = 0;
+
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_MODE_CTRL;
+    CMD_MURGA_SET_MOBILITY_MODE param = {0};
+
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+	BOOLEAN fgMULQPingPongEn = TRUE;
+    BOOLEAN fgMULQTriggerCalEn = TRUE;
+    BOOLEAN fgMobilityFlagForceEn = FALSE;
+
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
+
+    /* parameter parsing */    
+	for (i = 0, value = rstrtok(pbuffer,":"); value; value = rstrtok(NULL,":"), i++)
+	{
+		switch (i)
+		{
+			case 0:
+				fgMULQPingPongEn = simple_strtol(value, 0, 10);
+				break;
+            case 1:
+				fgMULQTriggerCalEn = simple_strtol(value, 0, 10);
+				break;
+            case 2:
+				fgMobilityFlagForceEn = simple_strtol(value, 0, 10);
+				break;
+			default:
+				break;
+		}
+	}
+
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+                    ("%s: PingPong: %d, LQTrigger: %d, FlagForceEn: %d\n", __FUNCTION__, fgMULQPingPongEn, fgMULQTriggerCalEn, fgMobilityFlagForceEn));
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.fgMULQPingPongEn      = fgMULQPingPongEn;
+    param.fgMULQTriggerCalEn    = fgMULQTriggerCalEn;
+    param.fgMobilityFlagForceEn = fgMobilityFlagForceEn;
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
+
+#ifdef RT_BIG_ENDIAN
+	cmd = cpu2le32(cmd);
+#endif
+
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
+
+error:
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+
+    return Ret;
+}
+
+/*
+==========================================================================
+Description:
+	Set MU_RGA Mobility Log Ctrl
+
+Parameters:
+	Standard MU-RGA  Paramter
+
+==========================================================================
+ */
+INT SetMuraMobilityLogCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+{
+    INT32 Ret = TRUE;
+	
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_LOG_CTRL;
+    CMD_MURGA_SET_MOBILITY_LOG param = {0};
+
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+	BOOLEAN fgMobilityLogEn = TRUE;
+
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
+
+    /* parameter parsing */
+    fgMobilityLogEn = simple_strtol(pflag, 0, 10);
+
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+                    ("%s: LQ Value Log: %d \n", __FUNCTION__, fgMobilityLogEn));
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.fgMobilityLogEn      = fgMobilityLogEn;
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
+
+#ifdef RT_BIG_ENDIAN
+	cmd = cpu2le32(cmd);
+#endif
+
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
+
+error:
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+
+    return Ret;
+}
+
+/*
+==========================================================================
+Description:
+	Set MU_RGA Mobility Test Ctrl
+
+Parameters:
+	Standard MU-RGA  Paramter
+
+==========================================================================
+ */
+INT SetMuraMobilityTestCtrlProc(RTMP_ADAPTER *pAd, RTMP_STRING *arg)
+{
+    INT32 Ret = TRUE;
+
+    // prepare command message
+    struct _CMD_ATTRIBUTE attr = {0};
+    struct cmd_msg *msg = NULL;
+    UINT32 cmd = MURA_MOBILITY_TEST_CTRL;
+    CMD_MURGA_SET_MOBILITY_TEST param = {0};
+
+    PCHAR pbuffer = NULL;
+    PCHAR pflag = NULL;
+	BOOLEAN fgMobilityTestEn = TRUE;
+
+    pbuffer = arg;
+    if (pbuffer != NULL) {
+        pflag = pbuffer;
+    }
+    else {
+        return 0;
+    }
+
+    /* parameter parsing */
+    fgMobilityTestEn = simple_strtol(pflag, 0, 10);
+
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_OFF,
+                    ("%s: LQ Test: %d \n", __FUNCTION__, fgMobilityTestEn));
+
+    msg = AndesAllocCmdMsg(pAd, sizeof(cmd) + sizeof(param));
+    if (!msg)
+    {
+        Ret = FALSE;
+        goto error;
+    }
+
+    param.fgMobilityTestEn = fgMobilityTestEn;
+
+    SET_CMD_ATTR_MCU_DEST(attr, HOST2N9);
+    SET_CMD_ATTR_TYPE(attr, EXT_CID);
+    SET_CMD_ATTR_EXT_TYPE(attr, EXT_CMD_ID_MU_MIMO_RA);
+    SET_CMD_ATTR_CTRL_FLAGS(attr, INIT_CMD_SET_AND_RETRY);
+    SET_CMD_ATTR_RSP_WAIT_MS_TIME(attr, 0);
+    SET_CMD_ATTR_RSP_EXPECT_SIZE(attr, 0);
+    SET_CMD_ATTR_RSP_WB_BUF_IN_CALBK(attr, NULL);
+    SET_CMD_ATTR_RSP_HANDLER(attr, NULL);
+    AndesInitCmdMsg(msg, attr);
+
+#ifdef RT_BIG_ENDIAN
+	cmd = cpu2le32(cmd);
+#endif
+
+    AndesAppendCmdMsg(msg, (char *)&cmd, sizeof(cmd));
+    AndesAppendCmdMsg(msg, (char *)&param, sizeof(param));
+    AndesSendCmdMsg(pAd, msg);
+
+error:
+    MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_INFO,
+                ("%s:(Ret = %d_\n", __FUNCTION__, Ret));
+
+    return Ret;
 }
 
 /*
@@ -894,7 +1419,6 @@ static VOID mura_algorithm_state_callback(
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("%s: error !! event fill null!!\n", __FUNCTION__));
-		return;
     }
 
     //if (msg->rsp_payload == NULL)
@@ -1152,7 +1676,6 @@ static VOID mura_algorithm_group_state_callback(
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("%s: error !! event fill null!!\n", __FUNCTION__));
-		return;
     }
 
     //if (msg->rsp_payload == NULL)
@@ -1223,7 +1746,6 @@ static VOID mura_algorithm_hwfb_state_callback(
     {
         MTWF_LOG(DBG_CAT_ALL, DBG_SUBCAT_ALL, DBG_LVL_ERROR,
             ("%s: error !! event fill null!!\n", __FUNCTION__));
-		return;
     }
 
     //if (msg->rsp_payload == NULL)

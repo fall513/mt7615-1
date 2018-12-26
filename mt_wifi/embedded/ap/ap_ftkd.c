@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
 /****************************************************************************
  * Ralink Tech Inc.
  * Taiwan, R.O.C.
@@ -12,7 +11,7 @@
  * way altering the source code is stricitly prohibited, unless the prior
  * written consent of Ralink Technology, Inc. is obtained.
  ***************************************************************************/
-#endif /* MTK_LICENSE */
+
 /****************************************************************************
 
 	Abstract:
@@ -213,9 +212,6 @@ VOID TYPE_FUNC FT_KDP_Release(
 	if (pAd->ApCfg.FtTab.FlgIsFtKdpInit == 0)
 		return;
 
-	if (pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK == NULL)
-		return;
-
 	MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("ap_ftkd> Release FT KDP Module...\n"));
 
 #ifndef FT_KDP_FUNC_SOCK_COMM
@@ -235,6 +231,12 @@ VOID TYPE_FUNC FT_KDP_Release(
 	}
 #endif /* FT_KDP_FUNC_R0KH_IP_RECORD */
 
+	if (pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK != NULL)
+	{
+		FT_MEM_FREE(pAd, pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK);
+		pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK = NULL;
+	}
+
 #ifdef FT_KDP_FUNC_INFO_BROADCAST
 {
 	BOOLEAN Status;
@@ -244,9 +246,6 @@ VOID TYPE_FUNC FT_KDP_Release(
 
 	/* free spin lock */
 	NdisFreeSpinLock(&(pAd->ApCfg.FtTab.FT_KdpLock));
-
-	FT_MEM_FREE(pAd, pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK);
-	pAd->ApCfg.FtTab.pFT_KDP_Ctrl_BK = NULL;
 #endif /* FT_KDP_EMPTY */
 
 	pAd->ApCfg.FtTab.FlgIsFtKdpInit = 0;
@@ -441,7 +440,6 @@ VOID TYPE_FUNC FT_KDP_EventInform(
 			if (pCB == NULL)
 			{
 				MTWF_LOG(DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_ERROR, ("ap_ftkd> pCB == NULL!\n"));
-				FT_MEM_FREE(pAd, pFtKdp);
 				return;
 			}
 
@@ -551,7 +549,7 @@ VOID TYPE_FUNC FT_KDP_EventInform(
 	if (pPktComm != NULL)
 	{
 		/* make up 802.3 header */
-		NdisMoveMemory(pHdr8023->DA, pAd->ApCfg.MBSSID[ApIdx].wdev.bssid, MAC_ADDR_LEN);
+		NdisMoveMemory(pHdr8023->DA, pAd->ApCfg.MBSSID[ApIdx].wdev.bssid, 6);
 
 		/* can not send a packet with same SA & DA in 5VT board */
 /*		NdisMoveMemory(pHdr8023->SA, pAd->ApCfg.MBSSID[ApIdx].Bssid, 6); */
@@ -600,7 +598,9 @@ VOID TYPE_FUNC FT_KDP_EventInform(
 }
 #endif
 
+#ifdef FT_KDP_FUNC_SOCK_COMM
 	FT_MEM_FREE(pAd, pFtKdp);
+#endif /* FT_KDP_FUNC_SOCK_COMM */
 #endif /* FT_KDP_EMPTY */
 }
 

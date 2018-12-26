@@ -1,4 +1,3 @@
-#ifdef MTK_LICENSE
  /***************************************************************************
  * MediaTek Inc.
  * 4F, No. 2 Technology 5th Rd.
@@ -16,7 +15,7 @@
  ***************************************************************************
 
 */
-#endif /* MTK_LICENSE */
+
 #include "rt_config.h"
 #include "wlan_config/config_internal.h"
 
@@ -104,3 +103,4 @@ UCHAR wlan_config_get_rx_stream(struct wifi_dev *wdev)
 	struct wlan_config *cfg = (struct wlan_config*)wdev->wpf_cfg;
 	return cfg->phy_conf.rx_stream;
 }
+
